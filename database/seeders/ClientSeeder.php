@@ -26,17 +26,6 @@ class ClientSeeder extends Seeder
         );
 
         Client::updateOrCreate(
-            ['client_name' => 'PT Petrona Inti Chemindo'],
-            [
-                'client_type'    => 'Korporat',
-                'address'        => 'Kawasan Industri MM2100, Cikarang Barat, Bekasi',
-                'contact_person' => 'Sinta Wijaya',
-                'phone'          => '021-8998-1234',
-                'email'          => 'finance@petronachemindo.co.id',
-            ]
-        );
-
-        Client::updateOrCreate(
             ['client_name' => 'PT Bank Mandiri (Persero) Tbk'],
             [
                 'client_type'    => 'Perbankan',
@@ -44,6 +33,17 @@ class ClientSeeder extends Seeder
                 'contact_person' => 'Rina Kartika',
                 'phone'          => '021-524-5516',
                 'email'          => 'appraisal@bankmandiri.co.id',
+            ]
+        );
+
+        Client::updateOrCreate(
+            ['client_name' => 'PT Petrona Inti Chemindo'],
+            [
+                'client_type'    => 'Korporat',
+                'address'        => 'Kawasan Industri MM2100, Cikarang Barat, Bekasi',
+                'contact_person' => 'Sinta Wijaya',
+                'phone'          => '021-8998-1234',
+                'email'          => 'finance@petronachemindo.co.id',
             ]
         );
 
@@ -59,17 +59,6 @@ class ClientSeeder extends Seeder
         );
 
         Client::updateOrCreate(
-            ['client_name' => 'Ahmad Fauzi'],
-            [
-                'client_type'    => 'Perorangan',
-                'address'        => 'Jl. Kemang Selatan No. 22, Jakarta Selatan',
-                'contact_person' => 'Ahmad Fauzi',
-                'phone'          => '0812-3456-7890',
-                'email'          => 'ahmad.fauzi@gmail.com',
-            ]
-        );
-
-        Client::updateOrCreate(
             ['client_name' => 'PT Multi Guna Sejahtera'],
             [
                 'client_type'    => 'Korporat',
@@ -77,6 +66,28 @@ class ClientSeeder extends Seeder
                 'contact_person' => 'Dewi Lestari',
                 'phone'          => '021-5314-7788',
                 'email'          => 'dewi@multigunasejahtera.co.id',
+            ]
+        );
+
+        Client::updateOrCreate(
+            ['client_name' => 'PT Sinar Abadi Teknik'],
+            [
+                'client_type'    => 'Korporat',
+                'address'        => 'Jl. Industri Raya No. 45, Cikarang, Bekasi',
+                'contact_person' => 'Agus Prasetyo',
+                'phone'          => '021-8901-2345',
+                'email'          => 'agus@sinarabaditeknik.co.id',
+            ]
+        );
+
+        Client::updateOrCreate(
+            ['client_name' => 'Ahmad Fauzi'],
+            [
+                'client_type'    => 'Perorangan',
+                'address'        => 'Jl. Kemang Selatan No. 22, Jakarta Selatan',
+                'contact_person' => 'Ahmad Fauzi',
+                'phone'          => '0812-3456-7890',
+                'email'          => 'ahmad.fauzi@gmail.com',
             ]
         );
     }

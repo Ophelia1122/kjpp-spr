@@ -98,8 +98,7 @@ class InvoiceController extends Controller
 
     /**
      * Export PDF Invoice resmi (Kop Surat, Detail Termin, Nominal,
-     * No Rekening Bank KJPP). Data rekening bank sebaiknya disimpan
-     * di config/kjpp.php agar mudah diubah tanpa sentuh kode.
+     * No Rekening Bank KJPP).
      */
     public function exportInvoice(Invoice $invoice)
     {
@@ -108,11 +107,35 @@ class InvoiceController extends Controller
         $pdf = Pdf::loadView('pdf.invoice', [
             'invoice'    => $invoice,
             'project'    => $invoice->project,
-            'bank_info'  => config('kjpp.bank_account'), // lihat config/kjpp.php
+            'bank_info'  => config('kjpp.bank_account'),
         ])->setPaper('a4', 'portrait');
 
         $safeFilename = str_replace(['/', '\\'], '-', $invoice->invoice_number);
         return $pdf->download("Invoice-{$safeFilename}.pdf");
+    }
+
+    /**
+     * Export PDF Kwitansi resmi.
+     * GUARD KETAT: hanya bisa dicetak jika invoice sudah berstatus 'Paid',
+     * karena kwitansi adalah bukti PENERIMAAN uang, bukan tagihan.
+     * Mencetak kwitansi untuk invoice Unpaid akan menyesatkan secara
+     * akuntansi (seolah uang sudah diterima padahal belum).
+     */
+    public function exportKwitansi(Invoice $invoice)
+    {
+        if ($invoice->status !== Invoice::STATUS_PAID) {
+            abort(403, 'Kwitansi hanya dapat dicetak untuk invoice yang sudah berstatus Paid.');
+        }
+
+        $invoice->load('project.instructingClient');
+
+        $pdf = Pdf::loadView('pdf.kwitansi', [
+            'invoice' => $invoice,
+            'project' => $invoice->project,
+        ])->setPaper('a4', 'landscape');
+
+        $safeFilename = str_replace(['/', '\\'], '-', $invoice->invoice_number);
+        return $pdf->download("Kwitansi-{$safeFilename}.pdf");
     }
 
     private function generateInvoiceNumber(string $type): string
@@ -124,5 +147,15 @@ class InvoiceController extends Controller
             ->count() + 1;
 
         return sprintf('%s/KJPP/%s/%03d', $prefix, $year, $count);
+    }
+
+    /**
+     * Belum ada halaman detail invoice tersendiri di Fase 1 ini — invoice
+     * selalu dikelola dari dalam dashboard proyek (proposals.show), jadi
+     * route ini cukup redirect ke sana supaya link invoices.show tidak 404.
+     */
+    public function show(Invoice $invoice)
+    {
+        return redirect()->route('proposals.show', $invoice->project_id);
     }
 }

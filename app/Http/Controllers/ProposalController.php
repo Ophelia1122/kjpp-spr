@@ -8,10 +8,15 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProposalController extends Controller
 {
+    /**
+     * Menampilkan form pembuatan proposal baru.
+     * View: resources/views/proposals/create.blade.php
+     * (bukan lagi create_proposal.blade.php — file lama boleh dihapus
+     * setelah Anda pastikan create.blade.php berjalan baik).
+     */
     public function create()
     {
-        $clients = \App\Models\Client::orderBy('client_name')->get();
-        return view('proposals.create_proposal', compact('clients'));
+        return view('proposals.create');
     }
 
     /**
@@ -79,9 +84,6 @@ class ProposalController extends Controller
 
     /**
      * Generate PDF Proposal Resmi: gabungan data proyek + TEXT BAKU KJPP.
-     * Teks baku (klausul standar, syarat & ketentuan) disimpan terpisah
-     * di view resources/views/pdf/proposal.blade.php agar mudah di-maintain
-     * oleh non-developer (mis. tim legal) tanpa menyentuh controller.
      */
     public function exportPdf(Project $project)
     {
@@ -89,17 +91,17 @@ class ProposalController extends Controller
 
         $pdf = Pdf::loadView('pdf.proposal', [
             'project'      => $project,
-            'sla_days'     => $project->sla_days, // otomatis dari report_style
+            'sla_days'     => $project->sla_days,
             'generated_at' => now()->format('d F Y'),
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->download("Proposal-{$project->proposal_number}.pdf");
+        // Sanitasi nama file (proposal_number mengandung "/" -> ilegal di Windows)
+        $safeFilename = str_replace(['/', '\\'], '-', $project->proposal_number);
+        return $pdf->download("Proposal-{$safeFilename}.pdf");
     }
 
     /**
      * Dipanggil saat klien SETUJU -> admin lanjut ke pemilihan skema termin.
-     * (Pembuatan invoice DP sebenarnya ada di InvoiceController@generateDp
-     * agar tanggung jawab tetap terpisah / single responsibility).
      */
     public function markApproved(Project $project)
     {

@@ -3,13 +3,6 @@
 @section('content')
 <div class="max-w-4xl mx-auto py-8 space-y-6">
 
-    {{-- ===================== FLASH MESSAGE ===================== --}}
-    @if (session('success'))
-        <div class="rounded-md bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">
-            {{ session('success') }}
-        </div>
-    @endif
-
     {{-- ===================== HEADER ===================== --}}
     <div class="flex items-start justify-between">
         <div>
@@ -72,6 +65,47 @@
         </dl>
     </div>
 
+    {{-- ===================== CARD DAFTAR TAGIHAN & PEMBAYARAN (KWITANSI AUTOSHOW) ===================== --}}
+    @if ($project->invoices && $project->invoices->isNotEmpty())
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-4">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Daftar Tagihan & Pembayaran</h2>
+
+            <div class="divide-y divide-gray-100">
+                @foreach ($project->invoices as $inv)
+                    <div class="py-3 flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-gray-900 text-sm">
+                                Invoice {{ $inv->invoice_type }} ({{ $inv->invoice_number }})
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                Rp {{ number_format($inv->amount, 0, ',', '.') }} — 
+                                <span class="{{ $inv->status === 'Paid' ? 'text-green-600 font-semibold' : 'text-orange-500' }}">
+                                    {{ $inv->status }}
+                                </span>
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            {{-- Cetak Invoice --}}
+                            <a href="{{ route('invoices.exportInvoice', $inv) }}" 
+                               class="px-3 py-1.5 text-xs font-medium rounded bg-gray-800 text-white hover:bg-gray-900">
+                                📄 Cetak Invoice
+                            </a>
+
+                            {{-- Tombol Kwitansi Muncul Otomatis Setiap Status Invoice = Paid --}}
+                            @if ($inv->status === 'Paid')
+                                <a href="{{ route('invoices.exportKwitansi', $inv) }}" 
+                                   class="px-3 py-1.5 text-xs font-medium rounded bg-teal-600 text-white hover:bg-teal-700">
+                                    🧾 Cetak Kwitansi
+                                </a>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     {{-- ===================== PANEL AKSI (GATEKEEPING PER STATUS) ===================== --}}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Aksi Tersedia</h2>
@@ -94,11 +128,6 @@
             @php $dpInvoice = $project->invoices->firstWhere('invoice_type', 'DP'); @endphp
             <div class="flex flex-wrap gap-3 items-center">
                 @if ($dpInvoice)
-                    <a href="{{ route('invoices.exportInvoice', $dpInvoice) }}"
-                       class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-gray-800 text-white hover:bg-gray-900">
-                        📄 Cetak Invoice DP
-                    </a>
-
                     @if ($dpInvoice->status === 'Unpaid')
                         {{-- Simulasi role Keuangan: tombol verifikasi lunas --}}
                         <form action="{{ route('invoices.markAsPaid', $dpInvoice) }}" method="POST">
@@ -184,11 +213,6 @@
             <div class="space-y-4">
                 <div class="flex flex-wrap gap-3 items-center">
                     @if ($finalInvoice)
-                        <a href="{{ route('invoices.exportInvoice', $finalInvoice) }}"
-                           class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-gray-800 text-white hover:bg-gray-900">
-                            📄 Cetak Invoice Pelunasan
-                        </a>
-
                         @if ($finalInvoice->status === 'Unpaid')
                             <form action="{{ route('invoices.markAsPaid', $finalInvoice) }}" method="POST">
                                 @csrf
@@ -285,7 +309,7 @@
     // ===================== SLA COUNTDOWN (client-side, live) =====================
     (function () {
         const box = document.getElementById('sla-countdown');
-        if (!box) return; // hanya jalan kalau widget-nya ada di halaman (status In-Progress)
+        if (!box) return;
 
         const deadlineStr = box.dataset.deadline;
         if (!deadlineStr) return;
@@ -318,7 +342,6 @@
         }
 
         render();
-        // Update tiap jam cukup, tidak perlu tiap detik untuk hitungan hari.
         setInterval(render, 60 * 60 * 1000);
     })();
 </script>

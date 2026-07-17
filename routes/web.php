@@ -4,12 +4,17 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::group([], function () {
 
+    // --- Dashboard (halaman utama / taskbar masuk dari sini) ---
+    Route::get('/', [DashboardController::class, 'index'])->name('home');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/export-excel', [DashboardController::class, 'exportExcel'])->name('dashboard.exportExcel');
 
-    // --- Klien (dipakai untuk modal popup AJAX) ---
+    // --- Klien (dipakai untuk combobox AJAX & modal popup) ---
     Route::post('/clients/store-ajax', [ClientController::class, 'storeAjax'])->name('clients.storeAjax');
     Route::get('/clients/search', [ClientController::class, 'search'])->name('clients.search');
 
@@ -28,8 +33,9 @@ Route::group([], function () {
 
     // --- Invoice ---
     Route::post('/projects/{project}/invoices/dp', [InvoiceController::class, 'generateDp'])->name('invoices.generateDp');
-    Route::post('/projects/{project}/invoices/final', [InvoiceController::class, 'generateFinal'])->name('invoices.generateFinal');
+    Route::get('/projects/{project}/invoices/final', [InvoiceController::class, 'generateFinal'])->name('invoices.generateFinal');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
     Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->name('invoices.markAsPaid');
     Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'exportInvoice'])->name('invoices.exportInvoice');
+    Route::get('/invoices/{invoice}/kwitansi', [InvoiceController::class, 'exportKwitansi'])->name('invoices.exportKwitansi');
 });

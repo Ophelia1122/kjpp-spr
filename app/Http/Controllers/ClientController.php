@@ -10,9 +10,9 @@ class ClientController extends Controller
 {
     /**
      * Menyimpan klien baru dari POP-UP MODAL (tanpa reload halaman).
-     * Dipanggil via fetch/AJAX dari create_proposal.blade.php.
+     * Dipanggil via fetch/AJAX dari proposals/create.blade.php.
      * Mengembalikan JSON supaya bisa langsung dipakai untuk mengisi
-     * <select> klien di form proposal tanpa reload.
+     * combobox klien di form proposal tanpa reload.
      */
     public function storeAjax(Request $request)
     {
@@ -37,20 +37,35 @@ class ClientController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Klien baru berhasil ditambahkan.',
-            'client'  => $client, // dipakai JS untuk append <option> baru
+            'client'  => $client, // dipakai JS untuk langsung select klien baru ini
         ]);
     }
 
     /**
-     * Endpoint pendukung: cari klien untuk autocomplete/select2 (opsional).
+     * Endpoint pencarian AJAX untuk combobox "Nama Klien" di form proposal.
+     * Dipanggil tiap kali user mengetik (debounced) di
+     * resources/views/proposals/create.blade.php.
+     *
+     * Query: GET /clients/search?q=uob
+     * Return: [{id, client_name, client_type, address}, ...]
      */
     public function search(Request $request)
     {
-        $keyword = $request->get('q', '');
+        $keyword = trim((string) $request->get('q', ''));
 
-        $clients = Client::where('client_name', 'like', "%{$keyword}%")
-            ->limit(20)
-            ->get(['id', 'client_name', 'client_type']);
+        // Kalau keyword kosong, kembalikan daftar klien terbaru (max 10)
+        // supaya combobox tidak kosong melompong saat pertama kali difokus.
+        $query = Client::query();
+
+        if ($keyword !== '') {
+            $query->where('client_name', 'like', "%{$keyword}%");
+        } else {
+            $query->latest();
+        }
+
+        $clients = $query
+            ->limit(15)
+            ->get(['id', 'client_name', 'client_type', 'address']);
 
         return response()->json($clients);
     }
