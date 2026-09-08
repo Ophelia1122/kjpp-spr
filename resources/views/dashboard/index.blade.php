@@ -8,17 +8,32 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Dashboard Proyek</h1>
             <p class="text-sm text-gray-500">{{ $projects->total() }} proyek ditemukan</p>
+            <div class="flex gap-2 mt-2">
+                <a href="{{ route('dashboard', array_merge(request()->except('mine'), [])) }}"
+                   class="px-3 py-1 text-xs rounded-full font-medium {{ !request()->boolean('mine') ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                    🗂 Semua Proyek
+                </a>
+                <a href="{{ route('dashboard', array_merge(request()->all(), ['mine' => 1])) }}"
+                   class="px-3 py-1 text-xs rounded-full font-medium {{ request()->boolean('mine') ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                    👤 Proyek Saya
+                </a>
+            </div>
         </div>
         <div class="flex gap-2">
+        @can('reports.export')
             <a href="{{ route('dashboard.exportExcel', request()->query()) }}"
                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
                 📊 Export ke Excel
             </a>
+        @endcan
+        @can('proposals.manage')
             <a href="{{ route('proposals.create') }}"
                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
                 + Buat Proposal Baru
             </a>
+        @endcan
         </div>
+
     </div>
 
     {{-- ===================== FILTER & PENCARIAN ===================== --}}
@@ -49,8 +64,8 @@
     </form>
 
     {{-- ===================== TABEL PROYEK ===================== --}}
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <table class="w-full text-sm">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
+        <table class="min-w-[720px] w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     <th class="px-4 py-3">No. Proposal</th>
@@ -77,12 +92,29 @@
                                 {{ $project->status }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-center">
-                            <a href="{{ route('proposals.show', $project) }}"
-                               class="text-blue-600 hover:text-blue-800 font-medium">
-                                Kelola &rarr;
-                            </a>
+                         <td class="px-4 py-3 text-center">
+                            <div class="flex justify-center items-center gap-3">
+                                <a href="{{ route('proposals.show', $project) }}"
+                                class="text-blue-600 hover:text-blue-800 font-medium">
+                                    Kelola &rarr;
+                                </a>
+                            @can('proposals.manage')
+                                @if ($project->status === \App\Models\Project::STATUS_DRAFT)
+                                    <a href="{{ route('proposals.edit', $project) }}"
+                                    class="text-gray-500 hover:text-gray-700">
+                                        Edit
+                                    </a>
+                                    <form action="{{ route('proposals.destroy', $project) }}" method="POST"
+                                        onsubmit="return confirm('Yakin hapus proposal {{ $project->proposal_number }}? Aksi ini tidak bisa dibatalkan.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-red-500 hover:text-red-700">Hapus</button>
+                                    </form>
+                                @endif
+                            @endcan
+                            </div>
                         </td>
+
                     </tr>
                 @empty
                     <tr>

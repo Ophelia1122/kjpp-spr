@@ -89,11 +89,26 @@
         </tr>
         <tr>
             <td>
-                Jasa Penilaian — {{ $project->asset_type }}<br>
-                <span class="small">{{ $invoice->term_description ?? $invoice->invoice_type }}
-                    untuk proyek {{ $project->proposal_number }}</span>
+                Jasa Penilaian — Proyek No. {{ $project->proposal_number }}<br>
+                <span class="small">{{ $invoice->term_description ?? $invoice->invoice_type }}</span>
+
+                {{-- ===== Rincian per objek penilaian (bukan cuma ringkasan kategori) ===== --}}
+                @if ($project->valuationObjects->isNotEmpty())
+                    <table style="margin-top: 6px;">
+                        @foreach ($project->valuationObjects as $object)
+                            <tr>
+                                <td class="small" style="width: 16px; vertical-align: top;">{{ $loop->iteration }}.</td>
+                                <td class="small" style="vertical-align: top;">
+                                    {{ $object->short_label }} — {{ $object->location }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </table>
+                @else
+                    <div class="small">{{ $project->asset_type }} — {{ $project->asset_address }}</div>
+                @endif
             </td>
-            <td class="text-right">{{ number_format($invoice->amount, 0, ',', '.') }}</td>
+            <td class="text-right" style="vertical-align: top;">{{ number_format($invoice->amount, 0, ',', '.') }}</td>
         </tr>
         <tr style="background-color: #f0f0f0;">
             <td class="text-right"><strong>TOTAL TAGIHAN</strong></td>
@@ -134,11 +149,9 @@
             <td style="width: 50%;"></td>
             <td style="width: 50%;">
                 <div class="small">Hormat kami,</div>
-                <div class="small">Jakarta, {{ now()->translatedFormat('d F Y') }}</div>
+                <div class="small">Bagian Keuangan — {{ config('kjpp.company_name') }}</div>
                 <div style="height: 60px;"></div>
                 <div style="border-top: 1px solid #333; width: 200px;"></div>
-                <div class="small"><strong>Arief Rachman Setiady, S.M., M.M, MAPPI (Cert.)<strong></div>
-                <div class="small">Partner</div>
             </td>
         </tr>
     </table>

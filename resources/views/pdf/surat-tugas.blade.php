@@ -7,6 +7,7 @@
         body { font-family: 'Helvetica', sans-serif; font-size: 11px; color: #1a1a1a; line-height: 1.6; }
         table { width: 100%; border-collapse: collapse; }
         h1 { font-size: 14px; text-align: center; text-decoration: underline; margin-bottom: 4px; }
+        h2 { font-size: 12px; margin-top: 18px; margin-bottom: 6px; border-bottom: 1px solid #333; padding-bottom: 3px; }
         .text-center { text-align: center; }
         .small { font-size: 9.5px; color: #333; }
         .label-col { width: 190px; vertical-align: top; padding: 4px 0; }
@@ -35,10 +36,9 @@
     <p class="text-center small">No. {{ $project->proposal_number }}/ST</p>
 
     <p style="margin-top: 20px;">
-        Bersama ini kami menugaskan staff kami sebagai perwakilan KJPP Sugianto Prasodjo dan Rekan untuk melakukan Penilaian Aset atas nama
-        {{$project->instructingClient->client_name}} dengan berdasarkan Surat Penawaran {{$project->proposal_number}}
         Yang bertanda tangan di bawah ini, manajemen {{ config('kjpp.company_name') }}, dengan ini menugaskan
-        Penilai Lapangan tersebut di bawah untuk melaksanakan survei/inspeksi lapangan atas objek penilaian
+        Penilai Lapangan tersebut di bawah untuk melaksanakan survei/inspeksi lapangan atas
+        {{ $project->valuationObjects->count() > 1 ? 'seluruh objek penilaian' : 'objek penilaian' }}
         sebagai berikut:
     </p>
 
@@ -56,14 +56,6 @@
             <td class="val-col">: <strong>{{ \Carbon\Carbon::parse($project->survey_date)->translatedFormat('d F Y') }}</strong></td>
         </tr>
         <tr>
-            <td class="label-col">Jenis Objek Penilaian</td>
-            <td class="val-col">: {{ $project->asset_type }}</td>
-        </tr>
-        <tr>
-            <td class="label-col">Lokasi Objek</td>
-            <td class="val-col">: {{ $project->asset_address }}</td>
-        </tr>
-        <tr>
             <td class="label-col">Pemberi Tugas</td>
             <td class="val-col">: {{ $project->instructingClient->client_name }}</td>
         </tr>
@@ -71,6 +63,35 @@
             <td class="label-col">Estimasi Selesai Laporan</td>
             <td class="val-col">: {{ $project->estimated_completion_date_formatted ?? '-' }}</td>
         </tr>
+    </table>
+
+    {{-- ===================== RINCIAN OBJEK YANG DISURVEI ===================== --}}
+    <h2>Rincian Objek yang Disurvei</h2>
+    <table style="margin-top: 8px; border: 1px solid #333;">
+        <tr style="background-color: #1a1a1a; color: #fff;">
+            <td style="border: 1px solid #333; padding: 6px; width: 28px;" class="text-center small"><strong>No.</strong></td>
+            <td style="border: 1px solid #333; padding: 6px; width: 160px;" class="small"><strong>Jenis Aset/Properti</strong></td>
+            <td style="border: 1px solid #333; padding: 6px;" class="small"><strong>Lokasi</strong></td>
+            <td style="border: 1px solid #333; padding: 6px; width: 130px;" class="small"><strong>Atas Nama</strong></td>
+        </tr>
+        @forelse ($project->valuationObjects as $object)
+            <tr>
+                <td style="border: 1px solid #333; padding: 6px; vertical-align: top;" class="text-center small">{{ $loop->iteration }}</td>
+                <td style="border: 1px solid #333; padding: 6px; vertical-align: top;" class="small">
+                    @foreach ($object->description_lines as $line)
+                        {{ $line }}@if (!$loop->last)<br>@endif
+                    @endforeach
+                </td>
+                <td style="border: 1px solid #333; padding: 6px; vertical-align: top;" class="small">{{ $object->location }}</td>
+                <td style="border: 1px solid #333; padding: 6px; vertical-align: top;" class="text-center small">{{ $object->owner_name }}</td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="4" style="border: 1px solid #333; padding: 6px;" class="small text-center">
+                    {{ $project->asset_type }} — {{ $project->asset_address }}
+                </td>
+            </tr>
+        @endforelse
     </table>
 
     <p style="margin-top: 20px;">

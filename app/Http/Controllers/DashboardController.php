@@ -17,7 +17,13 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $query = Project::with('instructingClient')->latest();
-
+        // Filter "Proyek Saya" — menampilkan HANYA proyek yang
+        // assigned_appraiser_id-nya cocok dengan user yang sedang login.
+        // Tersedia untuk SEMUA role (bukan cuma Surveyor) karena Admin
+        // Produksi pun kadang mau lihat "yang jadi tanggung jawab saya".
+        if ($request->boolean('mine')) {
+            $query->where('assigned_appraiser_id', auth()->id());
+        }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -26,7 +32,6 @@ class DashboardController extends Controller
             $keyword = $request->q;
             $query->where(function ($q) use ($keyword) {
                 $q->where('proposal_number', 'like', "%{$keyword}%")
-                  ->orWhere('property_owner_name', 'like', "%{$keyword}%")
                   ->orWhereHas('instructingClient', function ($sub) use ($keyword) {
                       $sub->where('client_name', 'like', "%{$keyword}%");
                   });

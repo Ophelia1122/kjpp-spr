@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+
 class Project extends Model
 {
     use HasFactory;
@@ -31,27 +32,31 @@ class Project extends Model
     public const PURPOSE_LK_PROPERTI       = 'Pelaporan Keuangan';
 
     /**
-     * SLA (hari kerja) berdasarkan report_style.
-     * Sesuai spesifikasi: Terinci = 7 hari kerja, Ringkas = 3 hari kerja.
+     * Jenis laporan penilaian.
+     * Long Report  = Laporan Terinci (Comprehensive Style Report)
+     * Short Report = Laporan Ringkas (Short Form Report)
+     * SLA tidak lagi hardcode — diinput manual per proyek lewat
+     * sla_draft_days & sla_final_days (lihat migration 2024_01_08_000002).
      */
-    public const SLA_MAP = [
-        'Terinci' => 7,
-        'Ringkas' => 3,
-    ];
+    public const REPORT_LONG  = 'Long Report';
+    public const REPORT_SHORT = 'Short Report';
 
     protected $fillable = [
         'proposal_number',
+        'request_basis',
         'instructing_client_id',
-        'property_owner_name',
         'asset_type',
         'asset_address',
         'service_fee',
         'report_style',
+        'sla_draft_days',
+        'sla_final_days',
         'proposal_purpose',
         'psak_classification',
         'financial_reporting_date',
         'is_public_company',
         'assigned_appraiser',
+        'assigned_appraiser_id',
         'survey_date',
         'final_report_number',
         'status',
@@ -59,6 +64,8 @@ class Project extends Model
 
     protected $casts = [
         'service_fee'              => 'decimal:2',
+        'sla_draft_days'           => 'integer',
+        'sla_final_days'           => 'integer',
         'survey_date'               => 'date',
         'financial_reporting_date'  => 'date',
         'is_public_company'         => 'boolean',
@@ -70,6 +77,17 @@ class Project extends Model
     }
 
     /**
+     * User (akun sistem) yang ditugaskan sebagai penilai lapangan.
+     * Dipakai untuk filter "Proyek Saya" di dashboard — TIDAK dipakai
+     * di PDF (PDF tetap pakai kolom assigned_appraiser yang berupa teks,
+     * supaya nama tetap tercetak walau akunnya suatu saat dihapus).
+     */
+    public function assignedAppraiser()
+    {
+        return $this->belongsTo(User::class, 'assigned_appraiser_id');
+    }
+    
+    /**
      * Pengguna Laporan bisa lebih dari 1 instansi per proyek.
      */
     public function intendedUsers()
@@ -80,6 +98,11 @@ class Project extends Model
             'project_id',
             'client_id'
         )->withTimestamps();
+    }
+    
+    public function valuationObjects()
+    {
+        return $this->hasMany(ProjectValuationObject::class)->orderBy('sort_order');
     }
 
     public function invoices()
@@ -98,28 +121,41 @@ class Project extends Model
     }
 
     /**
-     * Accessor: jumlah hari SLA otomatis mengikuti report_style.
-     * Dipakai di tampilan Proposal & PDF, tidak perlu disimpan manual di DB.
+     * Label lengkap jenis laporan untuk ditampilkan di Blade/PDF, mis:
+     * "Long Report (Laporan Terinci / Comprehensive Style Report)".
      */
-    public function getSlaDaysAttribute(): int
+    public function getReportStyleLabelAttribute(): string
     {
-        return self::SLA_MAP[$this->report_style] ?? 7;
+        return match ($this->report_style) {
+            self::REPORT_LONG  => 'Long Report (Laporan Terinci / Comprehensive Style Report)',
+            self::REPORT_SHORT => 'Short Report (Laporan Ringkas / Short Form Report)',
+            default            => (string) $this->report_style,
+        };
     }
 
     /**
-     * Estimasi tanggal selesai kerja = survey_date + SLA hari kerja.
-     * Memakai Carbon::addWeekdays() (butuh nesbot/carbon-diff-in-weekdays
-     * yang sudah include di Carbon 2.x lewat method bawaan) sehingga
-     * Sabtu & Minggu otomatis di-skip tanpa loop manual.
-     * Mengembalikan Carbon instance null jika survey_date belum diisi.
+     * SLA "utama" yang dipakai untuk hitung mundur di halaman detail
+     * proyek = jangka waktu Laporan Draft/Resume (hari kerja sejak
+     * inspeksi terakhir). Null kalau belum diisi.
+     */
+    public function getSlaDaysAttribute(): ?int
+    {
+        return $this->sla_draft_days;
+    }
+
+    /**
+     * Estimasi tanggal Draft/Resume Laporan selesai = survey_date +
+     * sla_draft_days hari kerja. Memakai Carbon::addWeekdays() sehingga
+     * Sabtu & Minggu otomatis di-skip. Null kalau survey_date atau
+     * sla_draft_days belum diisi.
      */
     public function getEstimatedCompletionDateAttribute(): ?\Carbon\Carbon
     {
-        if (!$this->survey_date) {
+        if (!$this->survey_date || !$this->sla_draft_days) {
             return null;
         }
 
-        return $this->survey_date->copy()->addWeekdays($this->sla_days);
+        return $this->survey_date->copy()->addWeekdays($this->sla_draft_days);
     }
 
     /**
@@ -240,5 +276,26 @@ class Project extends Model
     public function getShowsBankAcknowledgementAttribute(): bool
     {
         return $this->proposal_purpose === self::PURPOSE_LELANG;
+    }
+
+    /**
+     * Ringkasan kategori objek untuk ditampilkan di dashboard/tabel (bukan PDF).
+     * Contoh: "Tanah dan Bangunan" (kalau cuma 1 objek) atau
+     * "3 Objek Penilaian" (kalau lebih dari 1, supaya kolom tabel tidak
+     * kepanjangan menampilkan semua kategori sekaligus).
+     */
+    public function getAssetSummaryLabelAttribute(): string
+    {
+        $count = $this->valuationObjects->count();
+
+        if ($count === 0) {
+            return $this->asset_type ?? '-'; // fallback untuk data lama sebelum migrasi ini
+        }
+
+        if ($count === 1) {
+            return $this->valuationObjects->first()->short_label;
+        }
+
+        return "{$count} Objek Penilaian";
     }
 }

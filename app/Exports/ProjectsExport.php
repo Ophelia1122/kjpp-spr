@@ -32,10 +32,14 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $keyword = $this->filters['q'];
             $query->where(function ($q) use ($keyword) {
                 $q->where('proposal_number', 'like', "%{$keyword}%")
-                  ->orWhere('property_owner_name', 'like', "%{$keyword}%");
+                  ->orWhereHas('instructingClient', function ($sub) use ($keyword) {
+                      $sub->where('client_name', 'like', "%{$keyword}%");
+                  });
             });
         }
-
+        if (!empty($this->filters['mine'])) {
+        $query->where('assigned_appraiser_id', auth()->id());
+        }
         return $query->get();
     }
 
@@ -47,11 +51,11 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             'Jenis Proposal',
             'Pemberi Tugas',
             'Pengguna Laporan',
-            'Pemilik Aset',
             'Jenis Objek',
             'Alamat Objek',
             'Jenis Laporan',
-            'SLA (Hari Kerja)',
+            'SLA Draft (Hari Kerja)',
+            'SLA Final (Hari Kerja)',
             'Fee Jasa (Rp)',
             'Penilai Lapangan',
             'Tanggal Survei',
@@ -79,11 +83,11 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $project->proposal_purpose,
             $project->instructingClient->client_name ?? '-',
             $project->intendedUsers->pluck('client_name')->implode(', '),
-            $project->property_owner_name,
             $project->asset_type,
             $project->asset_address,
             $project->report_style,
-            $project->sla_days,
+            $project->sla_draft_days ?? '-',
+            $project->sla_final_days ?? '-',
             (float) $project->service_fee,
             $project->assigned_appraiser ?? '-',
             $project->survey_date?->format('d-m-Y') ?? '-',

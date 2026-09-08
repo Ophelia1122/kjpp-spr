@@ -1,5 +1,9 @@
 *.log
 .DS_Store
+/.claude
+/public/fonts
+/storage/fonts
+/storage/app/tmp
 .env
 .env.backup
 .env.production

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -11,8 +12,6 @@ class ProjectController extends Controller
     /**
      * Fitur ini HANYA boleh diakses jika status proyek sudah
      * 'In-Progress / Scheduled' (artinya Invoice DP sudah 'Paid').
-     * Pengecekan status juga sebaiknya di-enforce di route middleware
-     * atau di sini sebagai guard tambahan.
      */
     public function inputSurveyData(Request $request, Project $project)
     {
@@ -21,19 +20,29 @@ class ProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'assigned_appraiser' => 'required|string|max:255',
-            'survey_date'        => 'required|date',
+            'assigned_appraiser_id' => 'required|exists:users,id',
+            'survey_date'           => 'required|date',
         ]);
 
-        $project->update($validated);
+        $appraiser = \App\Models\User::findOrFail($validated['assigned_appraiser_id']);
+
+        $project->update([
+            'assigned_appraiser_id' => $appraiser->id,
+            'assigned_appraiser'    => $appraiser->name, // denormalized untuk PDF Surat Tugas
+            'survey_date'           => $validated['survey_date'],
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'survey.input',
+            "Menetapkan {$appraiser->name} sebagai penilai lapangan untuk proyek {$project->proposal_number}, tanggal survei {$validated['survey_date']}",
+            $project
+        );
 
         return back()->with('success', 'Data penilai lapangan & tanggal survei berhasil disimpan.');
     }
 
     /**
      * Export PDF "Surat Tugas Penilaian".
-     * Hanya bisa diakses setelah assigned_appraiser & survey_date terisi
-     * (artinya proyek sudah melewati tahap DP Paid).
      */
     public function exportSuratTugas(Project $project)
     {
@@ -41,7 +50,7 @@ class ProjectController extends Controller
             abort(422, 'Surat Tugas belum bisa dicetak: penilai/tanggal survei belum diisi.');
         }
 
-        $project->load('instructingClient');
+        $project->load('instructingClient', 'valuationObjects');
 
         $pdf = Pdf::loadView('pdf.surat-tugas', [
             'project' => $project,
@@ -52,27 +61,15 @@ class ProjectController extends Controller
     }
 
     /**
-     * Dipanggil setelah draf laporan selesai dikerjakan penilai.
-     * Memindahkan status ke 'Pelunasan' -> memicu InvoiceController
-     * untuk generate Invoice Pelunasan.
-     */
-    public function markDraftCompleted(Project $project)
-    {
-        if ($project->status !== Project::STATUS_IN_PROGRESS) {
-            abort(403, 'Proyek belum dalam tahap pengerjaan.');
-        }
-
-        $project->update(['status' => Project::STATUS_PELUNASAN]);
-
-        return redirect()
-            ->route('invoices.generateFinal', $project)
-            ->with('success', 'Draf ditandai selesai. Invoice Pelunasan sedang dibuat.');
-    }
-
-    /**
      * Input Nomor Laporan Resmi. Terkunci sampai Invoice Pelunasan
      * berstatus Paid (yang otomatis mengubah status proyek jadi 'Selesai'
      * lewat InvoiceController@markAsPaid).
+     *
+     * NOTE: Method markDraftCompleted() yang dulu ada di sini SUDAH
+     * DIHAPUS — logikanya (validasi status + transisi ke 'Pelunasan')
+     * sekarang digabung langsung ke InvoiceController@generateFinal,
+     * karena sebelumnya method ini melakukan redirect() ke route POST
+     * yang menyebabkan 405 error (redirect selalu jadi GET request).
      */
     public function inputFinalReportNumber(Request $request, Project $project)
     {
@@ -85,13 +82,22 @@ class ProjectController extends Controller
         ]);
 
         $project->update($validated);
-
+        \App\Helpers\AuditLogger::record(
+            'project.final_report_number_set',
+            "Menginput Nomor Laporan Resmi \"{$validated['final_report_number']}\" untuk proyek {$project->proposal_number}",
+            $project
+        );
         return back()->with('success', 'Nomor Laporan Resmi berhasil disimpan.');
     }
 
-    public function show(Project $project)
+        public function show(Project $project)
     {
-        $project->load('instructingClient', 'intendedUsers', 'invoices');
-        return view('proposals.show', compact('project'));
+        $project->load('instructingClient', 'intendedUsers', 'invoices', 'valuationObjects');
+
+        $activeUsers = User::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('proposals.show', compact('project', 'activeUsers'));
     }
 }

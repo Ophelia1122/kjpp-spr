@@ -1,7 +1,9 @@
 FROM php:8.3-fpm
 
-# --- Install dependency sistem yang dibutuhkan Laravel + DomPDF ---
-RUN apt-get update && apt-get install -y \
+# --- Install dependency sistem yang dibutuhkan Laravel + generate .docx/PDF ---
+#     libreoffice-writer + java + font: untuk konversi .docx -> PDF
+#     (proposal: Word = master, PDF = hasil render LibreOffice atas .docx tsb)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     zip \
@@ -14,6 +16,11 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     nginx \
     supervisor \
+    libreoffice-writer \
+    libreoffice-java-common \
+    default-jre-headless \
+    fonts-liberation \
+    fonts-dejavu-core \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
@@ -24,6 +31,9 @@ RUN apt-get update && apt-get install -y \
         gd \
         zip \
     && rm -rf /var/lib/apt/lists/*
+
+# Path binary LibreOffice untuk App\Services\DocxToPdf (di Debian: 'soffice' on PATH).
+ENV LIBREOFFICE_BIN=soffice
 
 # --- Install Composer ---
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

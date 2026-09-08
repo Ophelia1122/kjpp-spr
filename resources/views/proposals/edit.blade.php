@@ -1,0 +1,579 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="max-w-4xl mx-auto py-8">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-xl font-semibold text-gray-900">Edit Proposal — {{ $project->proposal_number }}</h1>
+            <p class="text-xs text-amber-600 mt-1">⚠️ Perubahan di sini akan menimpa data objek penilaian sebelumnya.</p>
+        </div>
+        <a href="{{ route('proposals.show', $project) }}" class="text-sm text-gray-500 hover:text-gray-700">&larr; Kembali ke Detail Proyek</a>
+    </div>
+
+    <form action="{{ route('proposals.update', $project) }}" method="POST" class="space-y-6 bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        @csrf
+        @method('PUT')
+
+        {{-- ===================== NOMOR PROPOSAL (INPUT MANUAL) ===================== --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Nomor Proposal</label>
+            <input type="text" name="proposal_number" required
+                   value="{{ old('proposal_number', $project->proposal_number) }}"
+                   autocomplete="off" spellcheck="false"
+                   placeholder="00000/2.0131-00/KJPPSPR-PRO/APP/_/2026"
+                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm font-mono">
+            <p class="mt-1 text-xs text-gray-400">
+                Diinput manual sesuai nomor resmi yang diterbitkan sistem terintegrasi Kantor Pusat.
+            </p>
+        </div>
+
+        {{-- ===================== DASAR PERMINTAAN PENILAIAN (MANUAL) ===================== --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Dasar Permintaan Penilaian</label>
+            <textarea name="request_basis" rows="2"
+                      placeholder="Contoh: yang kami terima melalui Pesan WhatsApp permintaan penilaian tanggal 07 September 2026"
+                      class="mt-1 w-full rounded-md border-gray-300 shadow-sm">{{ old('request_basis', $project->request_basis) }}</textarea>
+            <p class="mt-1 text-xs text-gray-400">
+                Mengisi bagian kosong pada kalimat pembuka proposal:
+                &ldquo;Sesuai dengan informasi permintaan penilaian <span class="italic">[teks ini]</span>, mengenai permohonan jasa Penilai&hellip;&rdquo;.
+            </p>
+        </div>
+
+        {{-- ===================== PEMBERI TUGAS (AJAX COMBOBOX) ===================== --}}
+        <div class="relative">
+            <label class="block text-sm font-medium text-gray-700">Nama Klien (Pemberi Tugas)</label>
+            <div class="flex gap-2 mt-1">
+                <div class="relative flex-1">
+                    <input type="text" id="instructing_client_search" autocomplete="off"
+                           placeholder="Ketik nama klien untuk mencari..."
+                           class="w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <div id="instructing_client_results"
+                         class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+                <button type="button" onclick="openClientModal('instructing')"
+                        class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
+                    + Klien Baru
+                </button>
+            </div>
+            <div id="instructing_client_chip" class="hidden mt-2 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 text-sm px-3 py-1.5 rounded-full">
+                <span id="instructing_client_chip_text"></span>
+                <button type="button" onclick="clearInstructingClient()" class="text-blue-500 hover:text-blue-700">&times;</button>
+            </div>
+            <input type="hidden" name="instructing_client_id" id="instructing_client_id" required>
+        </div>
+
+        {{-- ===================== PENGGUNA LAPORAN (AJAX COMBOBOX, MULTI) ===================== --}}
+        <div class="relative">
+            <label class="block text-sm font-medium text-gray-700">Pengguna Laporan (bisa lebih dari satu)</label>
+            <div class="flex gap-2 mt-1">
+                <div class="relative flex-1">
+                    <input type="text" id="intended_user_search" autocomplete="off"
+                           placeholder="Ketik nama klien untuk mencari..."
+                           class="w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <div id="intended_user_results"
+                         class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+                <button type="button" onclick="openClientModal('intended')"
+                        class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
+                    + Klien Baru
+                </button>
+            </div>
+            <div id="intended_user_chips" class="flex flex-wrap gap-2 mt-2"></div>
+            <div id="intended_user_hidden_inputs"></div>
+        </div>
+
+        <hr>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Jenis Proposal</label>
+                <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
+                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="Jual Beli" @selected($project->proposal_purpose === 'Jual Beli')>Jual Beli</option>
+                    <option value="Penjaminan Utang" @selected($project->proposal_purpose === 'Penjaminan Utang')>Penjaminan Utang</option>
+                    <option value="Lelang" @selected($project->proposal_purpose === 'Lelang')>Lelang</option>
+                    <option value="Pelaporan Keuangan" @selected($project->proposal_purpose === 'Pelaporan Keuangan')>Pelaporan Keuangan (LK Properti)</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-400" id="purpose_hint"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Jenis Laporan</label>
+                <select name="report_style" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="Long Report" @selected(old('report_style', $project->report_style) === 'Long Report')>Long Report — Laporan Terinci (Comprehensive Style)</option>
+                    <option value="Short Report" @selected(old('report_style', $project->report_style) === 'Short Report')>Short Report — Laporan Ringkas (Short Form)</option>
+                </select>
+            </div>
+        </div>
+
+        {{-- ===================== SLA (HARI KERJA, INPUT MANUAL) ===================== --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">SLA Laporan Draft/Resume (hari kerja)</label>
+                <input type="number" name="sla_draft_days" min="1" max="365" required
+                       value="{{ old('sla_draft_days', $project->sla_draft_days) }}" placeholder="Contoh: 3"
+                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                <p class="mt-1 text-xs text-gray-400">Dihitung sejak inspeksi lapangan & penerimaan data terakhir.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">SLA Laporan Final (hari kerja)</label>
+                <input type="number" name="sla_final_days" min="1" max="365" required
+                       value="{{ old('sla_final_days', $project->sla_final_days) }}" placeholder="Contoh: 5"
+                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                <p class="mt-1 text-xs text-gray-400">Dihitung sejak Laporan Draft/Resume disetujui Pemberi Tugas.</p>
+            </div>
+        </div>
+
+        <div id="lk_fields" class="hidden space-y-4 rounded-md border border-dashed border-blue-300 bg-blue-50 p-4">
+            <p class="text-sm font-medium text-blue-800">Detail Khusus Pelaporan Keuangan</p>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Klasifikasi PSAK</label>
+                <select name="psak_classification[]" multiple class="mt-1 w-full rounded-md border-gray-300 shadow-sm h-24">
+                    @php $selectedPsak = explode(', ', $project->psak_classification ?? ''); @endphp
+                    <option value="Aset Tetap (PSAK 16)" @selected(in_array('Aset Tetap (PSAK 16)', $selectedPsak))>Aset Tetap (PSAK 16)</option>
+                    <option value="Properti Investasi (PSAK 13)" @selected(in_array('Properti Investasi (PSAK 13)', $selectedPsak))>Properti Investasi (PSAK 13)</option>
+                    <option value="Persediaan (PSAK 14)" @selected(in_array('Persediaan (PSAK 14)', $selectedPsak))>Persediaan (PSAK 14)</option>
+                    <option value="Aset Tidak Berwujud (PSAK 19)" @selected(in_array('Aset Tidak Berwujud (PSAK 19)', $selectedPsak))>Aset Tidak Berwujud (PSAK 19)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tanggal Pelaporan Keuangan (Cut-off)</label>
+                <input type="date" name="financial_reporting_date"
+                       value="{{ $project->financial_reporting_date?->toDateString() }}"
+                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="is_public_company" value="1" class="rounded border-gray-300" @checked($project->is_public_company)>
+                Klien adalah Perusahaan Terbuka (menampilkan klausul POJK 28/POJK.04/2021)
+            </label>
+        </div>
+
+        <hr>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Nilai Penawaran / Fee Appraisal (Rp)</label>
+            <input type="text" id="service_fee_display" inputmode="numeric" autocomplete="off" required
+                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+            <input type="hidden" name="service_fee" id="service_fee_raw" value="{{ $project->service_fee }}">
+        </div>
+
+        <hr>
+
+        <div>
+            <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium text-gray-700">Identifikasi Objek Penilaian dan Kepemilikan</label>
+                <button type="button" onclick="addObjectRow()"
+                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                    + Tambah Objek
+                </button>
+            </div>
+            <div id="objects_container" class="space-y-4"></div>
+        </div>
+
+        <div class="pt-2 flex gap-3">
+            <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">
+                Simpan Perubahan
+            </button>
+            <a href="{{ route('proposals.show', $project) }}" class="px-5 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium text-gray-700">
+                Batal
+            </a>
+        </div>
+    </form>
+</div>
+
+{{-- Template baris objek — SAMA PERSIS dengan create.blade.php --}}
+<template id="object_row_template">
+    <div class="object-row border border-gray-200 rounded-md p-4 bg-gray-50 relative">
+        <div class="flex items-center justify-between mb-3">
+            <span class="object-row-number text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-full w-6 h-6 flex items-center justify-center">1</span>
+            <button type="button" class="remove-object-btn text-red-500 hover:text-red-700 text-sm font-medium">🗑 Hapus Objek</button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-600">Kategori Aset/Properti</label>
+                <select class="object-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm" required>
+                    <option value="">-- Pilih Kategori --</option>
+                    <option value="Real Properti - Tanah">Real Properti - Tanah</option>
+                    <option value="Real Properti - Bangunan">Real Properti - Bangunan</option>
+                    <option value="Real Properti - Tanah dan Bangunan">Real Properti - Tanah dan Bangunan</option>
+                    <option value="Personal Properti - Mesin dan Peralatan">Personal Properti - Mesin dan Peralatan</option>
+                    <option value="Personal Properti - Kendaraan">Personal Properti - Kendaraan</option>
+                    <option value="Personal Properti - Alat Berat">Personal Properti - Alat Berat</option>
+                    <option value="Bisnis / Perusahaan">Bisnis / Perusahaan</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+            </div>
+            <div class="other-category-fields hidden col-span-2">
+                <label class="block text-xs font-medium text-gray-600">Sebutkan Jenis Aset/Properti</label>
+                <input type="text" class="object-custom-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+                       placeholder="Contoh: Kapal / Pesawat / Hak Sewa / Tanaman Keras">
+            </div>
+            <div class="real-property-fields hidden">
+                <label class="block text-xs font-medium text-gray-600">Luas Tanah (m²)</label>
+                <input type="number" step="0.01" min="0" class="object-land-area mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm">
+            </div>
+            <div class="real-property-fields hidden">
+                <label class="block text-xs font-medium text-gray-600">Luas Bangunan (m²)</label>
+                <input type="number" step="0.01" min="0" class="object-building-area mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm">
+            </div>
+            <div class="personal-property-fields hidden col-span-2">
+                <label class="block text-xs font-medium text-gray-600">Jumlah Unit</label>
+                <input type="number" min="0" class="object-unit-quantity mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm">
+            </div>
+            <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-600">Lokasi Objek</label>
+                <textarea rows="2" class="object-location mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm" required
+                          placeholder="Masukkan alamat lengkap beserta kelurahan, kecamatan, kota/kabupaten dan Provinsi"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600">Bentuk/Jenis Hak Atas Tanah</label>
+                <input type="text" class="object-ownership-form mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm" required>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600">Atas Nama</label>
+                <input type="text" class="object-owner-name mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm" required>
+            </div>
+            <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-600">Catatan Tambahan (opsional)</label>
+                <input type="text" class="object-notes mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm">
+            </div>
+        </div>
+    </div>
+</template>
+
+{{-- Modal tambah klien baru — SAMA PERSIS dengan create.blade.php --}}
+<div id="clientModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">Tambah Klien Baru</h2>
+            <button type="button" onclick="closeClientModal()" class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+        <div id="clientModalErrors" class="hidden mb-3 text-sm text-red-600"></div>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nama Klien</label>
+                <input type="text" id="modal_client_name" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Jenis Klien</label>
+                <select id="modal_client_type" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="Perbankan">Perbankan</option>
+                    <option value="Korporat">Korporat</option>
+                    <option value="Perorangan">Perorangan</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Alamat</label>
+                <textarea id="modal_client_address" rows="2" class="mt-1 w-full rounded-md border-gray-300 shadow-sm"></textarea>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" onclick="closeClientModal()" class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50">Batal</button>
+            <button type="button" onclick="submitNewClient()" class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // DATA AWAL DARI SERVER (untuk pre-fill form edit)
+    // ============================================================
+    @php
+        // Siapkan data di PHP dulu (bukan langsung di dalam @json()
+        // dengan closure multi-baris) — supaya tidak ada lagi masalah
+        // kurung tidak seimbang saat Blade meng-compile.
+        $intendedUsersData = $project->intendedUsers->map(function ($u) {
+            return ['id' => $u->id, 'client_name' => $u->client_name];
+        })->values();
+ 
+        $objectsData = $project->valuationObjects->map(function ($o) {
+            return [
+                'asset_category' => $o->asset_category,
+                'custom_category' => $o->custom_category,
+                'land_area' => $o->land_area,
+                'building_area' => $o->building_area,
+                'unit_quantity' => $o->unit_quantity,
+                'location' => $o->location,
+                'ownership_form' => $o->ownership_form,
+                'owner_name' => $o->owner_name,
+                'notes' => $o->notes,
+            ];
+        })->values();
+    @endphp
+    const initialInstructingClient = @json([
+        'id' => $project->instructingClient->id,
+        'client_name' => $project->instructingClient->client_name,
+    ]);
+    const initialIntendedUsers = @json($intendedUsersData);
+    const initialObjects = @json($objectsData);
+    const initialServiceFee = {{ $project->service_fee }};
+
+    // ============================================================
+    // OBJEK PENILAIAN — dynamic add/remove rows (identik dengan create.blade.php)
+    // ============================================================
+    let objectCounter = 0;
+
+    function addObjectRow(prefill = null) {
+        const template = document.getElementById('object_row_template');
+        const clone = template.content.cloneNode(true);
+        const row = clone.querySelector('.object-row');
+        const index = objectCounter++;
+
+        row.dataset.index = index;
+        row.querySelector('.object-category').name = `objects[${index}][asset_category]`;
+        row.querySelector('.object-custom-category').name = `objects[${index}][custom_category]`;
+        row.querySelector('.object-land-area').name = `objects[${index}][land_area]`;
+        row.querySelector('.object-building-area').name = `objects[${index}][building_area]`;
+        row.querySelector('.object-unit-quantity').name = `objects[${index}][unit_quantity]`;
+        row.querySelector('.object-location').name = `objects[${index}][location]`;
+        row.querySelector('.object-ownership-form').name = `objects[${index}][ownership_form]`;
+        row.querySelector('.object-owner-name').name = `objects[${index}][owner_name]`;
+        row.querySelector('.object-notes').name = `objects[${index}][notes]`;
+
+        if (prefill) {
+            row.querySelector('.object-category').value = prefill.asset_category ?? '';
+            row.querySelector('.object-custom-category').value = prefill.custom_category ?? '';
+            row.querySelector('.object-land-area').value = prefill.land_area ?? '';
+            row.querySelector('.object-building-area').value = prefill.building_area ?? '';
+            row.querySelector('.object-unit-quantity').value = prefill.unit_quantity ?? '';
+            row.querySelector('.object-location').value = prefill.location ?? '';
+            row.querySelector('.object-ownership-form').value = prefill.ownership_form ?? '';
+            row.querySelector('.object-owner-name').value = prefill.owner_name ?? '';
+            row.querySelector('.object-notes').value = prefill.notes ?? '';
+        }
+
+        const categorySelect = row.querySelector('.object-category');
+        categorySelect.addEventListener('change', () => toggleObjectFields(row));
+        row.querySelector('.remove-object-btn').addEventListener('click', () => {
+            row.remove();
+            renumberObjectRows();
+        });
+
+        document.getElementById('objects_container').appendChild(row);
+        toggleObjectFields(row); // langsung tampilkan field yang relevan kalau prefill sudah ada kategori
+        renumberObjectRows();
+    }
+
+    function toggleObjectFields(row) {
+        const category = row.querySelector('.object-category').value;
+        const isReal = category.startsWith('Real Properti');
+        const isPersonal = category.startsWith('Personal Properti');
+        const isOther = category === 'Lainnya';
+        row.querySelectorAll('.real-property-fields').forEach(el => el.classList.toggle('hidden', !isReal));
+        row.querySelectorAll('.personal-property-fields').forEach(el => el.classList.toggle('hidden', !isPersonal));
+        row.querySelectorAll('.other-category-fields').forEach(el => el.classList.toggle('hidden', !isOther));
+
+        const customInput = row.querySelector('.object-custom-category');
+        customInput.required = isOther;
+        if (!isOther) customInput.value = '';
+    }
+
+    function renumberObjectRows() {
+        const rows = document.querySelectorAll('#objects_container .object-row');
+        rows.forEach((row, i) => { row.querySelector('.object-row-number').textContent = i + 1; });
+        if (rows.length === 0) addObjectRow();
+    }
+
+    // ============================================================
+    // PRE-FILL saat halaman dimuat
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        setInstructingClient(initialInstructingClient);
+        initialIntendedUsers.forEach(u => addIntendedUser(u));
+
+        if (initialObjects.length > 0) {
+            initialObjects.forEach(obj => addObjectRow(obj));
+        } else {
+            addObjectRow();
+        }
+
+        // Pre-fill tampilan Fee Appraisal yang sudah diformat ribuan
+        document.getElementById('service_fee_display').value =
+            new Intl.NumberFormat('id-ID').format(initialServiceFee);
+
+        toggleLkFields();
+    });
+
+    // ============================================================
+    // STATE & FUNGSI KLIEN (identik dengan create.blade.php)
+    // ============================================================
+    let instructingClient = null;
+    let intendedUsers = [];
+    let activeModalTarget = null;
+
+    const searchUrl = "{{ route('clients.search') }}";
+    const storeAjaxUrl = "{{ route('clients.storeAjax') }}";
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    function debounce(fn, delay = 300) {
+        let timer;
+        return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+    }
+
+    async function searchClients(keyword) {
+        const res = await fetch(`${searchUrl}?q=${encodeURIComponent(keyword)}`, { headers: { 'Accept': 'application/json' } });
+        return res.json();
+    }
+
+    function renderResults(container, clients, onPick) {
+        if (clients.length === 0) {
+            container.innerHTML = `<div class="px-3 py-2 text-sm text-gray-400">Tidak ditemukan. Coba "+ Klien Baru".</div>`;
+        } else {
+            container.innerHTML = clients.map(c => `
+                <button type="button" data-id="${c.id}" data-name="${c.client_name.replace(/"/g, '&quot;')}"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-0">
+                    <div class="font-medium text-gray-800">${c.client_name}</div>
+                    <div class="text-xs text-gray-400">${c.client_type}</div>
+                </button>
+            `).join('');
+            container.querySelectorAll('button[data-id]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    onPick({ id: btn.dataset.id, client_name: btn.dataset.name });
+                    container.classList.add('hidden');
+                });
+            });
+        }
+        container.classList.remove('hidden');
+    }
+
+    const instructingInput = document.getElementById('instructing_client_search');
+    const instructingResults = document.getElementById('instructing_client_results');
+
+    instructingInput.addEventListener('input', debounce(async (e) => {
+        const keyword = e.target.value.trim();
+        if (keyword.length < 2) { instructingResults.classList.add('hidden'); return; }
+        renderResults(instructingResults, await searchClients(keyword), setInstructingClient);
+    }));
+
+    function setInstructingClient(client) {
+        instructingClient = client;
+        document.getElementById('instructing_client_id').value = client.id;
+        document.getElementById('instructing_client_chip_text').textContent = client.client_name;
+        document.getElementById('instructing_client_chip').classList.remove('hidden');
+        instructingInput.value = '';
+        instructingInput.classList.add('hidden');
+    }
+
+    function clearInstructingClient() {
+        instructingClient = null;
+        document.getElementById('instructing_client_id').value = '';
+        document.getElementById('instructing_client_chip').classList.add('hidden');
+        instructingInput.classList.remove('hidden');
+    }
+
+    const intendedInput = document.getElementById('intended_user_search');
+    const intendedResults = document.getElementById('intended_user_results');
+
+    intendedInput.addEventListener('input', debounce(async (e) => {
+        const keyword = e.target.value.trim();
+        if (keyword.length < 2) { intendedResults.classList.add('hidden'); return; }
+        const clients = await searchClients(keyword);
+        renderResults(intendedResults, clients.filter(c => !intendedUsers.some(u => u.id == c.id)), addIntendedUser);
+    }));
+
+    function addIntendedUser(client) {
+        if (intendedUsers.some(u => u.id == client.id)) return;
+        intendedUsers.push(client);
+        renderIntendedChips();
+        intendedInput.value = '';
+    }
+
+    function removeIntendedUser(id) {
+        intendedUsers = intendedUsers.filter(u => u.id != id);
+        renderIntendedChips();
+    }
+
+    function renderIntendedChips() {
+        document.getElementById('intended_user_chips').innerHTML = intendedUsers.map(u => `
+            <span class="inline-flex items-center gap-2 bg-gray-100 border border-gray-200 text-gray-700 text-sm px-3 py-1.5 rounded-full">
+                ${u.client_name}
+                <button type="button" onclick="removeIntendedUser(${u.id})" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </span>
+        `).join('');
+        document.getElementById('intended_user_hidden_inputs').innerHTML = intendedUsers.map(u =>
+            `<input type="hidden" name="intended_user_ids[]" value="${u.id}">`
+        ).join('');
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!instructingInput.contains(e.target) && !instructingResults.contains(e.target)) instructingResults.classList.add('hidden');
+        if (!intendedInput.contains(e.target) && !intendedResults.contains(e.target)) intendedResults.classList.add('hidden');
+    });
+
+    function openClientModal(target) {
+        activeModalTarget = target;
+        document.getElementById('clientModalErrors').classList.add('hidden');
+        document.getElementById('clientModal').classList.remove('hidden');
+        document.getElementById('clientModal').classList.add('flex');
+    }
+    function closeClientModal() {
+        document.getElementById('clientModal').classList.add('hidden');
+        document.getElementById('clientModal').classList.remove('flex');
+    }
+
+    async function submitNewClient() {
+        const payload = {
+            client_name: document.getElementById('modal_client_name').value,
+            client_type: document.getElementById('modal_client_type').value,
+            address: document.getElementById('modal_client_address').value,
+        };
+        try {
+            const response = await fetch(storeAjaxUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!data.success) {
+                const errBox = document.getElementById('clientModalErrors');
+                errBox.innerHTML = Object.values(data.errors).flat().join('<br>');
+                errBox.classList.remove('hidden');
+                return;
+            }
+            const client = { id: data.client.id, client_name: data.client.client_name };
+            activeModalTarget === 'instructing' ? setInstructingClient(client) : addIntendedUser(client);
+            closeClientModal();
+        } catch (err) {
+            alert('Gagal menyimpan klien. Silakan coba lagi.');
+        }
+    }
+
+    // ============================================================
+    // INPUT MASKING — Fee Appraisal
+    // ============================================================
+    (function () {
+        const displayInput = document.getElementById('service_fee_display');
+        const rawInput = document.getElementById('service_fee_raw');
+
+        function formatRupiah(value) {
+            const digitsOnly = value.replace(/\D/g, '');
+            return digitsOnly ? new Intl.NumberFormat('id-ID').format(parseInt(digitsOnly, 10)) : '';
+        }
+
+        displayInput.addEventListener('input', (e) => {
+            const digitsOnly = e.target.value.replace(/\D/g, '');
+            e.target.value = formatRupiah(e.target.value);
+            rawInput.value = digitsOnly;
+        });
+
+        displayInput.closest('form').addEventListener('submit', (e) => {
+            rawInput.value = displayInput.value.replace(/\D/g, '');
+        });
+    })();
+
+    // ============================================================
+    // TOGGLE FIELD LK PROPERTI + HINT DASAR NILAI
+    // ============================================================
+    const purposeHints = {
+        'Jual Beli': 'Dasar Nilai: Nilai Pasar.',
+        'Penjaminan Utang': 'Dasar Nilai: Nilai Pasar (Indikasi Nilai Likuidasi dapat diminta bank).',
+        'Lelang': 'Dasar Nilai: Nilai Pasar & Nilai Likuidasi (wajib), termasuk klausul Waktu Ekspos.',
+        'Pelaporan Keuangan': 'Dasar Nilai: Nilai Wajar (Fair Value), mengacu PSAK 113.',
+    };
+
+    function toggleLkFields() {
+        const purpose = document.getElementById('proposal_purpose').value;
+        document.getElementById('lk_fields').classList.toggle('hidden', purpose !== 'Pelaporan Keuangan');
+        document.getElementById('purpose_hint').textContent = purposeHints[purpose] ?? '';
+    }
+</script>
+@endsection

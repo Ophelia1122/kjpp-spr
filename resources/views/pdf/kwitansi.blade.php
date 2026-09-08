@@ -34,7 +34,7 @@
                 <div style="font-size: 18px; font-weight: bold; letter-spacing: 1px;">KWITANSI</div>
                 <div class="small">(Receipt)</div>
                 <div class="small" style="margin-top: 6px;">No. {{ $invoice->invoice_number }}</div>
-                <div class="small">Tgl: {{ ($invoice->payment_date ?? now())->translatedFormat('d F Y') }}</div>
+                 <div class="small">Tgl: {{ $invoice->payment_date->translatedFormat('d F Y') }}</div>
             </td>
         </tr>
     </table>
@@ -56,7 +56,7 @@
             <td class="label-col">Untuk pembayaran <span class="small">(In payment of)</span></td>
             <td class="val-col">
                 {{ $invoice->term_description ?? $invoice->invoice_type }}
-                — Jasa Penilaian {{ $project->asset_type }}, Proyek No. {{ $project->proposal_number }}
+                — Jasa Penilaian {{ $project->asset_summary_label }}, Proyek No. {{ $project->proposal_number }}
                 @if ($invoice->invoice_type === 'DP')
                     (Uang Muka / Down Payment)
                 @else
@@ -83,7 +83,7 @@
         <tr>
             <td style="width: 50%;"></td>
             <td style="width: 50%; text-align: center;">
-                <div class="small">Jakarta, {{ ($invoice->payment_date ?? now())->translatedFormat('d F Y') }}</div>
+                <div class="small">Jakarta, {{ $invoice->payment_date->translatedFormat('d F Y') }}</div>
                 <div class="small">{{ config('kjpp.company_name') }}</div>
                 <div style="height: 65px;"></div>
                 <div style="border-top: 1px solid #333; width: 220px; margin: 0 auto;"></div>

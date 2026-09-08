@@ -3,62 +3,39 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Models\ProjectValuationObject;
+use App\Services\DocxToPdf;
+use App\Services\ProposalDocxBuilder;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Validation\Rule;
 
 class ProposalController extends Controller
 {
-    /**
-     * Menampilkan form pembuatan proposal baru.
-     * View: resources/views/proposals/create.blade.php
-     * (bukan lagi create_proposal.blade.php — file lama boleh dihapus
-     * setelah Anda pastikan create.blade.php berjalan baik).
-     */
     public function create()
     {
         return view('proposals.create');
     }
 
-    /**
-     * Admin input data proyek & harga -> proposal_number di-generate otomatis
-     * -> status awal 'Draft Proposal'. SLA TIDAK disimpan manual, cukup
-     * dari accessor $project->sla_days (lihat Model Project).
-     */
     public function store(Request $request)
     {
-        // Multi-select psak_classification datang sebagai array dari form;
-        // gabungkan jadi satu string sebelum divalidasi (kolom DB-nya string).
         if ($request->has('psak_classification') && is_array($request->psak_classification)) {
             $request->merge([
                 'psak_classification' => implode(', ', $request->psak_classification),
             ]);
         }
 
-        $validated = $request->validate([
-            'instructing_client_id'    => 'required|exists:clients,id',
-            'intended_user_ids'        => 'required|array|min:1',
-            'intended_user_ids.*'      => 'exists:clients,id',
-            'property_owner_name'      => 'required|string|max:255',
-            'asset_type'               => 'required|string|max:255',
-            'asset_address'            => 'required|string',
-            'service_fee'              => 'required|numeric|min:0',
-            'report_style'             => 'required|in:Terinci,Ringkas',
-            'proposal_purpose'         => 'required|in:Jual Beli,Penjaminan Utang,Lelang,Pelaporan Keuangan',
-
-            // Hanya wajib diisi jika proposal_purpose = 'Pelaporan Keuangan'
-            'psak_classification'      => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|string|max:255',
-            'financial_reporting_date' => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|date',
-            'is_public_company'        => 'nullable|boolean',
-        ]);
+        $validated = $this->validateProposal($request);
 
         $project = Project::create([
-            'proposal_number'          => $this->generateProposalNumber(),
+            'proposal_number'          => $validated['proposal_number'],
+            'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
-            'property_owner_name'      => $validated['property_owner_name'],
-            'asset_type'               => $validated['asset_type'],
-            'asset_address'            => $validated['asset_address'],
+            'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
+            'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
             'report_style'             => $validated['report_style'],
+            'sla_draft_days'           => $validated['sla_draft_days'],
+            'sla_final_days'           => $validated['sla_final_days'],
             'proposal_purpose'         => $validated['proposal_purpose'],
             'psak_classification'      => $validated['psak_classification'] ?? null,
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
@@ -66,47 +43,248 @@ class ProposalController extends Controller
             'status'                   => Project::STATUS_DRAFT,
         ]);
 
-        // Simpan multi Pengguna Laporan (bisa lebih dari 1 instansi)
         $project->intendedUsers()->sync($validated['intended_user_ids']);
+        $this->syncValuationObjects($project, $validated['objects']);
 
+        \App\Helpers\AuditLogger::record(
+            'proposal.created',
+            "Membuat proposal {$project->proposal_number} ({$project->proposal_purpose}) untuk {$project->instructingClient->client_name}",
+            $project
+        );
+        
         return redirect()
             ->route('proposals.show', $project)
-            ->with('success', "Proposal {$project->proposal_number} berhasil dibuat.");
-    }
-
-    private function generateProposalNumber(): string
-    {
-        $year  = now()->year;
-        $count = Project::whereYear('created_at', $year)->count() + 1;
-
-        return sprintf('PRO/KJPP/%s/%03d', $year, $count);
+            ->with('success', "Proposal {$project->proposal_number} berhasil dibuat dengan " . count($validated['objects']) . " objek penilaian.");
     }
 
     /**
-     * Generate PDF Proposal Resmi: gabungan data proyek + TEXT BAKU KJPP.
+     * Form edit proposal. DIBATASI hanya untuk status 'Draft Proposal' —
+     * begitu proposal sudah diproses lebih lanjut (ada Invoice DP, dst),
+     * mengedit data dasar (fee, objek, klien) bisa bikin invoice/PDF yang
+     * sudah terlanjur dicetak jadi tidak sinkron dengan data terbaru.
+     * Kalau ada kesalahan setelah tahap itu, harus dibatalkan (hapus
+     * invoice-nya dulu lewat invoices.destroy) baru proyeknya bisa diedit.
      */
-    public function exportPdf(Project $project)
+    public function edit(Project $project)
     {
-        $project->load('instructingClient', 'intendedUsers');
+        if ($project->status !== Project::STATUS_DRAFT) {
+            abort(403, 'Proposal hanya bisa diedit selama masih berstatus Draft Proposal.');
+        }
 
-        $pdf = Pdf::loadView('pdf.proposal', [
-            'project'      => $project,
-            'sla_days'     => $project->sla_days,
-            'generated_at' => now()->format('d F Y'),
-        ])->setPaper('a4', 'portrait');
+        $project->load('instructingClient', 'intendedUsers', 'valuationObjects');
 
-        // Sanitasi nama file (proposal_number mengandung "/" -> ilegal di Windows)
-        $safeFilename = str_replace(['/', '\\'], '-', $project->proposal_number);
-        return $pdf->download("Proposal-{$safeFilename}.pdf");
+        return view('proposals.edit', compact('project'));
+    }
+
+    public function update(Request $request, Project $project)
+    {
+        if ($project->status !== Project::STATUS_DRAFT) {
+            abort(403, 'Proposal hanya bisa diedit selama masih berstatus Draft Proposal.');
+        }
+
+        if ($request->has('psak_classification') && is_array($request->psak_classification)) {
+            $request->merge([
+                'psak_classification' => implode(', ', $request->psak_classification),
+            ]);
+        }
+
+        $validated = $this->validateProposal($request, $project);
+
+        $project->update([
+            'proposal_number'          => $validated['proposal_number'],
+            'request_basis'            => $validated['request_basis'] ?? null,
+            'instructing_client_id'    => $validated['instructing_client_id'],
+            'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
+            'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
+            'service_fee'              => $validated['service_fee'],
+            'report_style'             => $validated['report_style'],
+            'sla_draft_days'           => $validated['sla_draft_days'],
+            'sla_final_days'           => $validated['sla_final_days'],
+            'proposal_purpose'         => $validated['proposal_purpose'],
+            'psak_classification'      => $validated['psak_classification'] ?? null,
+            'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
+            'is_public_company'        => $request->boolean('is_public_company'),
+        ]);
+
+        $project->intendedUsers()->sync($validated['intended_user_ids']);
+
+        // Cara paling aman untuk sinkronisasi objek saat edit: hapus semua
+        // baris lama, buat ulang dari input form. Karena ini masih status
+        // Draft (belum ada invoice/PDF resmi yang bergantung pada ID objek
+        // lama), tidak ada risiko data anak yang jadi yatim.
+        $project->valuationObjects()->delete();
+        $this->syncValuationObjects($project, $validated['objects']);
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.updated',
+            "Mengubah data proposal {$project->proposal_number}",
+            $project
+        );
+        
+        return redirect()
+            ->route('proposals.show', $project)
+            ->with('success', "Proposal {$project->proposal_number} berhasil diperbarui.");
     }
 
     /**
-     * Dipanggil saat klien SETUJU -> admin lanjut ke pemilihan skema termin.
+     * Hapus proposal. GUARD KETAT: hanya boleh selama status Draft DAN
+     * belum ada invoice sama sekali — supaya tidak ada jejak transaksi
+     * finansial yang hilang tanpa sengaja. Relasi valuationObjects &
+     * intendedUsers ikut terhapus otomatis lewat cascadeOnDelete di
+     * migration, tidak perlu dihapus manual di sini.
      */
+    public function destroy(Project $project)
+    {
+        if ($project->status !== Project::STATUS_DRAFT) {
+            abort(403, 'Hanya proposal berstatus Draft yang dapat dihapus.');
+        }
+
+        if ($project->invoices()->exists()) {
+            abort(403, 'Proposal ini sudah memiliki invoice dan tidak dapat dihapus. Batalkan invoice-nya terlebih dahulu jika diperlukan.');
+        }
+
+        $proposalNumber = $project->proposal_number;
+        \App\Helpers\AuditLogger::record('proposal.deleted', "Menghapus proposal {$proposalNumber}", $project);
+        $project->delete();
+
+        return redirect()
+            ->route('dashboard')
+            ->with('success', "Proposal {$proposalNumber} berhasil dihapus.");
+    }
+
+    /**
+     * Unduh proposal sebagai .docx (MASTER — bisa diedit staf untuk
+     * penyesuaian SPM). Teks baku mengikuti config/proposal_clauses.php.
+     */
+    public function exportWord(Project $project)
+    {
+        $builder = ProposalDocxBuilder::for($project);
+        $docx    = $builder->save();
+
+        return response()
+            ->download($docx, $builder->safeName() . '.docx')
+            ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * PDF proposal = hasil render LibreOffice atas .docx master (di atas),
+     * sehingga tata letak Word == PDF. ?view=1 -> tampil di browser.
+     */
+    public function exportPdf(Project $project, Request $request)
+    {
+        $builder = ProposalDocxBuilder::for($project);
+        $docx    = $builder->save();
+
+        try {
+            $pdf = DocxToPdf::convert($docx);
+        } finally {
+            @unlink($docx);
+        }
+
+        $name = $builder->safeName() . '.pdf';
+
+        $response = $request->boolean('view')
+            ? response()->file($pdf, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $name . '"',
+            ])
+            : response()->download($pdf, $name);
+
+        return $response->deleteFileAfterSend(true);
+    }
+
     public function markApproved(Project $project)
     {
         $project->update(['status' => Project::STATUS_WAITING_APPROVAL]);
 
         return back()->with('success', 'Proposal ditandai disetujui klien. Silakan buat Invoice DP.');
+    }
+
+    /**
+     * Validasi bersama untuk store() & update() — supaya aturan validasi
+     * tidak dobel-tulis dan berisiko berbeda antara create vs edit.
+     */
+    private function validateProposal(Request $request, ?Project $project = null): array
+    {
+        return $request->validate([
+            // Nomor proposal diinput MANUAL — sistem kantor pusat yang
+            // menerbitkan nomor resmi, jadi tidak di-generate di sini.
+            // Tetap wajib unik supaya tidak ada dua proyek bernomor sama.
+            'proposal_number'          => [
+                'required', 'string', 'max:255',
+                Rule::unique('projects', 'proposal_number')->ignore($project?->id),
+            ],
+            'request_basis'            => 'nullable|string|max:1000',
+            'instructing_client_id'    => 'required|exists:clients,id',
+            'intended_user_ids'        => 'required|array|min:1',
+            'intended_user_ids.*'      => 'exists:clients,id',
+            'service_fee'              => 'required|numeric|min:0',
+            'report_style'             => 'required|in:Long Report,Short Report',
+            // SLA diinput MANUAL dalam hari kerja — dua jangka waktu terpisah
+            // sesuai dokumen resmi (Draft/Resume, lalu Final setelah disetujui).
+            'sla_draft_days'           => 'required|integer|min:1|max:365',
+            'sla_final_days'           => 'required|integer|min:1|max:365',
+            'proposal_purpose'         => 'required|in:Jual Beli,Penjaminan Utang,Lelang,Pelaporan Keuangan',
+            'psak_classification'      => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|string|max:255',
+            'financial_reporting_date' => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|date',
+            'is_public_company'        => 'nullable|boolean',
+
+            'objects'                          => 'required|array|min:1',
+            'objects.*.asset_category'         => 'required|in:'
+                . 'Real Properti - Tanah,'
+                . 'Real Properti - Bangunan,'
+                . 'Real Properti - Tanah dan Bangunan,'
+                . 'Personal Properti - Mesin dan Peralatan,'
+                . 'Personal Properti - Kendaraan,'
+                . 'Personal Properti - Alat Berat,'
+                . 'Bisnis / Perusahaan,'
+                . 'Lainnya',
+            // Wajib diisi HANYA kalau kategori objek tersebut = "Lainnya".
+            'objects.*.custom_category' => 'nullable|required_if:objects.*.asset_category,Lainnya|string|max:255',
+            'objects.*.land_area'       => 'nullable|numeric|min:0',
+            'objects.*.building_area'   => 'nullable|numeric|min:0',
+            'objects.*.unit_quantity'   => 'nullable|integer|min:0',
+            'objects.*.location'        => 'required|string',
+            'objects.*.ownership_form'  => 'required|string|max:255',
+            'objects.*.owner_name'      => 'required|string|max:255',
+            'objects.*.notes'           => 'nullable|string',
+        ]);
+    }
+
+    private function syncValuationObjects(Project $project, array $objects): void
+    {
+        foreach ($objects as $index => $objectData) {
+            ProjectValuationObject::create([
+                'project_id'      => $project->id,
+                'sort_order'      => $index + 1,
+                'asset_category'  => $objectData['asset_category'],
+                'custom_category' => $objectData['asset_category'] === 'Lainnya'
+                    ? ($objectData['custom_category'] ?? null)
+                    : null,
+                'land_area'       => $objectData['land_area'] ?? null,
+                'building_area'   => $objectData['building_area'] ?? null,
+                'unit_quantity'   => $objectData['unit_quantity'] ?? null,
+                'location'        => $objectData['location'],
+                'ownership_form'  => $objectData['ownership_form'],
+                'owner_name'      => $objectData['owner_name'],
+                'notes'           => $objectData['notes'] ?? null,
+            ]);
+        }
+    }
+
+    private function summarizeAssetTypes(array $objects): string
+    {
+        $labels = collect($objects)
+            ->pluck('asset_category')
+            ->map(fn ($cat) => str_replace(['Real Properti - ', 'Personal Properti - '], '', $cat))
+            ->unique()
+            ->implode(', ');
+
+        return $labels ?: 'Lainnya';
+    }
+
+    private function summarizeAssetAddress(array $objects): string
+    {
+        return $objects[0]['location'] ?? '-';
     }
 }
