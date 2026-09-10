@@ -80,16 +80,13 @@
                 <dt class="text-gray-500">Biaya Jasa</dt>
                 <dd class="font-medium text-gray-900">Rp {{ number_format($project->total_fee, 0, ',', '.') }}</dd>
                 <dd class="text-gray-500 text-xs mt-0.5">
-                    @if ($project->fee_ppn_included)
-                        Sudah termasuk PPN
-                    @else
-                        Nilai dasar Rp {{ number_format($project->service_fee + ($project->transport_cost ?? 0), 0, ',', '.') }}
-                        + PPN Rp {{ number_format($project->fee_ppn_amount, 0, ',', '.') }}
+                    Fee Rp {{ number_format($project->fee_professional, 0, ',', '.') }}
+                    + PPN Rp {{ number_format($project->fee_ppn_amount, 0, ',', '.') }}
+                    @if (($project->transport_cost ?? 0) > 0)
+                        + Transport Rp {{ number_format($project->fee_transport_display, 0, ',', '.') }}
                     @endif
-                    @if ($project->fee_breakdown)
-                        · Rincian: Fee Rp {{ number_format($project->fee_professional, 0, ',', '.') }},
-                        Transport Rp {{ number_format($project->transport_cost ?? 0, 0, ',', '.') }}
-                    @endif
+                    · {{ $project->fee_ppn_included ? 'Fee sudah termasuk PPN' : 'PPN ditambahkan atas Fee' }}
+                    @if ($project->fee_breakdown) · ditampilkan sebagai rincian @endif
                 </dd>
             </div>
             <div>

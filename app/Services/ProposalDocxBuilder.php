@@ -639,7 +639,7 @@ class ProposalDocxBuilder
             $this->s->addText($this->cl['biaya_rincian_label'], $this->fBold, ['spaceBefore' => 80, 'spaceAfter' => 40, 'keepNext' => true]);
             $rows = [
                 ['Fee', $rp($p->fee_professional), false],
-                ['Transport', $rp($p->transport_cost ?? 0), false],
+                ['Transport', $rp($p->fee_transport_display), false],
                 ['PPN ' . $pct . '%', $rp($p->fee_ppn_amount), false],
                 ['Total', $rp($total), true],
             ];

@@ -83,16 +83,17 @@ class Project extends Model
      * =========================================================================
      * BIAYA JASA PENILAIAN
      *
-     * `service_fee` = nilai dasar yang diinput:
-     *  - Mode ALL-IN  : satu angka. Kalau fee_ppn_included=false, angka final
-     *    = service_fee × (1 + PPN). Kalau true, angka final = service_fee.
-     *  - Mode RINCIAN : service_fee = Fee jasa profesional saja (tanpa
-     *    transport, tanpa PPN). Total = (Fee + Transport) × (1 + PPN),
-     *    SELALU — flag fee_ppn_included di mode ini hanya mempengaruhi
-     *    kalimat caption, bukan angka.
+     * `service_fee` = FEE jasa profesional (nilai dasar yang diinput).
+     * PPN dikenakan HANYA atas Fee — Transport & Akomodasi adalah
+     * penggantian biaya (reimbursement), tidak dikenai PPN.
      *
-     * Semua turunan dihitung di sini supaya proposal .docx &
-     * invoice/kwitansi/dashboard konsisten.
+     *  - fee_ppn_included = true  : `service_fee` sudah termasuk PPN. Fee net
+     *    = service_fee / (1+rate); PPN = selisihnya; total tidak digross-up.
+     *  - fee_ppn_included = false : PPN ditambahkan di atas `service_fee`.
+     *
+     * total_fee (gross, dipakai proposal .docx + invoice/kwitansi/dashboard):
+     *   included : service_fee + transport
+     *   excluded : service_fee + (service_fee × rate) + transport
      * =========================================================================
      */
     public function getFeePpnRateAttribute(): float
@@ -100,51 +101,48 @@ class Project extends Model
         return (float) config('kjpp.ppn_rate', 0.11);
     }
 
-    /** Subtotal net (Fee + Transport), sebelum PPN. */
-    public function getFeeNetSubtotalAttribute(): float
+    /** Nilai PPN (Rupiah) — hanya atas Fee jasa profesional. */
+    public function getFeePpnAmountAttribute(): float
     {
-        $base      = (float) $this->service_fee;
-        $transport = (float) ($this->transport_cost ?? 0);
+        $base = (float) $this->service_fee;
+        $rate = $this->fee_ppn_rate;
 
-        if ($this->fee_breakdown) {
-            return round($base + $transport, 2);
-        }
+        return $this->fee_ppn_included
+            ? round($base - $base / (1 + $rate), 2)   // PPN yang sudah di dalam Fee
+            : round($base * $rate, 2);                 // PPN ditambahkan di atas Fee
+    }
 
-        // All-in: kalau sudah termasuk PPN, keluarkan PPN dari service_fee.
+    /** Komponen "Fee" (jasa profesional) NET pada tabel rincian. */
+    public function getFeeProfessionalAttribute(): float
+    {
+        $base = (float) $this->service_fee;
+
         return $this->fee_ppn_included
             ? round($base / (1 + $this->fee_ppn_rate), 2)
             : round($base, 2);
     }
 
-    /** Nilai PPN (Rupiah). */
-    public function getFeePpnAmountAttribute(): float
+    /** Nilai Transport & Akomodasi (sesuai input, tanpa PPN). */
+    public function getFeeTransportDisplayAttribute(): float
     {
-        // All-in + sudah termasuk PPN → PPN adalah bagian di dalam service_fee.
-        if (! $this->fee_breakdown && $this->fee_ppn_included) {
-            $base = (float) $this->service_fee;
-            return round($base - $base / (1 + $this->fee_ppn_rate), 2);
-        }
+        return round((float) ($this->transport_cost ?? 0), 2);
+    }
 
-        // Selain itu: PPN = rate × subtotal net.
-        return round($this->fee_net_subtotal * $this->fee_ppn_rate, 2);
+    /** Subtotal net = Fee net + Transport (sebelum PPN ditambahkan). */
+    public function getFeeNetSubtotalAttribute(): float
+    {
+        return round($this->fee_professional + $this->fee_transport_display, 2);
     }
 
     /** Total biaya final (gross) — angka besar di proposal & dasar penagihan. */
     public function getTotalFeeAttribute(): float
     {
-        if (! $this->fee_breakdown && $this->fee_ppn_included) {
-            return round((float) $this->service_fee, 2);
-        }
+        $base      = (float) $this->service_fee;
+        $transport = (float) ($this->transport_cost ?? 0);
 
-        return round($this->fee_net_subtotal + $this->fee_ppn_amount, 2);
-    }
-
-    /** Komponen "Fee" (jasa profesional) pada tabel rincian. */
-    public function getFeeProfessionalAttribute(): float
-    {
-        return $this->fee_breakdown
-            ? round((float) $this->service_fee, 2)
-            : round($this->fee_net_subtotal - (float) ($this->transport_cost ?? 0), 2);
+        return $this->fee_ppn_included
+            ? round($base + $transport, 2)
+            : round($base + $base * $this->fee_ppn_rate + $transport, 2);
     }
 
     public function instructingClient()

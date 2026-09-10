@@ -632,43 +632,41 @@
         const isBreakdown = document.getElementById('fee_breakdown').value === '1';
         document.getElementById('transport_cost_wrap').classList.toggle('hidden', !isBreakdown);
         document.getElementById('service_fee_label').textContent =
-            isBreakdown ? 'Fee Jasa Profesional (Rp) — tanpa transport & PPN' : 'Nilai Dasar Biaya (Rp)';
+            isBreakdown ? 'Fee Jasa Profesional (Rp)' : 'Nilai Biaya Jasa (Rp)';
         recalcFeeTotal();
     }
 
     function recalcFeeTotal() {
+        // PPN hanya atas Fee; Transport & Akomodasi = penggantian biaya (tanpa PPN).
         const PPN_PCT = +(PPN_RATE * 100).toFixed(2);
-        const base = parseInt(digits(document.getElementById('service_fee_raw').value) || '0', 10);
-        const transport = parseInt(digits(document.getElementById('transport_cost_raw').value) || '0', 10);
+        const base = parseInt(digits(document.getElementById('service_fee_raw').value) || '0', 10);  // Fee
+        const transportRaw = parseInt(digits(document.getElementById('transport_cost_raw').value) || '0', 10);
         const ppnIncluded = document.getElementById('fee_ppn_included').value === '1';
         const isBreakdown = document.getElementById('fee_breakdown').value === '1';
+        const transport = isBreakdown ? transportRaw : 0;
 
-        let net, ppn, total;
-        if (isBreakdown) {
-            net = base + transport;
-            ppn = net * PPN_RATE;
-            total = net + ppn;
-        } else if (ppnIncluded) {
-            total = base;
-            net = base / (1 + PPN_RATE);
-            ppn = base - net;
+        let feeNet, ppn, total;
+        if (ppnIncluded) {
+            feeNet = base / (1 + PPN_RATE);
+            ppn = base - feeNet;
+            total = base + transport;
         } else {
-            net = base;
+            feeNet = base;
             ppn = base * PPN_RATE;
-            total = base + ppn;
+            total = base + ppn + transport;
         }
 
-        document.getElementById('service_fee_hint').textContent = isBreakdown
-            ? 'Total = Fee + Transport + PPN ' + PPN_PCT + '%.'
-            : (ppnIncluded
-                ? 'Angka ini sudah dianggap termasuk PPN — angka final = angka ini.'
-                : 'Angka final = angka ini + PPN ' + PPN_PCT + '%.');
+        document.getElementById('service_fee_hint').textContent = ppnIncluded
+            ? 'Fee sudah termasuk PPN — di rincian Fee tampil net (dikurangi PPN). Transport tanpa PPN.'
+            : 'PPN ' + PPN_PCT + '% ditambahkan di atas Fee. Transport tanpa PPN.';
 
         const preview = document.getElementById('fee_total_preview');
         if (!base && !transport) { preview.textContent = ''; return; }
         preview.textContent = isBreakdown
-            ? 'Perkiraan: Fee Rp ' + rupiahFmt(base) + ' + Transport Rp ' + rupiahFmt(transport)
-              + ' + PPN ' + PPN_PCT + '% Rp ' + rupiahFmt(ppn) + ' = Total Rp ' + rupiahFmt(total)
+            ? 'Perkiraan: Fee Rp ' + rupiahFmt(feeNet)
+              + (transport ? ' + Transport Rp ' + rupiahFmt(transport) : '')
+              + ' + PPN ' + PPN_PCT + '% Rp ' + rupiahFmt(ppn)
+              + ' = Total Rp ' + rupiahFmt(total)
             : 'Perkiraan total (ditagihkan): Rp ' + rupiahFmt(total) + '  ·  PPN Rp ' + rupiahFmt(ppn);
     }
 
