@@ -92,7 +92,7 @@ class ProjectController extends Controller
 
         public function show(Project $project)
     {
-        $project->load('instructingClient', 'intendedUsers', 'invoices', 'valuationObjects');
+        $project->load('instructingClient', 'intendedUsers', 'invoices', 'valuationObjects', 'signedBy');
 
         $activeUsers = User::where('is_active', true)
             ->orderBy('name')

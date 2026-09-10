@@ -10,12 +10,35 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role_id', 'is_active'])]
+#[Fillable([
+    'name', 'email', 'password', 'role_id', 'is_active',
+    // Biodata profesi (lihat migration 2024_01_10_000001) — dipakai untuk
+    // mengisi blok tanda tangan & Penjelasan Status Penilai pada proposal
+    // saat user ini jadi penandatangan.
+    'jabatan', 'partner_status', 'mappi_no', 'rmk_no', 'izin_menkeu_no',
+    'sk_menkeu_no', 'sttd_ojk_no', 'ojk_kep_no', 'klasifikasi',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * Pilihan Jabatan (biodata). Hanya "Penanggung Jawab" yang boleh
+     * dipilih sebagai penandatangan proposal (lihat scopePenanggungJawab).
+     */
+    public const JABATAN_PELAKSANA_INSPEKSI = 'Pelaksana Inspeksi';
+    public const JABATAN_PENILAI            = 'Penilai';
+    public const JABATAN_ADMIN              = 'Admin';
+    public const JABATAN_PENANGGUNG_JAWAB   = 'Penanggung Jawab';
+
+    public const JABATAN_OPTIONS = [
+        self::JABATAN_PELAKSANA_INSPEKSI,
+        self::JABATAN_PENILAI,
+        self::JABATAN_ADMIN,
+        self::JABATAN_PENANGGUNG_JAWAB,
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -34,6 +57,16 @@ class User extends Authenticatable
     public function role()
     {
         return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * User yang boleh dipilih sebagai penandatangan proposal:
+     * jabatan "Penanggung Jawab" DAN akun masih aktif.
+     */
+    public function scopePenanggungJawab($query)
+    {
+        return $query->where('jabatan', self::JABATAN_PENANGGUNG_JAWAB)
+                     ->where('is_active', true);
     }
 
     /**

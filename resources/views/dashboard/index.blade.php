@@ -85,7 +85,7 @@
                         <td class="px-4 py-3 text-gray-500">{{ $project->proposal_purpose }}</td>
                         <td class="px-4 py-3 text-gray-500">{{ $project->asset_type }}</td>
                         <td class="px-4 py-3 text-right text-gray-700">
-                            Rp {{ number_format($project->service_fee, 0, ',', '.') }}
+                            Rp {{ number_format($project->total_fee, 0, ',', '.') }}
                         </td>
                         <td class="px-4 py-3">
                             <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $project->status_badge_classes }}">

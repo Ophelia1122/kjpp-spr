@@ -48,6 +48,9 @@ class Project extends Model
         'asset_type',
         'asset_address',
         'service_fee',
+        'fee_ppn_included',
+        'fee_breakdown',
+        'transport_cost',
         'report_style',
         'sla_draft_days',
         'sla_final_days',
@@ -57,6 +60,8 @@ class Project extends Model
         'is_public_company',
         'assigned_appraiser',
         'assigned_appraiser_id',
+        'signed_by_user_id',
+        'approver_name',
         'survey_date',
         'final_report_number',
         'status',
@@ -64,12 +69,83 @@ class Project extends Model
 
     protected $casts = [
         'service_fee'              => 'decimal:2',
+        'transport_cost'           => 'decimal:2',
+        'fee_ppn_included'         => 'boolean',
+        'fee_breakdown'            => 'boolean',
         'sla_draft_days'           => 'integer',
         'sla_final_days'           => 'integer',
         'survey_date'               => 'date',
         'financial_reporting_date'  => 'date',
         'is_public_company'         => 'boolean',
     ];
+
+    /**
+     * =========================================================================
+     * BIAYA JASA PENILAIAN
+     *
+     * `service_fee` = nilai dasar yang diinput:
+     *  - Mode ALL-IN  : satu angka. Kalau fee_ppn_included=false, angka final
+     *    = service_fee × (1 + PPN). Kalau true, angka final = service_fee.
+     *  - Mode RINCIAN : service_fee = Fee jasa profesional saja (tanpa
+     *    transport, tanpa PPN). Total = (Fee + Transport) × (1 + PPN),
+     *    SELALU — flag fee_ppn_included di mode ini hanya mempengaruhi
+     *    kalimat caption, bukan angka.
+     *
+     * Semua turunan dihitung di sini supaya proposal .docx &
+     * invoice/kwitansi/dashboard konsisten.
+     * =========================================================================
+     */
+    public function getFeePpnRateAttribute(): float
+    {
+        return (float) config('kjpp.ppn_rate', 0.11);
+    }
+
+    /** Subtotal net (Fee + Transport), sebelum PPN. */
+    public function getFeeNetSubtotalAttribute(): float
+    {
+        $base      = (float) $this->service_fee;
+        $transport = (float) ($this->transport_cost ?? 0);
+
+        if ($this->fee_breakdown) {
+            return round($base + $transport, 2);
+        }
+
+        // All-in: kalau sudah termasuk PPN, keluarkan PPN dari service_fee.
+        return $this->fee_ppn_included
+            ? round($base / (1 + $this->fee_ppn_rate), 2)
+            : round($base, 2);
+    }
+
+    /** Nilai PPN (Rupiah). */
+    public function getFeePpnAmountAttribute(): float
+    {
+        // All-in + sudah termasuk PPN → PPN adalah bagian di dalam service_fee.
+        if (! $this->fee_breakdown && $this->fee_ppn_included) {
+            $base = (float) $this->service_fee;
+            return round($base - $base / (1 + $this->fee_ppn_rate), 2);
+        }
+
+        // Selain itu: PPN = rate × subtotal net.
+        return round($this->fee_net_subtotal * $this->fee_ppn_rate, 2);
+    }
+
+    /** Total biaya final (gross) — angka besar di proposal & dasar penagihan. */
+    public function getTotalFeeAttribute(): float
+    {
+        if (! $this->fee_breakdown && $this->fee_ppn_included) {
+            return round((float) $this->service_fee, 2);
+        }
+
+        return round($this->fee_net_subtotal + $this->fee_ppn_amount, 2);
+    }
+
+    /** Komponen "Fee" (jasa profesional) pada tabel rincian. */
+    public function getFeeProfessionalAttribute(): float
+    {
+        return $this->fee_breakdown
+            ? round((float) $this->service_fee, 2)
+            : round($this->fee_net_subtotal - (float) ($this->transport_cost ?? 0), 2);
+    }
 
     public function instructingClient()
     {
@@ -85,6 +161,17 @@ class Project extends Model
     public function assignedAppraiser()
     {
         return $this->belongsTo(User::class, 'assigned_appraiser_id');
+    }
+
+    /**
+     * User (jabatan "Penanggung Jawab") yang menandatangani proposal.
+     * Biodata-nya (nama + nomor izin MAPPI/RMK/Menkeu/OJK/Klasifikasi)
+     * mengisi blok tanda tangan .docx/PDF. Null = pakai penandatangan
+     * baku dari config('kjpp.signatory').
+     */
+    public function signedBy()
+    {
+        return $this->belongsTo(User::class, 'signed_by_user_id');
     }
     
     /**

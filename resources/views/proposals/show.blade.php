@@ -77,8 +77,39 @@
                 </dd>
             </div>
             <div>
-                <dt class="text-gray-500">Fee Jasa</dt>
-                <dd class="font-medium text-gray-900">Rp {{ number_format($project->service_fee, 0, ',', '.') }}</dd>
+                <dt class="text-gray-500">Biaya Jasa</dt>
+                <dd class="font-medium text-gray-900">Rp {{ number_format($project->total_fee, 0, ',', '.') }}</dd>
+                <dd class="text-gray-500 text-xs mt-0.5">
+                    @if ($project->fee_ppn_included)
+                        Sudah termasuk PPN
+                    @else
+                        Nilai dasar Rp {{ number_format($project->service_fee + ($project->transport_cost ?? 0), 0, ',', '.') }}
+                        + PPN Rp {{ number_format($project->fee_ppn_amount, 0, ',', '.') }}
+                    @endif
+                    @if ($project->fee_breakdown)
+                        · Rincian: Fee Rp {{ number_format($project->fee_professional, 0, ',', '.') }},
+                        Transport Rp {{ number_format($project->transport_cost ?? 0, 0, ',', '.') }}
+                    @endif
+                </dd>
+            </div>
+            <div>
+                <dt class="text-gray-500">Penandatangan Proposal</dt>
+                @if ($project->signedBy)
+                    <dd class="font-medium text-gray-900">{{ $project->signedBy->name }}</dd>
+                    <dd class="text-gray-500 text-xs mt-0.5">
+                        {{ $project->signedBy->partner_status ?: config('kjpp.signatory.title') }} · biodata dari akun pengguna
+                    </dd>
+                @else
+                    <dd class="font-medium text-gray-900">{{ config('kjpp.signatory.name') }}</dd>
+                    <dd class="text-gray-500 text-xs mt-0.5">Penandatangan baku kantor (belum dipilih di proposal)</dd>
+                @endif
+            </div>
+            <div>
+                <dt class="text-gray-500">Pihak yang Menyetujui</dt>
+                <dd class="font-medium text-gray-900">{{ $project->approver_name ?: $project->instructingClient->client_name }}</dd>
+                @unless ($project->approver_name)
+                    <dd class="text-gray-500 text-xs mt-0.5">Otomatis = nama Pemberi Tugas (belum diisi manual)</dd>
+                @endunless
             </div>
         </dl>
     </div>

@@ -157,10 +157,9 @@
 
 {{-- ===================== FOOTER (berulang tiap halaman) ===================== --}}
 <div class="pagefoot">
-    {{ $foot['head_office'] }}<br>
-    {{ $foot['phone'] }}<br>
-    {{ $foot['website'] }} &nbsp;&nbsp; {{ $foot['emails'] }}<br>
-    {{ $foot['branches'] }}
+    @foreach (($foot['lines'] ?? []) as $line)
+        {{ $line }}<br>
+    @endforeach
     <div class="pg">Halaman <span class="pageno"></span></div>
 </div>
 

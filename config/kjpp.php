@@ -10,7 +10,8 @@ return [
 
     // Font body dokumen proposal (.docx & hasil PDF-nya). Helvetica ≈ Arial
     // di Word/LibreOffice, jadi pakai 'Arial' untuk hasil yang identik.
-    'pdf_font'        => 'Arial',
+    'pdf_font'        => 'Arial Narrow',
+    'pdf_font_size'   => 11,   // ukuran font isi (pt); judul bab = +2
 
     // Path binary LibreOffice untuk konversi .docx -> .pdf (Word = master).
     // Lokal Windows: full path soffice.exe. Docker/Linux: cukup 'soffice'.
@@ -21,6 +22,9 @@ return [
     'kepmenkeu_no'    => '722/KM.1/2015 tanggal 09 September 2015',
     'sttd_ojk_no'     => 'S-859/PM.223/2015 tanggal 17 November 2015',
     'npwp'            => '02.837.345.4-017.000',
+
+    // Tarif PPN yang berlaku (untuk perhitungan Biaya Jasa Penilaian).
+    'ppn_rate'        => 0.11,
 
     // Penilai Publik penanggung jawab / penandatangan proposal (baku).
     'signatory' => [
@@ -41,13 +45,18 @@ return [
         'account_name'   => 'KJPP Sugianto Prasodjo dan Rekan',
     ],
 
-    // Blok footer yang tercetak di setiap halaman proposal (baku).
+    // Blok footer alamat kantor — dicetak rata tengah di footer HALAMAN 1
+    // proposal (halaman 2+ pakai gambar public/images/footer-proposal.png).
+    // Tiap elemen array = satu baris.
     'footer' => [
-        'head_office' => 'Head Office: 18 Office Park 3rd floor Unit A-3E, Jl. TB Simatupang, No. 18 Jakarta 12520',
-        'phone'       => 'Telp. (021) 22708555, 22708666, 22708777   Fax (021) 22708288',
-        'website'     => 'Website : www.kjpp-spr.co.id',
-        'emails'      => 'E-mail: admin.pusat@kjpp-spr.co.id ; sugiantodanrekan@yahoo.co.id',
-        'branches'    => 'Branch Office: Denpasar (PS), Makassar (P), Semarang (PS), Pontianak (PS), Surabaya (PS), Bandung (P), Cirebon (PS), Lampung (P), Palembang (P), Sukoharjo-Solo (PS), Serang (P), Karawang (P), Manado (PS), Medan (PS)',
+        'lines' => [
+            'Head Office: 18 Office Park 3rd floor Unit A-3E, Jl. TB Simatupang, No. 18 Jakarta 12520',
+            'Telp. (021) 22708555, 22708666, 22708777 Fax (021) 22708288',
+            'Website : www.kjpp-spr.co.id',
+            'E-mail: admin.pusat@kjpp-spr.co.id ; sugiantodanrekan@yahoo.co.id',
+            'Branch Office: Denpasar (PS), Makassar (P), Semarang (PS), Pontianak (PS),  Surabaya (PS), Bandung (P),',
+            'Cirebon (PS), Lampung (P), Palembang (P), Sukoharjo-Solo (PS), Serang (P), Karawang (P), Manado (PS), Medan (PS)',
+        ],
     ],
 
     // Teks baku klausul standar — dipertahankan untuk kompatibilitas,

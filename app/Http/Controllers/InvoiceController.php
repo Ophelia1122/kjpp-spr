@@ -22,8 +22,9 @@ class InvoiceController extends Controller
             'invoice_date'      => 'nullable|date',
         ]);
 
+        // total_fee = angka final (sudah termasuk PPN & transport bila ada).
         $amount = round(
-            $project->service_fee * ($validated['dp_percentage'] / 100),
+            $project->total_fee * ($validated['dp_percentage'] / 100),
             2
         );
 
@@ -76,7 +77,7 @@ class InvoiceController extends Controller
             ->where('status', Invoice::STATUS_PAID)
             ->sum('amount');
 
-        $remaining = round($project->service_fee - $paidDp, 2);
+        $remaining = round($project->total_fee - $paidDp, 2);
 
         $invoice = Invoice::create([
             'project_id'       => $project->id,

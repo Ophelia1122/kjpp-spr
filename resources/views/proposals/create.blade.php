@@ -35,6 +35,39 @@
             </p>
         </div>
 
+        {{-- ===================== PENANDATANGAN PROPOSAL ===================== --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Penandatangan Proposal</label>
+            <select name="signed_by_user_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                <option value="">-- Penandatangan baku kantor ({{ config('kjpp.signatory.name') }}) --</option>
+                @foreach ($signers as $signer)
+                    <option value="{{ $signer->id }}" @selected(old('signed_by_user_id') == $signer->id)>{{ $signer->name }}</option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-gray-400">
+                Daftar diambil dari pengguna aktif berjabatan <span class="font-medium">Penanggung Jawab</span>.
+                Nama &amp; nomor izin (MAPPI, RMK, Izin Menkeu, STTD OJK, Klasifikasi) pada blok tanda tangan
+                proposal mengikuti biodata pengguna yang dipilih. Kosongkan untuk memakai penandatangan baku.
+            </p>
+            @if ($signers->isEmpty())
+                <p class="mt-1 text-xs text-amber-600">
+                    Belum ada pengguna aktif berjabatan &ldquo;Penanggung Jawab&rdquo;. Lengkapi lewat menu Kelola Pengguna.
+                </p>
+            @endif
+        </div>
+
+        {{-- ===================== PIHAK YANG MENYETUJUI ===================== --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Pihak yang Menyetujui</label>
+            <input type="text" name="approver_name" value="{{ old('approver_name') }}"
+                   placeholder="Kosongkan = otomatis pakai nama Pemberi Tugas"
+                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+            <p class="mt-1 text-xs text-gray-400">
+                Nama pihak pada kolom &ldquo;Menyetujui,&rdquo; di blok tanda tangan. Isi bila yang menyetujui
+                berbeda dari Pemberi Tugas (mis. bank, sementara Pemberi Tugas-nya PT — atau sebaliknya).
+            </p>
+        </div>
+
         {{-- ===================== PEMBERI TUGAS (AJAX COMBOBOX) ===================== --}}
         <div class="relative">
             <label class="block text-sm font-medium text-gray-700">Nama Klien (Pemberi Tugas)</label>
@@ -144,12 +177,45 @@
 
         <hr>
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Nilai Penawaran / Fee Appraisal (Rp)</label>
-            <input type="text" id="service_fee_display" inputmode="numeric" autocomplete="off" required
-                   placeholder="Contoh: 10.000.000"
-                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-            <input type="hidden" name="service_fee" id="service_fee_raw">
+        {{-- ===================== BIAYA JASA PENILAIAN ===================== --}}
+        <div class="space-y-4 rounded-md border border-gray-200 p-4">
+            <p class="text-sm font-medium text-gray-700">Biaya Jasa Penilaian</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Status PPN</label>
+                    <select name="fee_ppn_included" id="fee_ppn_included" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="1" @selected(old('fee_ppn_included', '1') == '1')>Sudah termasuk PPN</option>
+                        <option value="0" @selected(old('fee_ppn_included') === '0')>Belum termasuk PPN (11%)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Format Biaya</label>
+                    <select name="fee_breakdown" id="fee_breakdown" onchange="toggleFeeBreakdown()" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="0" @selected(old('fee_breakdown', '0') == '0')>All-in (langsung)</option>
+                        <option value="1" @selected(old('fee_breakdown') === '1')>Rincian (breakdown)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700" id="service_fee_label">Nilai Dasar Biaya (Rp)</label>
+                <input type="text" id="service_fee_display" inputmode="numeric" autocomplete="off" required
+                       placeholder="Contoh: 10.000.000"
+                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                <input type="hidden" name="service_fee" id="service_fee_raw">
+                <p class="mt-1 text-xs text-gray-400" id="service_fee_hint"></p>
+            </div>
+
+            <div id="transport_cost_wrap" class="hidden">
+                <label class="block text-sm font-medium text-gray-700">Biaya Transport &amp; Akomodasi (Rp)</label>
+                <input type="text" id="transport_cost_display" inputmode="numeric" autocomplete="off"
+                       placeholder="Contoh: 6.000.000"
+                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                <input type="hidden" name="transport_cost" id="transport_cost_raw">
+            </div>
+
+            <p class="text-sm text-gray-600" id="fee_total_preview"></p>
         </div>
 
         <hr>
@@ -540,34 +606,86 @@
     }
 
     // ============================================================
-    // INPUT MASKING — Fee Appraisal (separator ribuan otomatis)
+    // INPUT MASKING — Biaya (separator ribuan) + rincian PPN/transport
     // ============================================================
-    (function () {
-        const displayInput = document.getElementById('service_fee_display');
-        const rawInput = document.getElementById('service_fee_raw');
+    const PPN_RATE = {{ (float) config('kjpp.ppn_rate', 0.11) }};
 
-        function formatRupiah(value) {
-            const digitsOnly = value.replace(/\D/g, '');
-            if (!digitsOnly) return '';
-            return new Intl.NumberFormat('id-ID').format(parseInt(digitsOnly, 10));
+    function rupiahFmt(n) { return new Intl.NumberFormat('id-ID').format(Math.round(n)); }
+    function digits(v) { return (v || '').replace(/\D/g, ''); }
+
+    function maskMoney(displayId, rawId, onChange) {
+        const d = document.getElementById(displayId);
+        const r = document.getElementById(rawId);
+        if (!d) return;
+        d.addEventListener('input', () => {
+            const only = digits(d.value);
+            d.value = only ? rupiahFmt(parseInt(only, 10)) : '';
+            r.value = only;
+            if (onChange) onChange();
+        });
+    }
+
+    function toggleFeeBreakdown() {
+        const isBreakdown = document.getElementById('fee_breakdown').value === '1';
+        document.getElementById('transport_cost_wrap').classList.toggle('hidden', !isBreakdown);
+        document.getElementById('service_fee_label').textContent =
+            isBreakdown ? 'Fee Jasa Profesional (Rp) — tanpa transport & PPN' : 'Nilai Dasar Biaya (Rp)';
+        recalcFeeTotal();
+    }
+
+    function recalcFeeTotal() {
+        const PPN_PCT = +(PPN_RATE * 100).toFixed(2);
+        const base = parseInt(digits(document.getElementById('service_fee_raw').value) || '0', 10);
+        const transport = parseInt(digits(document.getElementById('transport_cost_raw').value) || '0', 10);
+        const ppnIncluded = document.getElementById('fee_ppn_included').value === '1';
+        const isBreakdown = document.getElementById('fee_breakdown').value === '1';
+
+        let net, ppn, total;
+        if (isBreakdown) {
+            // Rincian: base = Fee saja. Total = (Fee + Transport) + PPN.
+            net = base + transport;
+            ppn = net * PPN_RATE;
+            total = net + ppn;
+        } else if (ppnIncluded) {
+            total = base;                              // sudah gross
+            net = base / (1 + PPN_RATE);
+            ppn = base - net;
+        } else {
+            net = base;
+            ppn = base * PPN_RATE;
+            total = base + ppn;
         }
 
-        displayInput.addEventListener('input', (e) => {
-            const digitsOnly = e.target.value.replace(/\D/g, '');
-            e.target.value = formatRupiah(e.target.value);
-            rawInput.value = digitsOnly;
-        });
+        document.getElementById('service_fee_hint').textContent = isBreakdown
+            ? 'Total = Fee + Transport + PPN ' + PPN_PCT + '%.'
+            : (ppnIncluded
+                ? 'Angka ini sudah dianggap termasuk PPN — angka final = angka ini.'
+                : 'Angka final = angka ini + PPN ' + PPN_PCT + '%.');
 
-        displayInput.closest('form').addEventListener('submit', (e) => {
-            const digitsOnly = displayInput.value.replace(/\D/g, '');
-            rawInput.value = digitsOnly;
-            if (!digitsOnly) {
-                e.preventDefault();
-                displayInput.classList.add('border-red-400');
-                displayInput.focus();
-            }
-        });
-    })();
+        const preview = document.getElementById('fee_total_preview');
+        if (!base && !transport) { preview.textContent = ''; return; }
+        preview.textContent = isBreakdown
+            ? 'Perkiraan: Fee Rp ' + rupiahFmt(base) + ' + Transport Rp ' + rupiahFmt(transport)
+              + ' + PPN ' + PPN_PCT + '% Rp ' + rupiahFmt(ppn) + ' = Total Rp ' + rupiahFmt(total)
+            : 'Perkiraan total (ditagihkan): Rp ' + rupiahFmt(total) + '  ·  PPN Rp ' + rupiahFmt(ppn);
+    }
+
+    maskMoney('service_fee_display', 'service_fee_raw', recalcFeeTotal);
+    maskMoney('transport_cost_display', 'transport_cost_raw', recalcFeeTotal);
+    document.getElementById('fee_ppn_included').addEventListener('change', recalcFeeTotal);
+
+    document.getElementById('service_fee_display').closest('form').addEventListener('submit', (e) => {
+        const only = digits(document.getElementById('service_fee_display').value);
+        document.getElementById('service_fee_raw').value = only;
+        document.getElementById('transport_cost_raw').value = digits(document.getElementById('transport_cost_display').value);
+        if (!only) {
+            e.preventDefault();
+            document.getElementById('service_fee_display').classList.add('border-red-400');
+            document.getElementById('service_fee_display').focus();
+        }
+    });
+
+    toggleFeeBreakdown();
 
     // ============================================================
     // TOGGLE FIELD LK PROPERTI + HINT DASAR NILAI

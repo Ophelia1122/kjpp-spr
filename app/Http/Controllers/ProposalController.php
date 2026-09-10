@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\ProjectValuationObject;
+use App\Models\User;
 use App\Services\DocxToPdf;
 use App\Services\ProposalDocxBuilder;
 use Illuminate\Http\Request;
@@ -13,7 +14,9 @@ class ProposalController extends Controller
 {
     public function create()
     {
-        return view('proposals.create');
+        return view('proposals.create', [
+            'signers' => User::penanggungJawab()->orderBy('name')->get(),
+        ]);
     }
 
     public function store(Request $request)
@@ -30,9 +33,14 @@ class ProposalController extends Controller
             'proposal_number'          => $validated['proposal_number'],
             'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
+            'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
+            'approver_name'            => $validated['approver_name'] ?? null,
             'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
             'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
+            'fee_ppn_included'         => $request->boolean('fee_ppn_included'),
+            'fee_breakdown'            => $request->boolean('fee_breakdown'),
+            'transport_cost'          => $request->boolean('fee_breakdown') ? ($validated['transport_cost'] ?? 0) : null,
             'report_style'             => $validated['report_style'],
             'sla_draft_days'           => $validated['sla_draft_days'],
             'sla_final_days'           => $validated['sla_final_days'],
@@ -71,9 +79,21 @@ class ProposalController extends Controller
             abort(403, 'Proposal hanya bisa diedit selama masih berstatus Draft Proposal.');
         }
 
-        $project->load('instructingClient', 'intendedUsers', 'valuationObjects');
+        $project->load('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy');
 
-        return view('proposals.edit', compact('project'));
+        // Daftar penandatangan = Penanggung Jawab aktif. Kalau proposal ini
+        // sudah punya penandatangan yang kini tidak lagi memenuhi syarat
+        // (mis. jabatannya berubah), tetap sertakan supaya nilainya tidak
+        // hilang diam-diam saat form disimpan ulang.
+        $signers = User::penanggungJawab()->orderBy('name')->get();
+        if ($project->signedBy && ! $signers->contains('id', $project->signedBy->id)) {
+            $signers->push($project->signedBy);
+        }
+
+        return view('proposals.edit', [
+            'project' => $project,
+            'signers' => $signers,
+        ]);
     }
 
     public function update(Request $request, Project $project)
@@ -94,9 +114,14 @@ class ProposalController extends Controller
             'proposal_number'          => $validated['proposal_number'],
             'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
+            'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
+            'approver_name'            => $validated['approver_name'] ?? null,
             'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
             'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
+            'fee_ppn_included'         => $request->boolean('fee_ppn_included'),
+            'fee_breakdown'            => $request->boolean('fee_breakdown'),
+            'transport_cost'          => $request->boolean('fee_breakdown') ? ($validated['transport_cost'] ?? 0) : null,
             'report_style'             => $validated['report_style'],
             'sla_draft_days'           => $validated['sla_draft_days'],
             'sla_final_days'           => $validated['sla_final_days'],
@@ -216,9 +241,24 @@ class ProposalController extends Controller
             ],
             'request_basis'            => 'nullable|string|max:1000',
             'instructing_client_id'    => 'required|exists:clients,id',
+            // Penandatangan proposal — opsional. Kosong = pakai penandatangan
+            // baku config('kjpp.signatory'). Pilihan di form sudah dibatasi ke
+            // user aktif berjabatan "Penanggung Jawab"; di sini cukup pastikan
+            // user-nya ada (tidak memblokir edit lama bila jabatannya berubah).
+            'signed_by_user_id'        => 'nullable|exists:users,id',
+            // Pihak yang menyetujui (blok tanda tangan kolom kanan) — bisa
+            // bank atau klien (PT), tergantung kasus. Kosong = pakai nama
+            // Pemberi Tugas.
+            'approver_name'            => 'nullable|string|max:255',
             'intended_user_ids'        => 'required|array|min:1',
             'intended_user_ids.*'      => 'exists:clients,id',
             'service_fee'              => 'required|numeric|min:0',
+            // Biaya: nilai dasar (service_fee) + status PPN + mode tampil +
+            // komponen transport (mode rincian). Turunan (total, PPN, dll)
+            // dihitung di accessor Project.
+            'fee_ppn_included'         => 'nullable|boolean',
+            'fee_breakdown'            => 'nullable|boolean',
+            'transport_cost'          => 'nullable|numeric|min:0',
             'report_style'             => 'required|in:Long Report,Short Report',
             // SLA diinput MANUAL dalam hari kerja — dua jangka waktu terpisah
             // sesuai dokumen resmi (Draft/Resume, lalu Final setelah disetujui).

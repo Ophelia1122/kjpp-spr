@@ -68,6 +68,16 @@ return [
     // ------------------------------------------------------------------
     // 4. Setelah tabel Obyek Penilaian
     // ------------------------------------------------------------------
+    // Slot: :nama_sertifikat = daftar "Atas Nama" objek penilaian (form),
+    //       :pemberi_tugas   = nama Pemberi Tugas.
+    'post_objek_hubungan' =>
+        'Nama yang tercantum dalam dokumen kepemilikan atas objek penilaian adalah :nama_sertifikat, '
+        . 'sedangkan Pemberi Tugas dalam penugasan ini adalah :pemberi_tugas. Berdasarkan dokumen dan '
+        . 'informasi yang disampaikan kepada Penilai, terdapat hubungan kepemilikan/penguasaan atas '
+        . 'objek penilaian dimaksud oleh Pemberi Tugas. Penilai tidak melakukan verifikasi hukum secara '
+        . 'independen terhadap hubungan hukum dimaksud dan menggunakan dokumen serta informasi yang '
+        . 'disampaikan oleh Pemberi Tugas sebagai dasar dalam penugasan ini.',
+
     'post_objek' =>
         'Kami menegaskan bahwa seluruh pimpinan, rekan, dan staf KJPP Sugianto Prasodjo dan Rekan '
         . 'tidak bertanggung jawab atas kebenaran data dan informasi yang disampaikan oleh Pemberi '
@@ -171,6 +181,8 @@ return [
     // 9. Tingkat Kedalaman Investigasi
     // ------------------------------------------------------------------
     'tki_intro' => 'Penilaian ini dilakukan dengan batasan investigasi sebagai berikut:',
+    // Slot :alasan_limited pada butir "limited inspection".
+    'tki_alasan_limited_placeholder' => '----sebutkan alasannya----',
     'tki_items' => [
         'Data dan informasi atas objek penilaian dan kelengkapannya kami peroleh dari pemberi tugas '
         . 'dan/atau pemilik aset/properti serta pihak terkait lainnya. Pemberi Tugas dan Pengguna '
@@ -181,6 +193,20 @@ return [
         'Inspeksi dilakukan dengan disertai surat tugas atau persetujuan inspeksi serta dilengkapi '
         . 'berita acara inspeksi yang ditandatangani oleh Pemberi Tugas dan/atau pemilik objek atau '
         . 'pihak yang dikuasakan.',
+        'Kami akan melakukan verifikasi terhadap keseluruhan atau bagian dari objek penilaian, yang '
+        . 'diperlukan dan dianggap penting dalam pelaksanaan penilaian. Bila diketahui '
+        . 'pemeriksaan/verifikasi tidak dapat dilakukan atau memiliki keterbatasan, maka hal-hal '
+        . 'tersebut akan dinyatakan dalam berita acara perubahan Surat Perjanjian Kerja (SPK) yang '
+        . 'ditandatangani oleh Penilai, Pemberi Tugas dan/atau Pemilik Objek Penilaian.',
+        'Penilaian ini dilakukan dengan tingkat kedalaman investigasi yang terbatas (limited '
+        . 'inspection), di mana penilai tidak melakukan pemeriksaan fisik secara menyeluruh terhadap '
+        . 'seluruh bagian aset karena :alasan_limited. Data dan informasi yang digunakan dalam '
+        . 'penilaian ini sebagian besar bersumber dari keterangan Pemberi Tugas atau pihak terkait, '
+        . 'serta dokumen pendukung yang disampaikan kepada penilai, dan tidak diverifikasi secara '
+        . 'independen kecuali dinyatakan lain. Oleh karena itu, nilai yang disajikan dalam laporan ini '
+        . 'diasumsikan mencerminkan kondisi aset sebagaimana diinformasikan dan diamati secara visual, '
+        . 'serta tidak memperhitungkan potensi kerusakan tersembunyi, cacat internal, atau '
+        . 'ketidaksesuaian data yang tidak dapat diidentifikasi dalam penilaian terbatas ini.',
         'Bila ditemukan adanya batasan tingkat kedalaman investigasi, maka inspeksi kami lakukan '
         . 'secara sampling. Sedangkan jika aset yang di inspeksi dinformasikan tidak dapat diperiksa, '
         . 'maka hal tersebut akan dicatatkan sebagai kondisi pembatas yang berhubungan dengan asumsi '
@@ -191,11 +217,72 @@ return [
         . 'Pemberi Tugas dan/atau Pemilik Objek Penilaian.',
         'Apabila inspeksi lapangan tidak dapat dilakukan karena keberadaan objek penilaian tidak '
         . 'diketahui, maka penugasan dimaksud tidak dapat diteruskan atau batal.',
-        'Penilaian ini menggunakan luas objek penilaian sebagaimana tercantum dalam sertipikat. '
-        . 'Penilai hanya melakukan verifikasi terbatas pada bagian tertentu yang dapat diidentifikasi '
-        . 'secara fisik, tanpa melakukan pengukuran atas keseluruhan tanah dimaksud. Dengan demikian, '
-        . 'kebenaran luas objek penilaian sepenuhnya menjadi tanggung jawab Pemberi Tugas/Pemilik.',
-        'TKI lainnya.',
+        'Penilaian ini menggunakan luas tanah sebagaimana tercantum dalam sertipikat tanah. Penilai '
+        . 'hanya melakukan verifikasi terbatas pada bagian tertentu yang dapat diidentifikasi secara '
+        . 'fisik, tanpa melakukan pengukuran atas keseluruhan tanah dimaksud. Dengan demikian, '
+        . 'kebenaran luas tanah sepenuhnya menjadi tanggung jawab Pemberi Tugas/Pemilik.',
+    ],
+    // Blok TKI tambahan per jenis aset (muncul mengikuti kategori objek
+    // yang ada di proposal). Masing-masing = daftar paragraf.
+    'tki_bangunan' => [
+        'Penilaian atas spesifikasi bangunan didasarkan semata-mata pada hasil observasi visual yang '
+        . 'dapat diamati secara langsung. Penilai tidak melakukan pemeriksaan teknis maupun pengujian '
+        . 'laboratorium terhadap pondasi, struktur, ataupun tingkat kekerasan dinding bangunan. '
+        . 'Penilaian ini dilakukan dengan metode observasi non-destruktif (penilai tidak melakukan uji '
+        . 'material, uji struktur, maupun penggalian pondasi). Dengan demikian, kondisi struktural '
+        . 'bangunan berada di luar tanggung jawab penilai.',
+    ],
+    'tki_mesin' => [
+        'Penilaian mesin dan peralatan, kami mengambil dasar penilaian berdasarkan pemeriksaan visual '
+        . '(non-destruktif) terhadap kondisi fisik aset pada saat inspeksi. Pemeriksaan mencakup '
+        . 'identifikasi jenis, kapasitas, merek, model, nomor seri, tahun pembuatan, kondisi umum, dan '
+        . 'kelengkapan komponen utama.',
+        'Penilai tidak melakukan pembongkaran, uji fungsi, uji performa, atau pengujian destruktif '
+        . 'terhadap mesin maupun komponennya, serta tidak melakukan pengujian laboratorium terhadap '
+        . 'material, pelumas, atau cairan sistemik yang mungkin digunakan oleh mesin tersebut.',
+        'Informasi tambahan seperti tahun instalasi, umur pakai, histori perawatan, jam operasi, dan '
+        . 'status operasional (berfungsi/tidak berfungsi) diperoleh dari keterangan pengguna atau '
+        . 'dokumen pendukung yang disediakan oleh Pemberi Tugas, dan tidak diverifikasi secara '
+        . 'independen kecuali dinyatakan lain.',
+    ],
+    'tki_kendaraan' => [
+        'Dalam penilaian kendaraan, penilai mengambil dasar penilaian berdasarkan pemeriksaan visual '
+        . '(non-destruktif) terhadap kondisi fisik kendaraan pada saat inspeksi. Pemeriksaan mencakup '
+        . 'identifikasi jenis, merek, model, nomor rangka, nomor mesin, tahun pembuatan, kapasitas '
+        . 'mesin, kondisi umum, serta kelengkapan komponen dan perlengkapan standar kendaraan.',
+        'Penilai tidak melakukan pembongkaran, uji fungsi, uji performa mesin, atau pengujian '
+        . 'destruktif terhadap kendaraan dan komponennya, serta tidak melakukan pengujian laboratorium '
+        . 'terhadap pelumas, bahan bakar, atau cairan sistemik yang digunakan oleh kendaraan tersebut.',
+        'Informasi tambahan seperti tahun perakitan, jarak tempuh (odometer), histori perawatan, '
+        . 'status operasional (berfungsi/tidak berfungsi), serta kelengkapan dokumen (STNK, BPKB, '
+        . 'faktur pembelian, dan bukti servis) diperoleh dari pihak pengguna atau Pemberi Tugas, dan '
+        . 'tidak diverifikasi secara independen kecuali dinyatakan lain.',
+        'Dalam hal kendaraan tidak dapat dihidupkan atau diuji jalan pada saat inspeksi, penilai '
+        . 'berasumsi bahwa kondisi mesin, transmisi, dan sistem kelistrikan sesuai dengan informasi '
+        . 'yang diberikan oleh pihak terkait dan dalam kondisi fungsional wajar.',
+        'Penilai tidak bertanggung jawab atas cacat tersembunyi, kerusakan internal, atau '
+        . 'ketidaksesuaian spesifikasi teknis yang tidak dapat diidentifikasi melalui pemeriksaan '
+        . 'visual.',
+    ],
+    'tki_alat_berat' => [
+        'Dalam penilaian alat berat, penilai melakukan pemeriksaan visual (non-destruktif) untuk '
+        . 'menilai kondisi fisik unit pada saat inspeksi. Pemeriksaan mencakup identifikasi jenis '
+        . 'alat, merek, model, nomor seri, nomor rangka, kapasitas kerja, tahun pembuatan, kondisi '
+        . 'umum, serta kelengkapan komponen utama (mesin, undercarriage, sistem hidrolik, '
+        . 'boom/arm/bucket, dan kabin operator).',
+        'Penilai tidak melakukan uji beban, uji fungsi hidrolik, uji performa mesin, atau pengujian '
+        . 'destruktif, serta tidak melakukan analisis laboratorium terhadap oli, pelumas, cairan '
+        . 'hidrolik, atau bahan bakar yang digunakan pada unit alat berat tersebut.',
+        'Informasi tambahan seperti jam operasi (hour meter), histori perawatan, status operasional '
+        . '(aktif/non-aktif), lokasi penggunaan, dan kepemilikan diperoleh dari keterangan pihak '
+        . 'pengguna atau dokumen yang disediakan oleh Pemberi Tugas, dan tidak diverifikasi secara '
+        . 'independen kecuali dinyatakan lain.',
+        'Dalam hal alat berat tidak beroperasi pada saat inspeksi, penilai berasumsi bahwa kondisi '
+        . 'internal mesin, sistem hidrolik, dan sistem transmisi sesuai dengan informasi yang '
+        . 'diberikan oleh pihak terkait dan dalam kondisi fungsional wajar.',
+        'Penilai tidak bertanggung jawab atas kerusakan internal, cacat tersembunyi, atau kegagalan '
+        . 'fungsi sistem hidrolik dan mekanik yang tidak dapat diidentifikasi melalui pemeriksaan '
+        . 'visual.',
     ],
 
     // ------------------------------------------------------------------
@@ -218,21 +305,19 @@ return [
         . 'diterima dalam pemahaman penilaian. Asumsi dalam penilaian ini adalah sebagai berikut:',
     'asumsi_items' => [
         'Properti yang ditunjukkan kepada kami adalah benar merupakan properti dalam penilaian.',
-        'Objek penilaian diasumsikan didukung dokumen hak kepemilikan/penguasaan yang sah menurut '
-        . 'peraturan perundang-undangan, dapat dialihkan atau dibebani sesuai ketentuan, serta bebas '
-        . 'dari ikatan, sengketa, tuntutan, atau klaim pihak ketiga, kecuali apabila secara tegas '
-        . 'diungkapkan kepada Penilai. Penilai tidak melakukan audit legal; kebenaran dan keabsahan '
-        . 'dokumen sepenuhnya menjadi tanggung jawab Pemberi Tugas/Pemilik.',
+        'Objek penilaian didukung dokumen yang sah menurut peraturan perundang-undangan yang '
+        . 'membuktikan hak kepemilikan/penguasaan atau hak manfaat, dapat dialihkan/dibebani sesuai '
+        . 'ketentuan, serta bebas dari sengketa, atau klaim pihak ketiga kecuali yang secara tegas '
+        . 'diungkapkan kepada Penilai. Penilai tidak melakukan audit legal; keabsahan dokumen menjadi '
+        . 'tanggung jawab Pemberi Tugas.',
+        'Properti dimaksud dilengkapi dengan dokumen atas hak kepemilikan/penguasaan tanah yang sah '
+        . 'secara hukum, dapat dialihkan dan bebas dari ikatan, tuntutan atau halangan apapun.',
         'Nilai yang dicantumkan dalam laporan ini serta setiap nilai lain dalam laporan yang '
         . 'merupakan bagian dari properti yang dinilai hanya berlaku sesuai dengan maksud dan tujuan '
         . 'penilaian. Nilai yang digunakan dalam laporan penilaian ini tidak boleh digunakan untuk '
-        . 'tujuan penilaian lain yang dapat mengakibatkan terjadinya kesalahan interprestasi.',
+        . 'tujuan penilaian lain yang dapat mengakibatkan terjadinya kesalahan.',
         'Objek penilaian yang terdapat di luar identifikasi secara sampling diasumsikan adalah benar, '
         . 'mendekati karakteristik yang sama dengan objek yang diperiksa secara sampling.',
-        'Bagian-bagian bangunan yang tidak terlihat seperti struktur, pondasi dan Tingkat kekerasan '
-        . 'dinding terpenuhi sebagaimana mestinya dan berfungsi dengan baik.',
-        'Bagian-bagian mesin yang tidak terlihat seperti struktur, konstruksi, korosi, dan bagian '
-        . 'lainnya terpenuhi sebagaimana mestinya dan berfungsi dengan baik.',
         'Perbedaan kondisi yang mungkin terjadi antara tanggal penilaian dengan waktu penggunaan '
         . 'hasil penilaian dapat menurunkan relevansi opini nilai terhadap kebutuhan pengguna hasil '
         . 'penilaian, dikarenakan adanya perbedaan akses data dan informasi serta asumsi dan analisis '
@@ -243,11 +328,15 @@ return [
         . 'prosedur tersebut harus dituangkan dalam penugasan yang berdiri sendiri dan berbeda dengan '
         . 'penugasan penilaian sebelumnya.',
     ],
+    // Muncul hanya bila objek mengandung bangunan.
+    'asumsi_bangunan_item' =>
+        'Bagian-bagian bangunan yang tidak terlihat seperti struktur, pondasi dan tingkat kekerasan '
+        . 'dinding terpenuhi sebagaimana mestinya dan berfungsi dengan baik.',
     'asumsi_khusus' => [
         'Asumsi Khusus adalah asumsi yang berbeda dari fakta yang sebenarnya pada tanggal penilaian '
         . 'atau hal yang tidak akan diberatkan oleh sebagian kecil pelaku pasar dalam suatu transaksi '
         . 'pada tanggal penilaian. Asumsi yang digunakan untuk penilaian aset ini sesuai dengan KEPI & '
-        . 'SPI Edisi VII - 2018, Edisi Revisi SPI 103 (Lingkup Penugasan) Tahun 2020.',
+        . 'SPI Edisi VII - 2018 dan Edisi Revisi Tahun 2020.',
         'Asumsi Khusus yang diperlukan dalam penilaian ini akan ditetapkan dan dirumuskan setelah '
         . 'Penilai melakukan inspeksi lapangan serta memperoleh data pendukung yang relevan. Asumsi '
         . 'Khusus tersebut akan diungkapkan secara jelas dalam Laporan Penilaian.',
@@ -368,8 +457,10 @@ return [
         . 'inspeksi lapangan.',
 
     // ------------------------------------------------------------------
-    // 19. Data-data yang diperlukan
+    // LAMPIRAN (di akhir dokumen, setelah tanda tangan) — REV.1
     // ------------------------------------------------------------------
+    'lampiran_title' => 'LAMPIRAN PERMINTAAN DATA - DATA',
+    'data_diperlukan_intro' => 'Data - data yang diperlukan :',
     'data_diperlukan_lk_extra' => 'List Objek Penilaian sesuai dengan Laporan Keuangan.',
     'data_diperlukan_items' => [
         'Copy legalitas / sertifikat tanah (lembaran lengkap sesuai aslinya)',
@@ -431,7 +522,11 @@ return [
     // 25. Biaya Jasa Penilaian
     // ------------------------------------------------------------------
     'biaya_intro' => 'Untuk melaksanakan pekerjaan penilaian ini, Biaya Profesional Jasa Penilaian adalah sebesar:',
-    'biaya_ppn'   => 'Biaya belum/sudah termasuk PPN yang berlaku, Transportasi, Akomodasi.',
+    // Dipilih otomatis sesuai flag fee_ppn_included pada proposal.
+    'biaya_ppn'          => 'Biaya belum/sudah termasuk PPN yang berlaku, Transportasi, Akomodasi.',
+    'biaya_ppn_included' => 'Biaya sudah termasuk PPN yang berlaku, Transportasi, Akomodasi.',
+    'biaya_ppn_excluded' => 'Biaya belum termasuk PPN yang berlaku (:pct%), Transportasi, Akomodasi.',
+    'biaya_rincian_label' => 'Rincian Biaya :',
     'termin_label' => 'Termin Pembayaran :',
     'termin_1' => '50% (lima puluh persen) sebesar :rp (:terbilang), dibayarkan sebelum dilakukan inspeksi lapangan.',
     'termin_2' => '50% (lima puluh persen) sebesar :rp (:terbilang), dibayarkan sebelum laporan final diserahkan.',

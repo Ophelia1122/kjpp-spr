@@ -27,6 +27,7 @@
                     <th class="px-4 py-3">Nama</th>
                     <th class="px-4 py-3">Email</th>
                     <th class="px-4 py-3">Role</th>
+                    <th class="px-4 py-3">Jabatan</th>
                     <th class="px-4 py-3 text-center">Status</th>
                     <th class="px-4 py-3 text-center">Aksi</th>
                 </tr>
@@ -42,6 +43,7 @@
                         </td>
                         <td class="px-4 py-3 text-gray-500">{{ $user->email }}</td>
                         <td class="px-4 py-3 text-gray-500">{{ $user->role->name ?? '-' }}</td>
+                        <td class="px-4 py-3 text-gray-500">{{ $user->jabatan ?? '-' }}</td>
                         <td class="px-4 py-3 text-center">
                             @if ($user->is_active)
                                 <span class="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Aktif</span>
@@ -64,7 +66,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="px-4 py-10 text-center text-gray-400">Belum ada pengguna.</td></tr>
+                    <tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">Belum ada pengguna.</td></tr>
                 @endforelse
             </tbody>
         </table>

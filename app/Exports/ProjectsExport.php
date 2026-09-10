@@ -88,7 +88,7 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $project->report_style,
             $project->sla_draft_days ?? '-',
             $project->sla_final_days ?? '-',
-            (float) $project->service_fee,
+            (float) $project->total_fee,
             $project->assigned_appraiser ?? '-',
             $project->survey_date?->format('d-m-Y') ?? '-',
             $project->estimated_completion_date_formatted ?? '-',
