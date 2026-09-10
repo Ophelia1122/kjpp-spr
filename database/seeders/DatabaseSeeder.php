@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
         // 4. ProjectSeeder — paling akhir, bergantung ke Client.
         $this->call([
             RolePermissionSeeder::class,
+            BankSeeder::class,
             UserSeeder::class,
             ClientSeeder::class,
             ProjectSeeder::class,

@@ -39,9 +39,11 @@ return [
         'klasifikasi'    => 'Klasifikasi Bidang Jasa Properti',
     ],
 
+    // Fallback rekening bila tabel `banks` kosong (Batch 4: rekening sekarang
+    // di tabel `banks` + BankSeeder). Selaras dengan bank default seeder.
     'bank_account' => [
         'bank_name'      => 'Bank Mandiri',
-        'account_number' => '7301121479',
+        'account_number' => '070-00-1324576-1',
         'account_name'   => 'KJPP Sugianto Prasodjo dan Rekan',
     ],
 

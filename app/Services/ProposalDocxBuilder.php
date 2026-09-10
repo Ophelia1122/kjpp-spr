@@ -229,7 +229,7 @@ class ProposalDocxBuilder
 
     public function __construct(private Project $project)
     {
-        $this->project->loadMissing('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy', 'sectionTexts');
+        $this->project->loadMissing('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy', 'sectionTexts', 'bank');
         $this->cl  = config('proposal_clauses');
         $this->cfg = config('kjpp');
         $this->overrides = $this->project->sectionTexts->pluck('body', 'section_key')->all();
@@ -1051,11 +1051,13 @@ class ProposalDocxBuilder
             if ($i > 0) {
                 $lc->addTextBreak(1);
             }
-            $this->kvTable($lc, [
-                ['Bank', $b['bank_name'] ?? '-'],
-                ['Atas Nama', $b['account_name'] ?? '-'],
-                ['No. Rek', $b['account_number'] ?? '-'],
-            ], 2.4, 6.4);
+            $rows = [['Bank', $b['bank_name'] ?? '-']];
+            if (! empty($b['branch'])) {
+                $rows[] = ['Cabang', $b['branch']];
+            }
+            $rows[] = ['Atas Nama', $b['account_name'] ?? '-'];
+            $rows[] = ['No. Rek', $b['account_number'] ?? '-'];
+            $this->kvTable($lc, $rows, 2.4, 6.4);
         }
 
         $rc = $rt->addCell(Converter::cmToTwip(6.4));
@@ -1714,15 +1716,15 @@ class ProposalDocxBuilder
     }
 
     /**
-     * Daftar rekening bank untuk blok Biaya. Sementara dari config; nanti
-     * (fitur bank / Batch 4) diambil dari rekening yang dipilih di proposal
-     * (bisa 1–2). Menerima config('kjpp.bank_accounts') (array) bila ada.
+     * Rekening bank untuk blok "Rekening Bank" pada Biaya Jasa Penilaian.
+     * Prioritas: rekening yang dipilih di proposal (projects.bank_id) ->
+     * bank ber-is_default -> config('kjpp.bank_account') (fallback data lama).
      */
     private function bankAccounts(): array
     {
-        $accs = $this->cfg['bank_accounts'] ?? null;
-        if (is_array($accs) && $accs !== []) {
-            return $accs;
+        $bank = $this->project->effectiveBank();
+        if ($bank) {
+            return [$bank->toClauseArray()];
         }
         return [$this->cfg['bank_account']];
     }

@@ -22,6 +22,7 @@ class RolePermissionSeeder extends Seeder
 
         ['key' => 'invoices.view',    'label' => 'Lihat Invoice',                                     'group' => 'Invoice & Pembayaran'],
         ['key' => 'invoices.manage',  'label' => 'Kelola Invoice (Terbitkan/Verifikasi Lunas/Batalkan/Cetak)', 'group' => 'Invoice & Pembayaran'],
+        ['key' => 'tax_invoice.manage', 'label' => 'Isi Nomor & Tanggal Faktur Pajak',                 'group' => 'Invoice & Pembayaran'],
 
         ['key' => 'survey.view',      'label' => 'Lihat Data Survei Lapangan',                        'group' => 'Survei Lapangan'],
         ['key' => 'survey.manage',    'label' => 'Kelola Data Survei (Input Penilai/Tanggal, Cetak Surat Tugas)', 'group' => 'Survei Lapangan'],
@@ -34,6 +35,7 @@ class RolePermissionSeeder extends Seeder
 
         ['key' => 'roles.manage',     'label' => 'Kelola Role & Hak Akses',                            'group' => 'Pengaturan Sistem'],
         ['key' => 'users.manage',     'label' => 'Kelola Pengguna',                                    'group' => 'Pengaturan Sistem'],
+        ['key' => 'banks.manage',     'label' => 'Kelola Master Rekening Bank',                         'group' => 'Pengaturan Sistem'],
         ['key' => 'audit.view',       'label' => 'Lihat Log Aktivitas (Audit Log)',                    'group' => 'Pengaturan Sistem'],
     ];
 
@@ -56,7 +58,7 @@ class RolePermissionSeeder extends Seeder
         ],
         Role::ADMIN_KEUANGAN => [
             'dashboard.view', 'proposals.view',
-            'invoices.view', 'invoices.manage',
+            'invoices.view', 'invoices.manage', 'tax_invoice.manage',
             'survey.view', 'clients.view',
             'reports.view', 'reports.export',
         ],

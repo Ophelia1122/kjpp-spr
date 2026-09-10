@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\Project;
 use App\Models\ProjectValuationObject;
 use App\Models\User;
@@ -16,7 +17,14 @@ class ProposalController extends Controller
     {
         return view('proposals.create', [
             'signers' => User::penanggungJawab()->orderBy('name')->get(),
+            'banks'   => $this->bankOptions(),
         ]);
+    }
+
+    /** Daftar rekening bank untuk dropdown proposal (default di atas). */
+    private function bankOptions()
+    {
+        return Bank::orderByDesc('is_default')->orderBy('bank_name')->get();
     }
 
     public function store(Request $request)
@@ -35,6 +43,7 @@ class ProposalController extends Controller
             'instructing_client_id'    => $validated['instructing_client_id'],
             'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
             'approver_name'            => $validated['approver_name'] ?? null,
+            'bank_id'                  => $validated['bank_id'] ?? null,
             'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
             'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
@@ -93,6 +102,7 @@ class ProposalController extends Controller
         return view('proposals.edit', [
             'project' => $project,
             'signers' => $signers,
+            'banks'   => $this->bankOptions(),
         ]);
     }
 
@@ -116,6 +126,7 @@ class ProposalController extends Controller
             'instructing_client_id'    => $validated['instructing_client_id'],
             'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
             'approver_name'            => $validated['approver_name'] ?? null,
+            'bank_id'                  => $validated['bank_id'] ?? null,
             'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
             'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
@@ -223,6 +234,34 @@ class ProposalController extends Controller
         $project->update(['status' => Project::STATUS_WAITING_APPROVAL]);
 
         return back()->with('success', 'Proposal ditandai disetujui klien. Silakan buat Invoice DP.');
+    }
+
+    /**
+     * Nomor & Tanggal Faktur Pajak (Feature 6). Hanya Administrator + Admin
+     * Keuangan (izin tax_invoice.manage). Bisa diisi/dikoreksi di status apa
+     * pun — di UI dikunci setelah terisi & harus klik "Edit" untuk mengubah.
+     */
+    public function updateTaxInvoice(Request $request, Project $project)
+    {
+        $data = $request->validate([
+            'tax_invoice_number' => 'nullable|string|max:255',
+            'tax_invoice_date'   => 'nullable|date',
+        ]);
+
+        $project->update([
+            'tax_invoice_number' => $data['tax_invoice_number'] ?: null,
+            'tax_invoice_date'   => $data['tax_invoice_date'] ?: null,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.tax_invoice_set',
+            "Menyetel Faktur Pajak proposal {$project->proposal_number}: No. "
+                . ($project->tax_invoice_number ?: '(kosong)')
+                . ", Tgl " . ($project->tax_invoice_date?->format('d-m-Y') ?: '(kosong)'),
+            $project
+        );
+
+        return back()->with('success', 'Nomor & Tanggal Faktur Pajak disimpan.');
     }
 
     /**
@@ -350,6 +389,9 @@ class ProposalController extends Controller
             // bank atau klien (PT), tergantung kasus. Kosong = pakai nama
             // Pemberi Tugas.
             'approver_name'            => 'nullable|string|max:255',
+            // Rekening bank untuk blok "Rekening Bank" & PDF Invoice. Kosong =
+            // pakai bank ber-is_default (dropdown sudah membatasi pilihan).
+            'bank_id'                  => 'nullable|exists:banks,id',
             'intended_user_ids'        => 'required|array|min:1',
             'intended_user_ids.*'      => 'exists:clients,id',
             'service_fee'              => 'required|numeric|min:0',

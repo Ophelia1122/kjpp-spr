@@ -72,6 +72,23 @@
             </p>
         </div>
 
+        {{-- ===================== REKENING BANK ===================== --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Rekening Bank Pembayaran</label>
+            <select name="bank_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                <option value="">-- Rekening baku kantor (default) --</option>
+                @foreach ($banks as $bank)
+                    <option value="{{ $bank->id }}" @selected(old('bank_id', $project->bank_id) == $bank->id)>
+                        {{ $bank->bank_name }}{{ $bank->branch ? ' (' . $bank->branch . ')' : '' }} — {{ $bank->account_number }}{{ $bank->is_default ? ' · default' : '' }}
+                    </option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-gray-400">
+                Dipakai di blok &ldquo;Rekening Bank&rdquo; proposal &amp; PDF Invoice. Kosongkan untuk memakai
+                rekening default. Daftar dikelola di menu <span class="font-medium">Kelola Rekening Bank</span>.
+            </p>
+        </div>
+
         {{-- ===================== PEMBERI TUGAS (AJAX COMBOBOX) ===================== --}}
         <div class="relative">
             <label class="block text-sm font-medium text-gray-700">Nama Klien (Pemberi Tugas)</label>

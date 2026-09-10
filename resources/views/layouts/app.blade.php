@@ -55,7 +55,7 @@
                         </a>
                     @endcan
 
-                    @canany(['roles.manage', 'users.manage', 'audit.view'])
+                    @canany(['roles.manage', 'users.manage', 'banks.manage', 'audit.view'])
                         <div class="pt-4 mt-4 border-t border-gray-800">
                             <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pengaturan Sistem</p>
 
@@ -72,6 +72,14 @@
                                 class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
                                         {{ request()->routeIs('roles.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
                                     <span>🔐</span> Kelola Role & Izin
+                                </a>
+                            @endcan
+
+                            @can('banks.manage')
+                                <a href="{{ route('banks.index') }}"
+                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
+                                        {{ request()->routeIs('banks.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                    <span>🏦</span> Kelola Rekening Bank
                                 </a>
                             @endcan
 

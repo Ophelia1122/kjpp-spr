@@ -128,6 +128,12 @@
                 <td class="label-col small">Bank</td>
                 <td class="val-col small">: {{ $bank_info['bank_name'] ?? '-' }}</td>
             </tr>
+            @if (!empty($bank_info['branch']))
+                <tr>
+                    <td class="label-col small">Cabang</td>
+                    <td class="val-col small">: {{ $bank_info['branch'] }}</td>
+                </tr>
+            @endif
             <tr>
                 <td class="label-col small">Nomor Rekening</td>
                 <td class="val-col small">: {{ $bank_info['account_number'] ?? '-' }}</td>

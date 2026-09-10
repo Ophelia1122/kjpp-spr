@@ -121,8 +121,101 @@
                     <dd class="text-gray-500 text-xs mt-0.5">Otomatis = nama Pemberi Tugas (belum diisi manual)</dd>
                 @endunless
             </div>
+            <div>
+                <dt class="text-gray-500">Rekening Pembayaran</dt>
+                @if ($project->bank)
+                    <dd class="font-medium text-gray-900">{{ $project->bank->bank_name }}{{ $project->bank->branch ? ' (' . $project->bank->branch . ')' : '' }} — {{ $project->bank->account_number }}</dd>
+                    <dd class="text-gray-500 text-xs mt-0.5">a.n. {{ $project->bank->account_name }} · dipilih di proposal</dd>
+                @elseif ($default = \App\Models\Bank::default())
+                    <dd class="font-medium text-gray-900">{{ $default->bank_name }}{{ $default->branch ? ' (' . $default->branch . ')' : '' }} — {{ $default->account_number }}</dd>
+                    <dd class="text-gray-500 text-xs mt-0.5">a.n. {{ $default->account_name }} · rekening default kantor</dd>
+                @else
+                    <dd class="font-medium text-gray-900">{{ config('kjpp.bank_account.bank_name') }} — {{ config('kjpp.bank_account.account_number') }}</dd>
+                    <dd class="text-gray-500 text-xs mt-0.5">dari config (belum ada master rekening)</dd>
+                @endif
+            </div>
         </dl>
     </div>
+
+    {{-- ===================== CARD FAKTUR PAJAK ===================== --}}
+    @canany(['tax_invoice.manage', 'invoices.view'])
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Faktur Pajak</h2>
+
+            @php $hasFaktur = $project->tax_invoice_number || $project->tax_invoice_date; @endphp
+
+            @can('tax_invoice.manage')
+                <form action="{{ route('proposals.taxInvoice', $project) }}" method="POST" id="fakturForm">
+                    @csrf
+                    @method('PUT')
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Nomor Faktur Pajak</label>
+                            <input type="text" name="tax_invoice_number" id="faktur_number"
+                                   value="{{ old('tax_invoice_number', $project->tax_invoice_number) }}"
+                                   placeholder="Contoh: 010.000-26.00000001"
+                                   @disabled($hasFaktur)
+                                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm font-mono disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Tanggal Faktur Pajak</label>
+                            <input type="date" name="tax_invoice_date" id="faktur_date"
+                                   value="{{ old('tax_invoice_date', $project->tax_invoice_date?->toDateString()) }}"
+                                   @disabled($hasFaktur)
+                                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed">
+                        </div>
+                    </div>
+                    <div class="mt-3 flex flex-wrap items-center gap-3">
+                        @if ($hasFaktur)
+                            <button type="button" id="fakturEditBtn"
+                                    class="px-4 py-1.5 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                ✏️ Edit
+                            </button>
+                            <button type="submit" id="fakturSaveBtn" hidden
+                                    class="px-4 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                                Simpan
+                            </button>
+                            <span id="fakturLockNote" class="text-xs text-gray-400">🔒 Terkunci — klik Edit untuk mengubah.</span>
+                        @else
+                            <button type="submit"
+                                    class="px-4 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                                Simpan
+                            </button>
+                        @endif
+                    </div>
+                </form>
+                @if ($hasFaktur)
+                    <script>
+                        (function () {
+                            var b = document.getElementById('fakturEditBtn');
+                            if (!b) return;
+                            b.addEventListener('click', function () {
+                                ['faktur_number', 'faktur_date'].forEach(function (id) {
+                                    document.getElementById(id).disabled = false;
+                                });
+                                document.getElementById('faktur_number').focus();
+                                b.hidden = true;
+                                document.getElementById('fakturSaveBtn').hidden = false;
+                                document.getElementById('fakturLockNote').hidden = true;
+                            });
+                        })();
+                    </script>
+                @endif
+            @else
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <dt class="text-gray-500">Nomor Faktur Pajak</dt>
+                        <dd class="font-medium text-gray-900">{{ $project->tax_invoice_number ?: '(belum diisi)' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Tanggal Faktur Pajak</dt>
+                        <dd class="font-medium text-gray-900">{{ $project->tax_invoice_date?->translatedFormat('d F Y') ?: '(belum diisi)' }}</dd>
+                    </div>
+                </dl>
+                <p class="mt-2 text-xs text-gray-400">Hanya Administrator &amp; Admin Keuangan yang dapat mengisi.</p>
+            @endcan
+        </div>
+    @endcanany
 
     {{-- ===================== CARD DAFTAR TAGIHAN & PEMBAYARAN ===================== --}}
     @if ($project->invoices && $project->invoices->isNotEmpty())

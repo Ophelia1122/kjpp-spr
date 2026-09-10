@@ -173,12 +173,15 @@ class InvoiceController extends Controller
 
     public function exportInvoice(Invoice $invoice)
     {
-        $invoice->load('project.instructingClient', 'project.valuationObjects');
+        $invoice->load('project.instructingClient', 'project.valuationObjects', 'project.bank');
+
+        // Rekening = pilihan proposal -> bank default -> fallback config lama.
+        $bank = $invoice->project->effectiveBank();
 
         $pdf = Pdf::loadView('pdf.invoice', [
             'invoice'    => $invoice,
             'project'    => $invoice->project,
-            'bank_info'  => config('kjpp.bank_account'),
+            'bank_info'  => $bank ? $bank->toClauseArray() : config('kjpp.bank_account'),
         ])->setPaper('a4', 'portrait');
 
         $safeFilename = str_replace(['/', '\\'], '-', $invoice->invoice_number);

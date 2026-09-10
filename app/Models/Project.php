@@ -62,6 +62,9 @@ class Project extends Model
         'assigned_appraiser_id',
         'signed_by_user_id',
         'approver_name',
+        'bank_id',
+        'tax_invoice_number',
+        'tax_invoice_date',
         'survey_date',
         'final_report_number',
         'status',
@@ -76,6 +79,7 @@ class Project extends Model
         'sla_final_days'           => 'integer',
         'survey_date'               => 'date',
         'financial_reporting_date'  => 'date',
+        'tax_invoice_date'          => 'date',
         'is_public_company'         => 'boolean',
     ];
 
@@ -198,6 +202,22 @@ class Project extends Model
     public function sectionTexts()
     {
         return $this->hasMany(ProposalSectionText::class);
+    }
+
+    /**
+     * Rekening bank yang dipilih di proposal (Batch 4 / Feature 5). Null =
+     * pakai bank ber-is_default (fallback: config('kjpp.bank_account')).
+     * Dipakai blok "Rekening Bank" proposal .docx + PDF Invoice.
+     */
+    public function bank()
+    {
+        return $this->belongsTo(Bank::class);
+    }
+
+    /** Rekening efektif untuk dokumen: pilihan proposal -> default -> null. */
+    public function effectiveBank(): ?Bank
+    {
+        return $this->bank ?? Bank::default();
     }
 
     public function invoices()

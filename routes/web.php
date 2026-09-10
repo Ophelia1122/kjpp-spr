@@ -70,6 +70,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('/proposals/{project}/texts/{key}', [ProposalController::class, 'resetText'])->name('proposals.texts.reset');
         Route::delete('/proposals/{project}/texts', [ProposalController::class, 'resetAllTexts'])->name('proposals.texts.resetAll');
     });
+
+    // --- Proposal: Nomor & Tanggal Faktur Pajak (Feature 6 — Administrator + Admin Keuangan) ---
+    Route::middleware('permission:tax_invoice.manage')
+        ->put('/proposals/{project}/tax-invoice', [ProposalController::class, 'updateTaxInvoice'])->name('proposals.taxInvoice');
     // --- Proposal: lihat ---
     Route::middleware('permission:proposals.view')->group(function () {
         Route::get('/proposals/{project}', [ProjectController::class, 'show'])->name('proposals.show');
@@ -109,6 +113,16 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:audit.view')
         ->get('/audit-log', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit.index');
+
+    // --- Pengaturan Sistem: Master Rekening Bank (izin 'banks.manage', default hanya Administrator) ---
+    Route::middleware('permission:banks.manage')->group(function () {
+        Route::get('/banks', [\App\Http\Controllers\BankController::class, 'index'])->name('banks.index');
+        Route::get('/banks/create', [\App\Http\Controllers\BankController::class, 'create'])->name('banks.create');
+        Route::post('/banks', [\App\Http\Controllers\BankController::class, 'store'])->name('banks.store');
+        Route::get('/banks/{bank}/edit', [\App\Http\Controllers\BankController::class, 'edit'])->name('banks.edit');
+        Route::put('/banks/{bank}', [\App\Http\Controllers\BankController::class, 'update'])->name('banks.update');
+        Route::delete('/banks/{bank}', [\App\Http\Controllers\BankController::class, 'destroy'])->name('banks.destroy');
+    });
 
 
     Route::middleware('permission:users.manage')->group(function () {
