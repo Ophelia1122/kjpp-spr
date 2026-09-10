@@ -63,6 +63,12 @@ Route::middleware('auth')->group(function () {
         Route::put('/proposals/{project}', [ProposalController::class, 'update'])->name('proposals.update');
         Route::delete('/proposals/{project}', [ProposalController::class, 'destroy'])->name('proposals.destroy');
         Route::post('/proposals/{project}/approve', [ProposalController::class, 'markApproved'])->name('proposals.markApproved');
+
+        // --- Proposal: editor teks baku per-bab (override; Batch 3) ---
+        Route::get('/proposals/{project}/texts', [ProposalController::class, 'editTexts'])->name('proposals.texts');
+        Route::put('/proposals/{project}/texts/{key}', [ProposalController::class, 'updateText'])->name('proposals.texts.update');
+        Route::delete('/proposals/{project}/texts/{key}', [ProposalController::class, 'resetText'])->name('proposals.texts.reset');
+        Route::delete('/proposals/{project}/texts', [ProposalController::class, 'resetAllTexts'])->name('proposals.texts.resetAll');
     });
     // --- Proposal: lihat ---
     Route::middleware('permission:proposals.view')->group(function () {

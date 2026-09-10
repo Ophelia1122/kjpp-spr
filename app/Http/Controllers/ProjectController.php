@@ -92,7 +92,8 @@ class ProjectController extends Controller
 
         public function show(Project $project)
     {
-        $project->load('instructingClient', 'intendedUsers', 'invoices', 'valuationObjects', 'signedBy');
+        $project->load('instructingClient', 'intendedUsers', 'invoices', 'valuationObjects', 'signedBy')
+            ->loadCount('sectionTexts');
 
         $activeUsers = User::where('is_active', true)
             ->orderBy('name')

@@ -190,6 +190,16 @@ class Project extends Model
         return $this->hasMany(ProjectValuationObject::class)->orderBy('sort_order');
     }
 
+    /**
+     * Override teks baku proposal per-bab (Batch 3 — editor teks per-bab).
+     * Hanya bab yang diedit staf yang punya baris; sisanya pakai teks baku
+     * config/proposal_clauses.php. Dikonsumsi App\Services\ProposalDocxBuilder.
+     */
+    public function sectionTexts()
+    {
+        return $this->hasMany(ProposalSectionText::class);
+    }
+
     public function invoices()
     {
         return $this->hasMany(Invoice::class);

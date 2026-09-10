@@ -17,6 +17,25 @@
 
 return [
 
+    /*
+    | GAYA TEKS OTOMATIS (di-render ProposalDocxBuilder::styleRuns()):
+    |  - text_style.italic : istilah bahasa Inggris -> dicetak MIRING di mana pun
+    |    muncul pada isi bab proposal.
+    |  - text_style.bold   : nama sumber/standar (SPI, KEPI, dst) -> dicetak TEBAL
+    |    (token akronim saja, angka kutipan setelahnya tidak).
+    | Penebalan eksplisit tetap pakai markup **...** pada teks di bawah.
+    */
+    'text_style' => [
+        'italic' => [
+            'Market Value', 'Fair Value', 'Liquidation Value', 'Exposure Time',
+            'Market Approach', 'Income Approach', 'Cost Approach',
+            'Comprehensive Style Report', 'Short Form Report',
+            'limited inspection', 'subsequent event',
+            'hour meter', 'odometer', 'Counterpart',
+        ],
+        'bold' => ['SPI', 'KEPI', 'PSAK', 'POJK', 'PMK'],
+    ],
+
     // Kalimat pembuka. Bagian :basis diisi MANUAL lewat field
     // "Dasar Permintaan Penilaian" di form proposal (projects.request_basis).
     'pembuka' =>
@@ -30,22 +49,23 @@ return [
     // ------------------------------------------------------------------
     // 1. Penjelasan Status Penilai
     // ------------------------------------------------------------------
+    // Markup **...** = tebal (di-render ProposalDocxBuilder; di-strip utk editor teks).
     'status_penilai' => [
-        'Penilai Publik yang bertanda tangan di dalam Laporan Penilaian ini adalah :nama, MAPPI (Cert.) '
-        . 'merupakan Penilai Publik Properti dengan Izin Penilai Publik No. :izin berdasarkan Surat '
-        . 'Keputusan Menteri Keuangan Republik Indonesia Nomor :sk_menkeu, Penilai Publik juga telah '
+        'Penilai Publik yang bertanda tangan di dalam Laporan Penilaian ini adalah **:nama, MAPPI (Cert.)** '
+        . 'merupakan Penilai Publik Properti dengan Izin Penilai Publik **No. :izin** berdasarkan Surat '
+        . 'Keputusan Menteri Keuangan Republik Indonesia Nomor **:sk_menkeu**, Penilai Publik juga telah '
         . 'terdaftar sebagai Profesi Penunjang Penilai Publik pada Sektor Jasa Keuangan sesuai dengan '
-        . 'Keputusan Dewan Komisioner Otoritas Jasa Keuangan Nomor :ojk_kep, dengan lingkup pemberian '
+        . 'Keputusan Dewan Komisioner Otoritas Jasa Keuangan Nomor **:ojk_kep**, dengan lingkup pemberian '
         . 'jasa pada sektor Perbankan; Perasuransian, Penjaminan, dan Dana Pensiun; Lembaga Pembiayaan, '
         . 'Perusahaan Modal Ventura, Lembaga Keuangan Mikro, dan Lembaga Jasa Keuangan Lainnya; Inovasi '
         . 'Teknologi Sektor Keuangan serta Aset Keuangan Digital dan Aset Kripto.',
 
-        'Penilai bertindak atas nama Kantor Jasa Penilai Publik SUGIANTO PRASODJO DAN REKAN memiliki '
-        . 'Izin Usaha resmi dari Kementerian Keuangan Republik Indonesia No. :izin_usaha berdasarkan '
-        . 'Kepmenkeu No. :kepmenkeu dari Menteri Keuangan Republik Indonesia. KJPP Sugianto Prasodjo '
+        'Penilai bertindak atas nama **KANTOR JASA PENILAI PUBLIK SUGIANTO PRASODJO DAN REKAN** memiliki '
+        . '**Izin Usaha resmi** dari Kementerian Keuangan Republik Indonesia No. **:izin_usaha** berdasarkan '
+        . '**Kepmenkeu No. :kepmenkeu** dari Menteri Keuangan Republik Indonesia. KJPP Sugianto Prasodjo '
         . 'dan Rekan adalah perusahaan penilai independen yang terdaftar di Masyarakat Profesi Penilai '
         . 'Indonesia (MAPPI) dan terdaftar di Otoritas Jasa Keuangan/OJK (d/h Bapepam-LK) berdasarkan '
-        . 'Surat Tanda Terdaftar Profesi Penunjang Pasar Modal No. :sttd_ojk.',
+        . '**Surat Tanda Terdaftar Profesi Penunjang Pasar Modal No. :sttd_ojk.**',
 
         'Sebagai Penilai kami dalam posisi untuk memberikan penilaian yang objektif dan tidak memihak. '
         . 'Kami sebagai penilai menyatakan bahwa status kami adalah sebagai penilai independen. Kami '
@@ -365,19 +385,22 @@ return [
     // ------------------------------------------------------------------
     // 14. Laporan Penilaian
     // ------------------------------------------------------------------
+    // Bab 14 = daftar huruf a–d. Markup **...** = tebal.
+    //   a = laporan_intro, b = laporan_draft, c = laporan_final (+ Struktur),
+    //   d = laporan_rangkap.
     'laporan_intro' =>
-        'Jenis laporan penilaian yang akan disampaikan adalah :style, disusun dengan menggunakan '
+        'Jenis **laporan** penilaian yang akan disampaikan adalah **:style**, disusun dengan menggunakan '
         . 'Bahasa Indonesia. Jangka waktu pelaksanaan Investigasi dan penyusunan laporan penilaian '
-        . 'adalah jangka waktu :total hari kerja dihitung sejak tanggal inspeksi terakhir dan tanggal '
+        . 'adalah jangka waktu **:total** hari kerja dihitung sejak tanggal inspeksi terakhir dan tanggal '
         . 'penerimaan data terakhir sebagaimana tercatat dalam korespondensi (email/surat) atau daftar '
         . 'serah terima data dari Pemberi Tugas, dengan waktu pengerjaan sebagai berikut:',
     'laporan_draft' =>
-        'Laporan Draft / Resume Penilaian dalam waktu :draft hari kerja setelah inspeksi Lapangan dan '
+        '**Laporan Draft / Resume Penilaian** dalam waktu **:draft** hari kerja setelah inspeksi Lapangan dan '
         . 'penerimaan data terakhir dimaksud.',
     'laporan_final' =>
-        'Laporan Final akan disampaikan dalam waktu :final hari kerja setelah laporan resume/draft '
+        '**Laporan Final** akan disampaikan dalam waktu **:final** hari kerja setelah laporan resume/draft '
         . 'penilaian disetujui.',
-    'laporan_struktur_intro' => 'Struktur Laporan Penilaian meliputi:',
+    'laporan_struktur_intro' => '**Struktur Laporan Penilaian** meliputi:',
     'laporan_struktur' => [
         'Pendahuluan',
         'Lingkup Penugasan',
@@ -385,7 +408,7 @@ return [
         'Proses Penilaian',
         'Lampiran-lampiran termasuk foto, lokasi obyek penilaian dan lainnya',
     ],
-    'laporan_rangkap' => 'Laporan Penilaian akan disampaikan dalam 2 (dua) rangkap.',
+    'laporan_rangkap' => '**Laporan Penilaian** akan disampaikan masing-masing lokasi dalam **2 (dua)** rangkap.',
     'style_long'  => 'Laporan Penilaian Terinci (Comprehensive Style Report)',
     'style_short' => 'Laporan Penilaian Ringkas (Short Form Report)',
 

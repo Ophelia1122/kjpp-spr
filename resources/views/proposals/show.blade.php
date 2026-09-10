@@ -4,14 +4,27 @@
 <div class="max-w-4xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
-    <div class="flex items-start justify-between">
+    <div class="flex items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">{{ $project->proposal_number }}</h1>
             <p class="text-sm text-gray-500">Dibuat {{ $project->created_at->translatedFormat('d F Y') }}</p>
         </div>
-        <span class="px-3 py-1.5 rounded-full text-sm font-semibold {{ $project->status_badge_classes }}">
-            {{ $project->status }}
-        </span>
+        <div class="flex flex-col items-end gap-2">
+            <span class="px-3 py-1.5 rounded-full text-sm font-semibold {{ $project->status_badge_classes }}">
+                {{ $project->status }}
+            </span>
+            @can('proposals.manage')
+                <a href="{{ route('proposals.texts', $project) }}"
+                   class="text-xs font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap">
+                    ✏️ Editor Teks Proposal
+                    @if (($project->section_texts_count ?? 0) > 0)
+                        <span class="ml-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                            {{ $project->section_texts_count }} bab diedit
+                        </span>
+                    @endif
+                </a>
+            @endcan
+        </div>
     </div>
 
     {{-- ===================== CARD INFORMASI UTAMA ===================== --}}

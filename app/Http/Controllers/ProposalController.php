@@ -226,6 +226,106 @@ class ProposalController extends Controller
     }
 
     /**
+     * =========================================================================
+     * EDITOR TEKS BAKU PROPOSAL PER-BAB (Batch 3)
+     *
+     * Menyimpan OVERRIDE per bab di proposal_section_texts. Bab tanpa baris
+     * override otomatis pakai teks baku config/proposal_clauses.php. Tabel &
+     * elemen struktural tiap bab tetap dibuat otomatis oleh ProposalDocxBuilder.
+     *
+     * Bisa diakses di STATUS APA PUN (tidak dikunci ke Draft) — revisi wording
+     * proposal kadang masih diperlukan setelah tahap invoice.
+     * =========================================================================
+     */
+    public function editTexts(Project $project)
+    {
+        $project->load('instructingClient', 'sectionTexts');
+
+        return view('proposals.texts', [
+            'project'  => $project,
+            'sections' => ProposalDocxBuilder::for($project)->sectionsForEditor(),
+        ]);
+    }
+
+    public function updateText(Request $request, Project $project, string $key)
+    {
+        $section = $this->editableSection($project, $key);
+
+        $data = $request->validate([
+            'body' => 'required|string|max:20000',
+        ]);
+
+        $project->sectionTexts()->updateOrCreate(
+            ['section_key' => $key],
+            ['body' => $data['body']],
+        );
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.text_edited',
+            "Mengubah teks bab \"{$section['title']}\" pada proposal {$project->proposal_number}",
+            $project
+        );
+
+        return redirect()
+            ->route('proposals.texts', $project)
+            ->with('success', "Teks bab \"{$section['title']}\" disimpan.")
+            ->withFragment('bab-' . $key);
+    }
+
+    public function resetText(Project $project, string $key)
+    {
+        $section = $this->editableSection($project, $key);
+
+        $deleted = $project->sectionTexts()->where('section_key', $key)->delete();
+
+        if ($deleted) {
+            \App\Helpers\AuditLogger::record(
+                'proposal.text_reset',
+                "Mengembalikan teks bab \"{$section['title']}\" ke baku pada proposal {$project->proposal_number}",
+                $project
+            );
+        }
+
+        return redirect()
+            ->route('proposals.texts', $project)
+            ->with('success', "Teks bab \"{$section['title']}\" dikembalikan ke teks baku.")
+            ->withFragment('bab-' . $key);
+    }
+
+    public function resetAllTexts(Project $project)
+    {
+        $count = $project->sectionTexts()->count();
+        $project->sectionTexts()->delete();
+
+        if ($count) {
+            \App\Helpers\AuditLogger::record(
+                'proposal.text_reset_all',
+                "Mengembalikan SEMUA teks bab ({$count}) ke baku pada proposal {$project->proposal_number}",
+                $project
+            );
+        }
+
+        return redirect()
+            ->route('proposals.texts', $project)
+            ->with('success', "Semua teks bab dikembalikan ke baku ({$count} bab).");
+    }
+
+    /**
+     * Pastikan $key adalah bab yang memang bisa di-override untuk proposal
+     * ini (mempertimbangkan bab kondisional per jenis proposal). Selain itu
+     * kembalikan metadata bab (judul, dll) untuk audit log & flash message.
+     */
+    private function editableSection(Project $project, string $key): array
+    {
+        $section = collect(ProposalDocxBuilder::for($project)->sectionsForEditor())
+            ->firstWhere('key', $key);
+
+        abort_unless($section && $section['editable'], 404);
+
+        return $section;
+    }
+
+    /**
      * Validasi bersama untuk store() & update() — supaya aturan validasi
      * tidak dobel-tulis dan berisiko berbeda antara create vs edit.
      */
