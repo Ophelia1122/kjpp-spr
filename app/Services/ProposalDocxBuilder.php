@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Helpers\Terbilang;
 use App\Models\Project;
+use PhpOffice\PhpWord\ComplexType\TblWidth as TblWidthComplexType;
 use PhpOffice\PhpWord\Element\Footer;
 use PhpOffice\PhpWord\Element\Header;
 use PhpOffice\PhpWord\Element\Section;
@@ -11,6 +12,7 @@ use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\Shared\Converter;
 use PhpOffice\PhpWord\SimpleType\Jc;
+use PhpOffice\PhpWord\SimpleType\TblWidth as TblWidthSimpleType;
 
 /**
  * Membangun dokumen .docx "Surat Penawaran Jasa Penilaian" mengikuti
@@ -403,7 +405,7 @@ class ProposalDocxBuilder
         $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
         $t->addRow();
         $t->addCell(Converter::cmToTwip(10))->addText('No. ' . $this->project->proposal_number, $this->fBold, ['spaceAfter' => 0]);
-        $t->addCell(Converter::cmToTwip(6.5))->addText('Jakarta, ' . now()->translatedFormat('d F Y'), $this->fBold, ['alignment' => Jc::RIGHT, 'spaceAfter' => 0]);
+        $t->addCell(Converter::cmToTwip(6.5))->addText('Jakarta, ' . $this->idDate($this->project->effective_proposal_date), $this->fBold, ['alignment' => Jc::RIGHT, 'spaceAfter' => 0]);
 
         $this->s->addTextBreak(1);
         $pt = $this->project->instructingClient;
@@ -571,10 +573,24 @@ class ProposalDocxBuilder
         $this->sectionTitle('Identifikasi Obyek Penilaian dan Kepemilikan');
         $this->para('Obyek Penilaian dalam lingkup penugasan ini adalah :');
 
+        // Lebar tabel disamakan dengan lebar paragraf di atasnya: total
+        // lebar kolom + indent = lebar area isi halaman, dan tabel digeser
+        // ke kanan sejauh bodyIndent (sejajar huruf pertama paragraf, bukan
+        // menempel margin halaman). Proporsi kolom asli (No/Jenis/Lokasi/
+        // Bentuk/Atas Nama) dipertahankan, hanya diskalakan agar pas persis.
+        // CATATAN: 'width' pct=100% (cara lama) TERNYATA diukur LibreOffice
+        // terhadap lebar halaman PENUH, tidak dikurangi indent — makanya
+        // dipakai lebar absolut (dxa) + 'layout' fixed di sini.
+        $ratios  = [0.9, 4.6, 5.2, 3.4, 3.0]; // No | Jenis | Lokasi | Bentuk | Atas Nama
+        $targetW = (int) Converter::cmToTwip(self::PAGE_CONTENT_W_CM) - $this->bodyIndent;
+        $colW    = $this->distributeWidths($ratios, $targetW);
+
         $tbl = $this->s->addTable([
             'borderSize' => 6, 'borderColor' => '000000',
-            'width' => 100 * 50, 'unit' => 'pct',
+            'width'      => $targetW, 'unit' => TblWidthSimpleType::TWIP,
             'cellMargin' => 60,
+            'indent'     => new TblWidthComplexType($this->bodyIndent, TblWidthSimpleType::TWIP),
+            'layout'     => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED,
         ]);
         // Semua teks tabel rata tengah. Baris pertama kolom "Jenis
         // Aset/Properti" (kategori "Real Properti"/"Personal Properti"/dst)
@@ -584,22 +600,22 @@ class ProposalDocxBuilder
         $cdBold = ['size' => 9, 'bold' => true];
         $pc = ['alignment' => Jc::CENTER, 'spaceAfter' => 0];
         $tbl->addRow(null, ['tblHeader' => true]);
-        $tbl->addCell(Converter::cmToTwip(0.9))->addText('No.', $hd, $pc);
-        $tbl->addCell(Converter::cmToTwip(4.6))->addText('Jenis Aset/Properti', $hd, $pc);
-        $tbl->addCell(Converter::cmToTwip(5.2))->addText('Lokasi', $hd, $pc);
-        $tbl->addCell(Converter::cmToTwip(3.4))->addText('Bentuk/Jenis Hak Atas Tanah', $hd, $pc);
-        $tbl->addCell(Converter::cmToTwip(3.0))->addText('Atas Nama', $hd, $pc);
+        $tbl->addCell($colW[0])->addText('No.', $hd, $pc);
+        $tbl->addCell($colW[1])->addText('Jenis Aset/Properti', $hd, $pc);
+        $tbl->addCell($colW[2])->addText('Lokasi', $hd, $pc);
+        $tbl->addCell($colW[3])->addText('Bentuk/Jenis Hak Atas Tanah', $hd, $pc);
+        $tbl->addCell($colW[4])->addText('Atas Nama', $hd, $pc);
 
         foreach ($this->project->valuationObjects as $i => $o) {
             $tbl->addRow();
-            $tbl->addCell(Converter::cmToTwip(0.9))->addText((string) ($i + 1), $cd, $pc);
-            $jenis = $tbl->addCell(Converter::cmToTwip(4.6));
+            $tbl->addCell($colW[0])->addText((string) ($i + 1), $cd, $pc);
+            $jenis = $tbl->addCell($colW[1]);
             foreach ($o->description_lines as $k => $ln) {
                 $jenis->addText($ln, $k === 0 ? $cdBold : $cd, $pc);
             }
-            $tbl->addCell(Converter::cmToTwip(5.2))->addText($o->location, $cd, $pc);
-            $tbl->addCell(Converter::cmToTwip(3.4))->addText($o->ownership_form, $cd, $pc);
-            $tbl->addCell(Converter::cmToTwip(3.0))->addText($o->owner_name, $cd, $pc);
+            $tbl->addCell($colW[2])->addText($o->location, $cd, $pc);
+            $tbl->addCell($colW[3])->addText($o->ownership_form, $cd, $pc);
+            $tbl->addCell($colW[4])->addText($o->owner_name, $cd, $pc);
         }
 
         $this->s->addTextBreak(1);
@@ -608,6 +624,49 @@ class ProposalDocxBuilder
             $this->para(strtr($this->cl['post_objek_hubungan'], $this->objekPenutupRepl()));
             $this->para($this->cl['post_objek']);
         });
+    }
+
+    /**
+     * Bagi $totalTwip ke tiap kolom sebanding dengan $ratios (bebas skala,
+     * tak perlu berjumlah 1). Selisih pembulatan ditaruh di kolom TERAKHIR
+     * supaya total akhirnya presisi sampai twip (tabel tidak meleset dari
+     * $totalTwip walau 1 twip, yang bisa membuat sisi kanannya sedikit
+     * lewat/kurang dari margin).
+     */
+    private function distributeWidths(array $ratios, int $totalTwip): array
+    {
+        $sum    = array_sum($ratios);
+        $widths = array_map(fn ($r) => (int) round($totalTwip * $r / $sum), $ratios);
+        $widths[array_key_last($widths)] += $totalTwip - array_sum($widths);
+
+        return $widths;
+    }
+
+    /**
+     * Lebar kolom (twip) untuk tabel yang harus SEJAJAR dengan paragraf di
+     * atasnya (mis. rincian biaya, rekening bank, blok tanda tangan) —
+     * proporsi $ratiosCm dipertahankan apa adanya kalau totalnya masih
+     * muat, tapi dipangkas proporsional bila total + bodyIndent akan
+     * melewati lebar isi halaman (tabel yang lebarnya sudah dekat lebar
+     * halaman penuh, mis. Rekening Bank & blok tanda tangan).
+     */
+    private function indentedColWidths(array $ratiosCm): array
+    {
+        $natural = (int) Converter::cmToTwip(array_sum($ratiosCm));
+        $cap     = (int) Converter::cmToTwip(self::PAGE_CONTENT_W_CM) - $this->bodyIndent;
+
+        return $this->distributeWidths($ratiosCm, min($natural, $cap));
+    }
+
+    /** Properti tabel baku dipakai bareng dg indentedColWidths(): rata dg paragraf. */
+    private function indentedTableStyle(int $totalWidthTwip, array $extra = []): array
+    {
+        return $extra + [
+            'width'      => $totalWidthTwip, 'unit' => TblWidthSimpleType::TWIP,
+            'indent'     => new TblWidthComplexType($this->bodyIndent, TblWidthSimpleType::TWIP),
+            'layout'     => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED,
+            'cellMargin' => 0,
+        ];
     }
 
     private function objekPenutupRepl(): array
@@ -742,10 +801,21 @@ class ProposalDocxBuilder
         });
     }
 
+    /**
+     * Format tanggal ke Bahasa Indonesia untuk dokumen ("03 Juli 2026"),
+     * lepas dari APP_LOCALE (yang = 'en'). Carbon sudah mem-bundle data
+     * locale 'id' — tidak perlu paket tambahan. copy() supaya instance
+     * asli (hasil cast model) tidak ikut berubah locale-nya.
+     */
+    private function idDate(?\Carbon\Carbon $d): string
+    {
+        return $d ? $d->copy()->locale('id')->translatedFormat('d F Y') : '';
+    }
+
     private function tanggalPenilaianParas(): array
     {
         if ($this->project->proposal_purpose === Project::PURPOSE_LK_PROPERTI) {
-            $tgl = $this->project->valuation_date?->translatedFormat('d F Y') ?? '…………………';
+            $tgl = $this->idDate($this->project->valuation_date) ?: '…………………';
 
             return array_map(
                 fn ($p) => strtr($p, [':tgl' => $tgl]),
@@ -754,7 +824,7 @@ class ProposalDocxBuilder
         }
 
         $tgl = $this->project->valuation_date
-            ? ' (tanggal penilaian: ' . $this->project->valuation_date->translatedFormat('d F Y') . ')'
+            ? ' (tanggal penilaian: ' . $this->idDate($this->project->valuation_date) . ')'
             : '';
 
         return [strtr($this->cl['tanggal_penilaian_umum'], [
@@ -1016,11 +1086,12 @@ class ProposalDocxBuilder
                 ['PPN ' . $pct . '%', $rp($p->fee_ppn_amount), false],
                 ['Total', $rp($total), true],
             ];
-            $rin = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+            $colW = $this->indentedColWidths([2.6, 0.3, 5.0]);
+            $rin  = $this->s->addTable($this->indentedTableStyle(array_sum($colW)));
             $rin->addRow(null, ['cantSplit' => true]);
-            $cK = $rin->addCell(Converter::cmToTwip(2.6));
-            $cC = $rin->addCell(Converter::cmToTwip(0.3));
-            $cV = $rin->addCell(Converter::cmToTwip(5.0));
+            $cK = $rin->addCell($colW[0]);
+            $cC = $rin->addCell($colW[1]);
+            $cV = $rin->addCell($colW[2]);
             foreach ($rows as [$k, $v, $bold]) {
                 $f = $bold ? $this->fBold : $this->fBody;
                 $cK->addText($k, $f, ['spaceAfter' => 0]);
@@ -1043,10 +1114,11 @@ class ProposalDocxBuilder
         $this->s->addText($this->cl['rekening_label'], $this->fBold, ['spaceAfter' => 40] + $ind);
         $this->listJustClosed = false;
 
-        $rt = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        $colW = $this->indentedColWidths([9.5, 6.4]);
+        $rt   = $this->s->addTable($this->indentedTableStyle(array_sum($colW)));
         $rt->addRow(null, ['cantSplit' => true]);
 
-        $lc = $rt->addCell(Converter::cmToTwip(9.5));
+        $lc = $rt->addCell($colW[0]);
         foreach (array_values($this->bankAccounts()) as $i => $b) {
             if ($i > 0) {
                 $lc->addTextBreak(1);
@@ -1060,7 +1132,7 @@ class ProposalDocxBuilder
             $this->kvTable($lc, $rows, 2.4, 6.4);
         }
 
-        $rc = $rt->addCell(Converter::cmToTwip(6.4));
+        $rc = $rt->addCell($colW[1]);
         $this->kvTable($rc, [['NPWP No.', $this->cfg['npwp']]], 2.2, 3.6);
 
         $this->s->addTextBreak(1);
@@ -1096,13 +1168,16 @@ class ProposalDocxBuilder
             ?: $this->project->instructingClient->client_name;
 
         // cantSplit: blok tanda tangan tidak boleh terbelah dua halaman.
-        $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        // Digeser sejajar bodyIndent (sama seperti paragraf Bab 25 di
+        // atasnya) via indentedColWidths()/indentedTableStyle().
+        $colW = $this->indentedColWidths([9.9, 6.0]);
+        $t    = $this->s->addTable($this->indentedTableStyle(array_sum($colW)));
         $t->addRow(null, ['cantSplit' => true]);
 
         // Kolom kiri (blok KJPP/penandatangan) sengaja dilebarkan supaya
         // kolom kanan ("Menyetujui," dst) bergeser ke kanan & tidak
         // menempel dengan blok tanda tangan Penilai.
-        $l = $t->addCell(Converter::cmToTwip(9.9));
+        $l = $t->addCell($colW[0]);
         $l->addText('Hormat kami,', $this->fBody, ['spaceAfter' => 0]);
         $l->addText(strtoupper($this->cfg['company_name']), $this->fBold, ['spaceAfter' => 0]);
         $l->addText($this->cfg['company_tagline'], $this->fBody, ['spaceAfter' => 0]);
@@ -1115,7 +1190,7 @@ class ProposalDocxBuilder
         $l->addText('Surat Tanda Terdaftar OJK No. ' . $sig['sttd_ojk_no'], $this->fBody, ['spaceAfter' => 0]);
         $l->addText($sig['klasifikasi'], $this->fBody, ['spaceAfter' => 0]);
 
-        $r = $t->addCell(Converter::cmToTwip(6.0));
+        $r = $t->addCell($colW[1]);
         $r->addText('Menyetujui,', $this->fBody, ['spaceAfter' => 0]);
         $r->addText($approver, $this->fBold, ['spaceAfter' => 0]);
         $r->addTextBreak(7); // ruang tanda tangan + stempel
@@ -1585,6 +1660,12 @@ class ProposalDocxBuilder
     // Ukuran font (pt) judul sub-bab bernomor + judul "LAMPIRAN …".
     // Isi paragraf memakai config('kjpp.pdf_font_size') (default 11).
     private const HEADING_SIZE = 12;
+
+    // Lebar area isi halaman (cm) = lebar A4 (21) dikurangi margin kiri &
+    // kanan (2,54 masing-masing, lihat addSection() di boot()). Dipakai
+    // tabel bab 4 (Identifikasi Obyek) supaya lebarnya konsisten dengan
+    // lebar paragraf/margin halaman, bukan angka tebakan.
+    private const PAGE_CONTENT_W_CM = 21.0 - 2.54 - 2.54;
 
     // Daftar bernomor dirender sebagai TABEL 2-kolom tanpa garis: kolom
     // penanda (lebar tetap) | kolom isi. Dengan begitu SEMUA penanda lurus,

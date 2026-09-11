@@ -27,17 +27,21 @@ class User extends Authenticatable
     /**
      * Pilihan Jabatan (biodata). Hanya "Penanggung Jawab" yang boleh
      * dipilih sebagai penandatangan proposal (lihat scopePenanggungJawab).
+     * "Reviewer" memakai set field biodata yang sama dengan Penanggung
+     * Jawab (nomor izin Menkeu, SK Menkeu, STTD/KEP OJK, klasifikasi).
      */
     public const JABATAN_PELAKSANA_INSPEKSI = 'Pelaksana Inspeksi';
     public const JABATAN_PENILAI            = 'Penilai';
     public const JABATAN_ADMIN              = 'Admin';
     public const JABATAN_PENANGGUNG_JAWAB   = 'Penanggung Jawab';
+    public const JABATAN_REVIEWER           = 'Reviewer';
 
     public const JABATAN_OPTIONS = [
         self::JABATAN_PELAKSANA_INSPEKSI,
         self::JABATAN_PENILAI,
         self::JABATAN_ADMIN,
         self::JABATAN_PENANGGUNG_JAWAB,
+        self::JABATAN_REVIEWER,
     ];
 
     /**
@@ -86,5 +90,16 @@ class User extends Authenticatable
     public function isAdministrator(): bool
     {
         return $this->role?->slug === Role::ADMINISTRATOR;
+    }
+
+    /**
+     * Berjabatan "Reviewer" — gerbang akses tombol "Tandai Sudah Direview" /
+     * "Kembalikan ke Surveyor" pada alur review SLA Final. SENGAJA dicek
+     * dari jabatan (biodata), BUKAN dari Role/izin sistem — siapa pun bisa
+     * jadi Reviewer terlepas dari role akunnya (Admin Produksi, dst).
+     */
+    public function isReviewer(): bool
+    {
+        return $this->jabatan === self::JABATAN_REVIEWER;
     }
 }

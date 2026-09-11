@@ -3,164 +3,133 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 100px 60px 90px 60px; }
-        body { font-family: 'Helvetica', sans-serif; font-size: 11px; color: #1a1a1a; line-height: 1.6; }
+        @page { margin: 55px 55px 75px 55px; }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 10.5px; color: #000; line-height: 1.5; }
         table { width: 100%; border-collapse: collapse; }
-        h1 { font-size: 14px; text-align: center; text-decoration: underline; margin-bottom: 4px; }
-        .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .small { font-size: 9.5px; color: #333; }
-        .label-col { width: 170px; vertical-align: top; padding: 4px 0; }
-        .val-col { vertical-align: top; padding: 4px 0; }
-        .amount-table td { border: 1px solid #333; padding: 8px; }
-        .status-paid { color: #16a34a; font-weight: bold; }
-        .status-unpaid { color: #dc2626; font-weight: bold; }
-        .bank-box { border: 1px solid #999; padding: 10px; margin-top: 10px; }
+        .text-center { text-align: center; }
+        .bold { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .small { font-size: 9px; }
+
+        {{-- ===== Kop surat ===== --}}
+        .lh-logo { text-align: center; margin-bottom: 6px; }
+        .lh-logo img { width: 380px; }
+        hr.thick { border: none; border-top: 2.5px solid #000; margin: 4px 0 16px; }
+
+        .doc-title { text-align: center; font-size: 19px; font-weight: bold; margin: 4px 0 16px; }
+
+        {{-- ===== Kotak invoice ===== --}}
+        .frame { border: 1.3px solid #000; }
+        .frame td { padding: 7px 10px; vertical-align: top; }
+        .b-bottom { border-bottom: 1.3px solid #000; }
+        .b-top { border-top: 1.3px solid #000; }
+        .no-box { width: 230px; }
     </style>
 </head>
 <body>
 
-    {{-- Kop Surat --}}
-    <table style="margin-bottom: 15px;">
-        <tr>
-            <td style="width: 90px;">
-                <img src="{{ config('kjpp.company_logo') }}" style="width: 80px;" alt="Logo">
-            </td>
-            <td class="text-center">
-                <div style="font-size: 15px; font-weight: bold;">{{ config('kjpp.company_name') }}</div>
-                <div class="small">{{ config('kjpp.company_address') }}</div>
-                <div class="small">Telp: {{ config('kjpp.company_phone') }} | Email: {{ config('kjpp.company_email') }}</div>
-            </td>
-            <td style="width: 90px;"></td>
-        </tr>
-    </table>
-    <hr style="border-top: 2px solid #1a1a1a;">
-
-    <h1 style="margin-top: 25px;">
-        INVOICE {{ $invoice->invoice_type === 'DP' ? 'UANG MUKA (DP)' : 'PELUNASAN' }}
-    </h1>
-    <p class="text-center small">No. {{ $invoice->invoice_number }}</p>
-
-    {{-- Detail Klien & Invoice --}}
-    <table style="margin-top: 20px;">
-        <tr>
-            <td style="width: 50%; vertical-align: top;">
-                <div class="small" style="font-weight: bold; margin-bottom: 4px;">Ditagihkan Kepada:</div>
-                <div><strong>{{ $project->instructingClient->client_name }}</strong></div>
-                <div class="small">{{ $project->instructingClient->address }}</div>
-            </td>
-            <td style="width: 50%; vertical-align: top;">
-                <table>
-                    <tr>
-                        <td class="label-col small">Nomor Invoice</td>
-                        <td class="val-col small">: {{ $invoice->invoice_number }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label-col small">Nomor Proyek</td>
-                        <td class="val-col small">: {{ $project->proposal_number }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label-col small">Tanggal Terbit</td>
-                        <td class="val-col small">: {{ $invoice->created_at->translatedFormat('d F Y') }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label-col small">Tipe Termin</td>
-                        <td class="val-col small">: {{ $invoice->term_description ?? $invoice->invoice_type }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label-col small">Status Pembayaran</td>
-                        <td class="val-col small">
-                            :
-                            <span class="{{ $invoice->status === 'Paid' ? 'status-paid' : 'status-unpaid' }}">
-                                {{ $invoice->status === 'Paid' ? 'LUNAS' : 'BELUM DIBAYAR' }}
-                            </span>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-
-    {{-- Rincian Tagihan --}}
-    <table class="amount-table" style="margin-top: 25px;">
-        <tr style="background-color: #f0f0f0;">
-            <td><strong>Uraian</strong></td>
-            <td class="text-right" style="width: 160px;"><strong>Nominal (Rp)</strong></td>
-        </tr>
-        <tr>
-            <td>
-                Jasa Penilaian — Proyek No. {{ $project->proposal_number }}<br>
-                <span class="small">{{ $invoice->term_description ?? $invoice->invoice_type }}</span>
-
-                {{-- ===== Rincian per objek penilaian (bukan cuma ringkasan kategori) ===== --}}
-                @if ($project->valuationObjects->isNotEmpty())
-                    <table style="margin-top: 6px;">
-                        @foreach ($project->valuationObjects as $object)
-                            <tr>
-                                <td class="small" style="width: 16px; vertical-align: top;">{{ $loop->iteration }}.</td>
-                                <td class="small" style="vertical-align: top;">
-                                    {{ $object->short_label }} — {{ $object->location }}
-                                </td>
-                            </tr>
-                        @endforeach
-                    </table>
-                @else
-                    <div class="small">{{ $project->asset_type }} — {{ $project->asset_address }}</div>
-                @endif
-            </td>
-            <td class="text-right" style="vertical-align: top;">{{ number_format($invoice->amount, 0, ',', '.') }}</td>
-        </tr>
-        <tr style="background-color: #f0f0f0;">
-            <td class="text-right"><strong>TOTAL TAGIHAN</strong></td>
-            <td class="text-right"><strong>Rp {{ number_format($invoice->amount, 0, ',', '.') }}</strong></td>
-        </tr>
-    </table>
-
-    <p class="small" style="margin-top: 8px;">
-        Terbilang: <em>{{ \App\Helpers\Terbilang::make($invoice->amount) }}</em>
-    </p>
-
-    {{-- Informasi Rekening Bank --}}
-    <div class="bank-box">
-        <div class="small" style="font-weight: bold; margin-bottom: 4px;">Pembayaran dapat ditransfer ke rekening:</div>
-        <table>
-            <tr>
-                <td class="label-col small">Bank</td>
-                <td class="val-col small">: {{ $bank_info['bank_name'] ?? '-' }}</td>
-            </tr>
-            @if (!empty($bank_info['branch']))
-                <tr>
-                    <td class="label-col small">Cabang</td>
-                    <td class="val-col small">: {{ $bank_info['branch'] }}</td>
-                </tr>
-            @endif
-            <tr>
-                <td class="label-col small">Nomor Rekening</td>
-                <td class="val-col small">: {{ $bank_info['account_number'] ?? '-' }}</td>
-            </tr>
-            <tr>
-                <td class="label-col small">Atas Nama</td>
-                <td class="val-col small">: {{ $bank_info['account_name'] ?? '-' }}</td>
-            </tr>
-        </table>
+    {{-- ===================== KOP SURAT ===================== --}}
+    <div class="lh-logo">
+        <img src="{{ public_path('images/logo-spr-long.png') }}" alt="KJPP Sugianto Prasodjo dan Rekan">
     </div>
+    <hr class="thick">
 
-    <p class="small" style="margin-top: 15px;">
-        Mohon konfirmasi pembayaran dikirimkan ke {{ config('kjpp.company_email') }} agar dapat kami proses
-        lebih lanjut. Invoice ini sah tanpa tanda tangan basah, dicetak melalui sistem {{ config('kjpp.company_name') }}.
-    </p>
+    <div class="doc-title">I&nbsp;N&nbsp;V&nbsp;O&nbsp;I&nbsp;C&nbsp;E</div>
 
-    <table style="margin-top: 40px;">
+    {{-- ===================== KOTAK INVOICE ===================== --}}
+    <table class="frame">
         <tr>
-            <td style="width: 50%;"></td>
-            <td style="width: 50%;">
-                <div class="small">Hormat kami,</div>
-                <div class="small">Bagian Keuangan — {{ config('kjpp.company_name') }}</div>
-                <div style="height: 60px;"></div>
-                <div style="border-top: 1px solid #333; width: 200px;"></div>
+            <td class="b-bottom" style="width: 60%;">
+                Telah diterima Dari
+            </td>
+            <td class="b-bottom text-right no-box">
+                No. <strong>{{ $invoice->invoice_number }}</strong>
+            </td>
+        </tr>
+        <tr>
+            <td class="b-bottom" colspan="2">
+                <strong>{{ $project->instructingClient->client_name }}</strong><br>
+                <span class="small">{{ $project->instructingClient->address }}</span>
+            </td>
+        </tr>
+
+        <tr>
+            <td class="b-bottom bold" style="width: 60%;">URAIAN / DESCRIPTION</td>
+            <td class="b-bottom bold text-right no-box">JUMLAH / AMOUNT</td>
+        </tr>
+
+        <tr>
+            <td style="width: 60%;">
+                <span class="underline bold">UNTUK PEMBAYARAN</span><br>
+                <span class="italic small">FOR PAYMENT</span>
+                <br><br>
+                <span class="bold italic">
+                    Pembayaran {{ $invoice->term_description ?: 'Biaya Jasa Penilaian' }}
+                    Biaya Jasa Penilaian Properti an. {{ $project->instructingClient->client_name }}
+                    yang berlokasi di :
+                </span>
+                <br>
+                @foreach ($project->valuationObjects as $object)
+                    <br>{{ $loop->iteration }}. {{ $object->location }}<br>
+                @endforeach
+                <br>
+                Sesuai dengan Surat Penawaran No. {{ $project->proposal_number }}<br>
+                Tanggal {{ $project->effective_proposal_date->translatedFormat('d F Y') }}
+                <br><br>
+                Ppn {{ rtrim(rtrim(number_format($invoice->ppn_rate * 100, 2, ',', ''), '0'), ',') }}%
+            </td>
+            <td class="text-right no-box">
+                Rp&nbsp;&nbsp;&nbsp;{{ number_format($invoice->net_amount, 0, ',', '.') }}
+                <br><br><br><br><br><br><br><br><br><br>
+                Rp&nbsp;&nbsp;&nbsp;{{ number_format($invoice->ppn_amount, 0, ',', '.') }}
+            </td>
+        </tr>
+
+        <tr>
+            <td class="b-top" style="width: 60%;">
+                <span class="underline bold">TERBILANG</span><br>
+                <span class="italic small">THE AMOUNT OF</span>
+                <br><br>
+                <span class="bold italic"># {{ \App\Helpers\Terbilang::make($invoice->amount) }} #</span>
+            </td>
+            <td class="b-top">&nbsp;</td>
+        </tr>
+
+        <tr>
+            <td class="b-top text-center bold" style="width: 60%;">TOTAL</td>
+            <td class="b-top text-right bold no-box">Rp&nbsp;&nbsp;&nbsp;{{ number_format($invoice->amount, 0, ',', '.') }}</td>
+        </tr>
+    </table>
+
+    {{-- ===================== REKENING & TANDA TANGAN ===================== --}}
+    <table style="margin-top: 14px;">
+        <tr>
+            <td style="width: 55%; vertical-align: top;">
+                Pembayaran mohon ditransfer ke Rekening:<br>
+                <strong>{{ $bank_info['bank_name'] ?? '-' }}</strong><br>
+                @if (!empty($bank_info['branch']))
+                    <strong>Cabang {{ $bank_info['branch'] }}</strong><br>
+                @endif
+                <strong>A/C. {{ $bank_info['account_number'] ?? '-' }}</strong><br>
+                <strong>{{ $bank_info['account_name'] ?? config('kjpp.company_name') }}</strong>
+            </td>
+            <td style="width: 45%; vertical-align: top; text-align: center;">
+                Jakarta, {{ $invoice->displayDate->translatedFormat('d F Y') }}
+                <br><br><br><br><br>
+                <strong>{{ config('kjpp.signatory.name') }}, MAPPI (Cert.)</strong><br>
+                {{ config('kjpp.signatory.title') }}
             </td>
         </tr>
     </table>
+
+    {{-- ===================== FOOTER ===================== --}}
+    <div style="position: fixed; bottom: -55px; left: 0; right: 0; text-align: center; font-size: 8px; color: #333;">
+        @foreach (config('kjpp.footer.lines') as $line)
+            {{ $line }}<br>
+        @endforeach
+    </div>
 
 </body>
 </html>

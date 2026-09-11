@@ -59,10 +59,22 @@ class ProjectValuationObject extends Model
     }
 
     /**
+     * Format luas (m2) ala Indonesia TANPA desimal basa-basi: bilangan bulat
+     * (mis. 1.000,00) tampil sebagai "1.000", sementara pecahan yang memang
+     * berarti (mis. 42,8) tetap tampil dengan desimalnya.
+     */
+    private static function formatArea(float $value): string
+    {
+        $decimals = fmod($value, 1) === 0.0 ? 0 : 2;
+
+        return number_format($value, $decimals, ',', '.');
+    }
+
+    /**
      * Menyusun deskripsi multi-baris untuk kolom "Jenis Aset/Properti"
      * di tabel PDF proposal, meniru format dokumen asli KJPP:
      * "Real Properti / Tanah, Bangunan dan Sarana Pelengkap /
-     *  Luas Tanah: 72 m2 / Luas Bangunan: 42.80 m2"
+     *  Luas Tanah: 72 m2 / Luas Bangunan: 42,8 m2"
      * Dikembalikan sebagai array baris supaya Blade tinggal @foreach
      * dan taruh <br> di antaranya (aman untuk DomPDF).
      */
@@ -76,10 +88,10 @@ class ProjectValuationObject extends Model
                 . ($this->notes ? " ({$this->notes})" : '');
 
             if ($this->land_area) {
-                $lines[] = 'Luas Tanah: ' . number_format((float) $this->land_area, 2, ',', '.') . ' m2';
+                $lines[] = 'Luas Tanah: ' . self::formatArea((float) $this->land_area) . ' m2';
             }
             if ($this->building_area) {
-                $lines[] = 'Luas Bangunan: ' . number_format((float) $this->building_area, 2, ',', '.') . ' m2';
+                $lines[] = 'Luas Bangunan: ' . self::formatArea((float) $this->building_area) . ' m2';
             }
         } elseif ($this->is_personal_property) {
             $lines[] = 'Personal Properti';

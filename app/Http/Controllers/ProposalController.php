@@ -39,6 +39,7 @@ class ProposalController extends Controller
 
         $project = Project::create([
             'proposal_number'          => $validated['proposal_number'],
+            'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
             'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
@@ -122,6 +123,7 @@ class ProposalController extends Controller
 
         $project->update([
             'proposal_number'          => $validated['proposal_number'],
+            'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
             'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
@@ -234,6 +236,63 @@ class ProposalController extends Controller
         $project->update(['status' => Project::STATUS_WAITING_APPROVAL]);
 
         return back()->with('success', 'Proposal ditandai disetujui klien. Silakan buat Invoice DP.');
+    }
+
+    /**
+     * Tandai proyek BATAL (Batch 7). Non-destruktif: seluruh data proyek,
+     * objek, invoice, dan teks proposal tetap tersimpan — hanya status
+     * yang berubah. Status terakhir disimpan supaya bisa "diaktifkan
+     * kembali" ke tahap yang tepat. Edit proposal otomatis terkunci
+     * (edit() sudah membatasi ke status Draft).
+     */
+    public function cancel(Project $project)
+    {
+        if ($project->status === Project::STATUS_BATAL) {
+            return back()->with('info', 'Proyek ini sudah berstatus Batal.');
+        }
+
+        $previous = $project->status;
+
+        $project->update([
+            'status_before_cancel' => $previous,
+            'cancelled_at'         => now(),
+            'status'               => Project::STATUS_BATAL,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.cancelled',
+            "Membatalkan proyek {$project->proposal_number} (status sebelumnya: {$previous}). Data tidak dihapus.",
+            $project
+        );
+
+        return back()->with('success', "Proyek {$project->proposal_number} ditandai Batal. Data tetap tersimpan dan bisa diaktifkan kembali kapan saja.");
+    }
+
+    /**
+     * Aktifkan kembali proyek yang berstatus Batal — kembali ke status
+     * terakhir sebelum dibatalkan (fallback: Draft Proposal).
+     */
+    public function reactivate(Project $project)
+    {
+        if ($project->status !== Project::STATUS_BATAL) {
+            return back()->with('info', 'Proyek ini tidak sedang dibatalkan.');
+        }
+
+        $restored = $project->status_before_cancel ?: Project::STATUS_DRAFT;
+
+        $project->update([
+            'status'               => $restored,
+            'status_before_cancel' => null,
+            'cancelled_at'         => null,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.reactivated',
+            "Mengaktifkan kembali proyek {$project->proposal_number} ke status \"{$restored}\"",
+            $project
+        );
+
+        return back()->with('success', "Proyek {$project->proposal_number} diaktifkan kembali ke status \"{$restored}\".");
     }
 
     /**
@@ -378,6 +437,9 @@ class ProposalController extends Controller
                 'required', 'string', 'max:255',
                 Rule::unique('projects', 'proposal_number')->ignore($project?->id),
             ],
+            // Tanggal proposal (kop dokumen "Jakarta, <tanggal>"). Boleh mundur
+            // — proposal sering dibuat bertanggal beberapa hari lalu.
+            'proposal_date'            => 'required|date',
             'request_basis'            => 'nullable|string|max:1000',
             'instructing_client_id'    => 'required|exists:clients,id',
             // Penandatangan proposal — opsional. Kosong = pakai penandatangan

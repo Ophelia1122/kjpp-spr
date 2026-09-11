@@ -39,7 +39,8 @@ class LoginController extends Controller
        
         \App\Helpers\AuditLogger::record('auth.login', 'Login berhasil');
 
-        return redirect()->intended(route('dashboard'));
+        // Beranda = dashboard operasional yang bisa dibuka semua role.
+        return redirect()->intended(route('home'));
     }
 
     public function logout(Request $request)

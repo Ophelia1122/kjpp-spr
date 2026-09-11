@@ -42,6 +42,173 @@ class ProjectController extends Controller
     }
 
     /**
+     * Tandai draf laporan selesai -> status proyek maju ke 'Pelunasan'.
+     * SENGAJA TIDAK LAGI otomatis menerbitkan invoice (dulu digabung ke
+     * InvoiceController@generateFinal) — sekarang penerbitan invoice
+     * sepenuhnya lewat InvoiceController@store yang fleksibel (staf bisa
+     * menagih sisa tagihan kapan saja / berapa kali pun lewat kartu
+     * "Buat Invoice" di halaman proyek).
+     */
+    public function markDraftComplete(Project $project)
+    {
+        if ($project->status !== Project::STATUS_IN_PROGRESS) {
+            abort(403, 'Draf hanya bisa ditandai selesai selama proyek berstatus In-Progress.');
+        }
+
+        $project->update(['status' => Project::STATUS_PELUNASAN]);
+
+        \App\Helpers\AuditLogger::record(
+            'project.draft_completed',
+            "Menandai draf laporan selesai untuk proyek {$project->proposal_number}",
+            $project
+        );
+
+        return back()->with('success', 'Draf laporan ditandai selesai. Terbitkan invoice untuk sisa tagihan bila diperlukan.');
+    }
+
+    /**
+     * =========================================================================
+     * ALUR REVIEW SLA FINAL — Surveyor "Submit untuk Review" -> Reviewer
+     * (jabatan = Reviewer, LINTAS ROLE) setuju/kembalikan -> Admin Produksi
+     * konfirmasi (memulai SLA Laporan Final) / kembalikan ke Reviewer.
+     *
+     * SENGAJA independen dari status proyek utama & dari tombol "Tandai
+     * Draf Selesai (Buat Invoice Pelunasan)" — proses ini murni menentukan
+     * kapan SLA Laporan Final mulai dihitung, tidak menahan invoicing.
+     * =========================================================================
+     */
+
+    /** Tahap 1 (Surveyor/Admin Produksi, izin survey.manage): ajukan review. */
+    public function submitForReview(Project $project)
+    {
+        if ($project->status !== Project::STATUS_IN_PROGRESS || ! $project->survey_date) {
+            abort(403, 'Ajukan review hanya bisa dilakukan setelah tanggal survei diisi.');
+        }
+        if ($project->review_status !== null) {
+            abort(403, 'Proyek ini sudah pernah diajukan untuk review.');
+        }
+
+        $project->update([
+            'review_status'               => Project::REVIEW_SUBMITTED,
+            'review_submitted_at'         => now(),
+            'review_submitted_by_user_id' => auth()->id(),
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'review.submitted',
+            "Mengajukan hasil pekerjaan proyek {$project->proposal_number} untuk direview",
+            $project
+        );
+
+        return back()->with('success', 'Proyek diajukan untuk direview.');
+    }
+
+    /** Tahap 2 (Reviewer, jabatan): setujui hasil review, teruskan ke Admin Produksi. */
+    public function approveReview(Project $project)
+    {
+        abort_unless(auth()->user()->isReviewer(), 403, 'Hanya pengguna berjabatan Reviewer yang dapat melakukan aksi ini.');
+
+        if ($project->review_status !== Project::REVIEW_SUBMITTED) {
+            abort(403, 'Proyek ini tidak sedang menunggu review.');
+        }
+
+        $project->update([
+            'review_status'        => Project::REVIEW_REVIEWED,
+            'reviewed_at'          => now(),
+            'reviewed_by_user_id'  => auth()->id(),
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'review.approved_by_reviewer',
+            "Menyetujui hasil review proyek {$project->proposal_number}, diteruskan ke Admin Produksi",
+            $project
+        );
+
+        return back()->with('success', 'Hasil pekerjaan disetujui, menunggu konfirmasi Admin Produksi.');
+    }
+
+    /** Tahap 2 (Reviewer, jabatan): kembalikan ke Surveyor untuk revisi. */
+    public function rejectReviewToSurveyor(Request $request, Project $project)
+    {
+        abort_unless(auth()->user()->isReviewer(), 403, 'Hanya pengguna berjabatan Reviewer yang dapat melakukan aksi ini.');
+
+        if ($project->review_status !== Project::REVIEW_SUBMITTED) {
+            abort(403, 'Proyek ini tidak sedang menunggu review.');
+        }
+
+        $validated = $request->validate(['reason' => 'required|string|max:1000']);
+
+        $project->update([
+            'review_status'               => null,
+            'review_rejected_at'          => now(),
+            'review_rejected_by_user_id'  => auth()->id(),
+            'review_rejection_note'       => $validated['reason'],
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'review.rejected_to_surveyor',
+            "Mengembalikan proyek {$project->proposal_number} ke Surveyor untuk revisi. Alasan: {$validated['reason']}",
+            $project
+        );
+
+        return back()->with('warning', 'Proyek dikembalikan ke Surveyor untuk revisi.');
+    }
+
+    /** Tahap 3 (Admin Produksi, izin proposals.manage): konfirmasi -> mulai SLA Final. */
+    public function confirmReviewApproval(Project $project)
+    {
+        if ($project->review_status !== Project::REVIEW_REVIEWED) {
+            abort(403, 'Proyek ini belum disetujui Reviewer.');
+        }
+
+        $project->update([
+            'review_status'               => Project::REVIEW_APPROVED,
+            'review_approved_at'          => now(),
+            'review_approved_by_user_id'  => auth()->id(),
+            // Jejak penolakan lama sudah tidak relevan setelah disetujui penuh.
+            'review_rejected_at'          => null,
+            'review_rejected_by_user_id'  => null,
+            'review_rejection_note'       => null,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'review.confirmed',
+            "Mengonfirmasi persetujuan pekerjaan proyek {$project->proposal_number}. SLA Laporan Final mulai dihitung.",
+            $project
+        );
+
+        return back()->with('success', 'Pekerjaan dikonfirmasi disetujui. SLA Laporan Final mulai dihitung.');
+    }
+
+    /** Tahap 3 (Admin Produksi, izin proposals.manage): kembalikan ke Reviewer. */
+    public function rejectReviewToReviewer(Request $request, Project $project)
+    {
+        if ($project->review_status !== Project::REVIEW_REVIEWED) {
+            abort(403, 'Proyek ini belum disetujui Reviewer.');
+        }
+
+        $validated = $request->validate(['reason' => 'required|string|max:1000']);
+
+        $project->update([
+            'review_status'               => Project::REVIEW_SUBMITTED,
+            'review_rejected_at'          => now(),
+            'review_rejected_by_user_id'  => auth()->id(),
+            'review_rejection_note'       => $validated['reason'],
+            // Perlu direview ulang -- batalkan persetujuan Reviewer sebelumnya.
+            'reviewed_at'                 => null,
+            'reviewed_by_user_id'         => null,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'review.rejected_to_reviewer',
+            "Mengembalikan proyek {$project->proposal_number} ke Reviewer untuk ditinjau ulang. Alasan: {$validated['reason']}",
+            $project
+        );
+
+        return back()->with('warning', 'Proyek dikembalikan ke Reviewer untuk ditinjau ulang.');
+    }
+
+    /**
      * Export PDF "Surat Tugas Penilaian".
      */
     public function exportSuratTugas(Project $project)
@@ -92,8 +259,10 @@ class ProjectController extends Controller
 
         public function show(Project $project)
     {
-        $project->load('instructingClient', 'intendedUsers', 'invoices', 'valuationObjects', 'signedBy', 'bank')
-            ->loadCount('sectionTexts');
+        $project->load(
+            'instructingClient', 'intendedUsers', 'invoices', 'valuationObjects', 'signedBy', 'bank',
+            'reviewSubmittedBy', 'reviewedBy', 'reviewApprovedBy', 'reviewRejectedBy'
+        )->loadCount('sectionTexts');
 
         $activeUsers = User::where('is_active', true)
             ->orderBy('name')

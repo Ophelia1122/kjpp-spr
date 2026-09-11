@@ -15,7 +15,8 @@ class RolePermissionSeeder extends Seeder
      * mengubahnya, jadi digabung jadi 1 izin saja per modul.
      */
     private const PERMISSIONS = [
-        ['key' => 'dashboard.view',   'label' => 'Lihat Dashboard',                                  'group' => 'Dashboard'],
+        ['key' => 'dashboard.view',     'label' => 'Lihat Beranda, Dashboard Project & Timeline',      'group' => 'Dashboard'],
+        ['key' => 'dashboard.overview', 'label' => 'Lihat Dashboard Ringkasan Manajemen',              'group' => 'Dashboard'],
 
         ['key' => 'proposals.view',   'label' => 'Lihat Proposal & Detail Proyek',                    'group' => 'Proposal'],
         ['key' => 'proposals.manage', 'label' => 'Kelola Proposal (Buat/Edit/Hapus/Cetak PDF)',        'group' => 'Proposal'],
@@ -51,17 +52,19 @@ class RolePermissionSeeder extends Seeder
      */
     private const ROLE_PERMISSIONS = [
         Role::ADMIN_PRODUKSI => [
-            'dashboard.view', 'proposals.view', 'proposals.manage',
+            'dashboard.view', 'dashboard.overview', 'proposals.view', 'proposals.manage',
             'survey.view', 'survey.manage',
             'clients.view', 'clients.manage',
             'invoices.view', 'reports.view',
         ],
         Role::ADMIN_KEUANGAN => [
-            'dashboard.view', 'proposals.view',
+            'dashboard.view', 'dashboard.overview', 'proposals.view',
             'invoices.view', 'invoices.manage', 'tax_invoice.manage',
             'survey.view', 'clients.view',
             'reports.view', 'reports.export',
         ],
+        // Surveyor SENGAJA tanpa dashboard.overview — tidak melihat angka
+        // nilai kontrak / pipeline keuangan. Beranda & Timeline tetap bisa.
         Role::SURVEYOR => [
             'dashboard.view', 'proposals.view',
             'survey.view', 'survey.manage',

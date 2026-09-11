@@ -10,16 +10,41 @@
     <form action="{{ route('proposals.store') }}" method="POST" class="space-y-6 bg-white rounded-lg border border-gray-200 shadow-sm p-6">
         @csrf
 
-        {{-- ===================== NOMOR PROPOSAL (INPUT MANUAL) ===================== --}}
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Nomor Proposal</label>
-            <input type="text" name="proposal_number" required value="{{ old('proposal_number') }}"
-                   autocomplete="off" spellcheck="false"
-                   placeholder="00000/2.0131-00/KJPPSPR-PRO/APP/_/2026"
-                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm font-mono">
-            <p class="mt-1 text-xs text-gray-400">
-                Diinput manual sesuai nomor resmi yang diterbitkan sistem terintegrasi Kantor Pusat.
-            </p>
+        {{-- ============ NOMOR PROPOSAL (70%) + TANGGAL PROPOSAL (30%) — 1 BARIS ============ --}}
+        <div class="grid grid-cols-1 sm:grid-cols-10 gap-4">
+            <div class="sm:col-span-7">
+                <label class="block text-sm font-medium text-gray-700">Nomor Proposal</label>
+                <input type="text" name="proposal_number" required value="{{ old('proposal_number') }}"
+                       autocomplete="off" spellcheck="false"
+                       placeholder="00000/2.0131-00/KJPPSPR-PRO/APP/_/2026"
+                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm font-mono">
+                <p class="mt-1 text-xs text-gray-400">
+                    Diinput manual sesuai nomor resmi yang diterbitkan sistem terintegrasi Kantor Pusat.
+                </p>
+            </div>
+            <div class="sm:col-span-3">
+                <label class="block text-sm font-medium text-gray-700">Tanggal Proposal</label>
+                {{-- Diketik/tampil dd/mm/yyyy; ikon kalender membuka date picker native.
+                     Yang disubmit = hidden #proposal_date_iso (yyyy-mm-dd). --}}
+                <div class="relative mt-1">
+                    <input type="text" id="proposal_date_display" required
+                           placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" maxlength="10"
+                           class="w-full rounded-md border-gray-300 shadow-sm pr-10">
+                    <button type="button" id="proposal_date_pick" tabindex="-1" aria-label="Pilih dari kalender"
+                            class="absolute inset-y-0 right-0 grid w-10 place-items-center text-gray-400 hover:text-gray-600">
+                        <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0V11.25A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                        </svg>
+                    </button>
+                    <input type="date" id="proposal_date_picker" tabindex="-1" aria-hidden="true"
+                           class="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0">
+                </div>
+                <input type="hidden" name="proposal_date" id="proposal_date_iso"
+                       value="{{ old('proposal_date', now()->toDateString()) }}">
+                <p class="mt-1 text-xs text-gray-400">
+                    Format dd/mm/yyyy — atau klik ikon kalender. Tercetak di kop dokumen; boleh mundur.
+                </p>
+            </div>
         </div>
 
         {{-- ===================== DASAR PERMINTAAN PENILAIAN (MANUAL) ===================== --}}
@@ -717,5 +742,56 @@
         document.getElementById('purpose_hint').textContent = purposeHints[purpose] ?? '';
     }
     document.addEventListener('DOMContentLoaded', toggleLkFields);
+
+    /* ===== Tanggal Proposal — tampil/ketik dd/mm/yyyy, submit ISO (yyyy-mm-dd) ===== */
+    (function () {
+        var disp = document.getElementById('proposal_date_display');
+        var iso  = document.getElementById('proposal_date_iso');
+        if (!disp || !iso) return;
+
+        function isoToDisplay(v) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+            return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
+        }
+        function displayToIso(v) {
+            var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((v || '').trim());
+            if (!m) return '';
+            var d = +m[1], mo = +m[2], y = +m[3];
+            var dt = new Date(y, mo - 1, d);
+            if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
+            return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        }
+
+        disp.value = isoToDisplay(iso.value);
+
+        disp.addEventListener('input', function () {
+            var digits = disp.value.replace(/\D/g, '').slice(0, 8);
+            if (digits.length > 4)      disp.value = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+            else if (digits.length > 2) disp.value = digits.slice(0, 2) + '/' + digits.slice(2);
+            else                        disp.value = digits;
+            var parsed = displayToIso(disp.value);
+            if (parsed) iso.value = parsed;
+        });
+
+        disp.addEventListener('blur', function () {
+            var parsed = displayToIso(disp.value);
+            if (parsed) { iso.value = parsed; disp.value = isoToDisplay(parsed); }
+            else        { disp.value = isoToDisplay(iso.value); }
+        });
+
+        // Ikon kalender -> date picker native; hasilnya sinkron ke text + hidden.
+        var pick    = document.getElementById('proposal_date_picker');
+        var pickBtn = document.getElementById('proposal_date_pick');
+        if (pick && pickBtn) {
+            pickBtn.addEventListener('click', function () {
+                pick.value = iso.value || '';
+                if (typeof pick.showPicker === 'function') { try { pick.showPicker(); return; } catch (e) {} }
+                pick.focus(); pick.click();
+            });
+            pick.addEventListener('change', function () {
+                if (pick.value) { iso.value = pick.value; disp.value = isoToDisplay(pick.value); }
+            });
+        }
+    })();
 </script>
 @endsection

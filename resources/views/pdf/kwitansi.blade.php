@@ -3,97 +3,158 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 50px 60px; size: A4 landscape; }
-        body { font-family: 'Helvetica', sans-serif; font-size: 12px; color: #1a1a1a; line-height: 1.6; }
+        @page { margin: 55px 55px 75px 55px; }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 10.5px; color: #000; line-height: 1.5; }
         table { width: 100%; border-collapse: collapse; }
-        .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .small { font-size: 10px; color: #333; }
-        .frame { border: 2px solid #1a1a1a; padding: 25px 35px; }
-        .label-col { width: 210px; vertical-align: top; padding: 6px 0; }
-        .val-col { vertical-align: top; padding: 6px 0; border-bottom: 1px dotted #999; }
-        .amount-box { border: 1px solid #333; padding: 10px 14px; font-weight: bold; font-size: 14px; }
+        .text-center { text-align: center; }
+        .bold { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .small { font-size: 9px; }
+
+        .box { border: 1.3px solid #000; padding: 8px 10px; }
+        .doc-title { font-size: 20px; font-weight: bold; text-align: center; }
+        .doc-sub { font-size: 13px; font-style: italic; text-align: center; }
+
+        .frame { border: 1.3px solid #000; margin-top: 12px; }
+        .frame td { padding: 8px 10px; vertical-align: top; }
+        .label-col { width: 160px; }
+        .dots { border-bottom: 1px dotted #999; }
+        .dots-row td { border-bottom: 1px dotted #999; }
+        table.breakdown td { padding: 1px 4px 1px 0; }
+
+        .amount-row { border-top: 1.3px solid #000; }
+        .amount-box { font-size: 22px; font-weight: bold; }
+        .checkbox { display: inline-block; width: 8px; height: 8px; border: 1px solid #000; margin-right: 3px; vertical-align: middle; }
     </style>
 </head>
 <body>
 
-<div class="frame">
-
-    {{-- ===================== KOP + JUDUL ===================== --}}
-    <table style="margin-bottom: 15px;">
+    {{-- ===================== KOP: LOGO/MINI-LETTERHEAD | JUDUL | NO/TGL ===================== --}}
+    <table>
         <tr>
-            <td style="width: 90px;">
-                <img src="{{ config('kjpp.company_logo') }}" style="width: 75px;" alt="Logo">
+            <td style="width: 33%; vertical-align: middle;">
+                <div class="box">
+                    <img src="{{ public_path('images/logo-spr-short.png') }}" style="width: 100%;" alt="KJPP Sugianto Prasodjo dan Rekan">
+                </div>
             </td>
-            <td>
-                <div style="font-size: 16px; font-weight: bold;">{{ config('kjpp.company_name') }}</div>
-                <div class="small">{{ config('kjpp.company_address') }}</div>
-                <div class="small">Telp: {{ config('kjpp.company_phone') }} | Email: {{ config('kjpp.company_email') }}</div>
+            <td style="width: 34%; vertical-align: middle;">
+                <div class="doc-title">KWITANSI</div>
+                <div class="doc-sub">RECEIPT</div>
             </td>
-            <td style="width: 220px; text-align: right; vertical-align: top;">
-                <div style="font-size: 18px; font-weight: bold; letter-spacing: 1px;">KWITANSI</div>
-                <div class="small">(Receipt)</div>
-                <div class="small" style="margin-top: 6px;">No. {{ $invoice->invoice_number }}</div>
-                 <div class="small">Tgl: {{ $invoice->payment_date->translatedFormat('d F Y') }}</div>
+            <td style="width: 33%; vertical-align: middle;">
+                <table class="small">
+                    <tr>
+                        <td>No.<br>Number</td>
+                        <td>:</td>
+                        <td class="bold">{{ $invoice->kwitansi_number }}</td>
+                    </tr>
+                    <tr>
+                        <td>Tgl.<br>Date</td>
+                        <td>:</td>
+                        <td class="bold">{{ optional($invoice->payment_date)->translatedFormat('d F Y') }}</td>
+                    </tr>
+                </table>
             </td>
         </tr>
     </table>
-    <hr style="border-top: 2px solid #1a1a1a; margin-bottom: 15px;">
 
     {{-- ===================== ISI KWITANSI ===================== --}}
-    <table style="margin-top: 10px;">
-        <tr>
-            <td class="label-col">Telah diterima dari <span class="small">(Received from)</span></td>
-            <td class="val-col"><strong>{{ $project->instructingClient->client_name }}</strong></td>
+    <table class="frame">
+        <tr class="dots-row">
+            <td class="label-col">
+                <span class="underline">Sudah terima dari</span><br>
+                <span class="italic small">Received Form</span>
+            </td>
+            <td>{{ $project->instructingClient->client_name }}</td>
         </tr>
-        <tr>
-            <td class="label-col">Uang sejumlah <span class="small">(The sum of)</span></td>
-            <td class="val-col">
-                <em>{{ \App\Helpers\Terbilang::make($invoice->amount) }}</em>
+        <tr class="dots-row">
+            <td class="label-col">
+                <span class="underline">Banyaknya Uang</span><br>
+                <span class="italic small">Amount Received</span>
+            </td>
+            <td class="bold italic"># {{ \App\Helpers\Terbilang::make($invoice->amount) }} #</td>
+        </tr>
+        <tr class="dots-row">
+            <td class="label-col" rowspan="3">
+                <span class="underline">Untuk Pembayaran</span><br>
+                <span class="italic small">For payment of</span>
+            </td>
+            <td>
+                Pembayaran {{ $invoice->term_description ?: 'Biaya Jasa Penilaian' }}
+                Biaya Jasa Penilaian Properti an. {{ $project->instructingClient->client_name }}
             </td>
         </tr>
+        <tr class="dots-row">
+            <td>Sesuai dengan Surat Penawaran No. {{ $project->proposal_number }}</td>
+        </tr>
+        <tr class="dots-row">
+            <td>Tanggal {{ $project->effective_proposal_date->translatedFormat('d F Y') }}</td>
+        </tr>
         <tr>
-            <td class="label-col">Untuk pembayaran <span class="small">(In payment of)</span></td>
-            <td class="val-col">
-                {{ $invoice->term_description ?? $invoice->invoice_type }}
-                — Jasa Penilaian {{ $project->asset_summary_label }}, Proyek No. {{ $project->proposal_number }}
-                @if ($invoice->invoice_type === 'DP')
-                    (Uang Muka / Down Payment)
-                @else
-                    (Pelunasan Sisa Tagihan)
-                @endif
+            <td></td>
+            <td>
+                <table class="breakdown" style="width: 260px;">
+                    <tr><td>Fee</td><td>:</td><td class="text-right">Rp {{ number_format($invoice->net_amount, 0, ',', '.') }}</td></tr>
+                    <tr><td>PPN {{ rtrim(rtrim(number_format($invoice->ppn_rate * 100, 2, ',', ''), '0'), ',') }}%</td><td>:</td><td class="text-right">Rp {{ number_format($invoice->ppn_amount, 0, ',', '.') }}</td></tr>
+                    <tr class="bold"><td>Total</td><td>:</td><td class="text-right">Rp {{ number_format($invoice->amount, 0, ',', '.') }}</td></tr>
+                </table>
             </td>
         </tr>
     </table>
 
-    {{-- ===================== NOMINAL BOX ===================== --}}
-    <table style="margin-top: 25px;">
+    {{-- ===================== NOMINAL BESAR + CARA BAYAR + REKENING ===================== --}}
+    <table class="frame">
         <tr>
-            <td style="width: 60%;"></td>
-            <td style="width: 40%;">
-                <div class="amount-box text-center">
-                    Rp {{ number_format($invoice->amount, 0, ',', '.') }},-
+            <td style="width: 45%;">
+                <span class="small">Rp.</span>
+                <span class="amount-box">{{ number_format($invoice->amount, 0, ',', '.') }},00</span>
+                <br><br>
+                <table class="small">
+                    <tr>
+                        <td style="width: 60px;"><span class="checkbox"></span> CASH</td>
+                        <td style="width: 100px;"><span class="checkbox"></span> CHEQUE / BG</td>
+                        <td><span class="checkbox"></span> TRANSFER</td>
+                    </tr>
+                </table>
+                <br>
+                <table class="small">
+                    <tr><td style="width: 60px; vertical-align: top;">Bank<br><span class="italic">Bank</span></td><td class="dots">&nbsp;</td></tr>
+                    <tr><td style="vertical-align: top; padding-top: 8px;">Nomer<br><span class="italic">Number</span></td><td class="dots">&nbsp;</td></tr>
+                    <tr><td style="vertical-align: top; padding-top: 8px;">Tanggal<br><span class="italic">Date</span></td><td class="dots">&nbsp;</td></tr>
+                </table>
+            </td>
+            <td style="width: 55%; vertical-align: top;">
+                Mohon ditransfer ke Rekening Kami:<br><br>
+                <table class="small">
+                    <tr><td style="width: 120px;">Pemilik Rekening</td><td>: {{ $bank_info['account_name'] ?? config('kjpp.company_name') }}</td></tr>
+                    <tr><td>Bank</td><td>: {{ $bank_info['bank_name'] ?? '-' }}</td></tr>
+                    @if (!empty($bank_info['branch']))
+                        <tr><td>Cabang</td><td>: {{ $bank_info['branch'] }}</td></tr>
+                    @endif
+                    <tr><td>Account</td><td>: {{ $bank_info['account_number'] ?? '-' }}</td></tr>
+                </table>
+                <br><br><br>
+                <div class="text-right">
+                    <strong>{{ config('kjpp.signatory.name') }}, MAPPI (Cert.)</strong><br>
+                    <span class="italic">{{ config('kjpp.signatory.title') }}</span>
                 </div>
             </td>
         </tr>
     </table>
 
-    {{-- ===================== TANDA TANGAN ===================== --}}
-    <table style="margin-top: 45px;">
-        <tr>
-            <td style="width: 50%;"></td>
-            <td style="width: 50%; text-align: center;">
-                <div class="small">Jakarta, {{ $invoice->payment_date->translatedFormat('d F Y') }}</div>
-                <div class="small">{{ config('kjpp.company_name') }}</div>
-                <div style="height: 65px;"></div>
-                <div style="border-top: 1px solid #333; width: 220px; margin: 0 auto;"></div>
-                <div class="small"><strong>Arief Rachman Setiady, S.M., M.M., MAPPI (Cert.)</strong></div>
-                <div class="small">Penilai Publik — Izin No. P-1.25.00690</div>
-            </td>
-        </tr>
-    </table>
+    <p class="small text-center" style="margin-top: 10px;">
+        Kwitansi ini baru dianggap sah, setelah pembayaran dengan Bilyet Giro/Cek tsb, dapat diuangkan<br>
+        <span class="italic">This receipt will be cleared after Bilyet Giro/Cheque can be cleared</span>
+    </p>
 
-</div>
+    {{-- ===================== FOOTER ===================== --}}
+    <div style="position: fixed; bottom: -55px; left: 0; right: 0; text-align: center; font-size: 8px; color: #333;">
+        @foreach (config('kjpp.footer.lines') as $line)
+            {{ $line }}<br>
+        @endforeach
+    </div>
 
 </body>
 </html>

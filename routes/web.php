@@ -30,14 +30,30 @@ Route::middleware('auth')->group(function () {
 
     // Ganti password sendiri — SENGAJA di luar semua grup middleware
     // 'permission:...', supaya semua role bisa akses tanpa terkecuali.
-    Route::get('/profile/password', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
+    Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.updatePassword');
 
     // --- Dashboard ---
+    // "Beranda"           = dashboard operasional SEMUA role        -> home()
+    // "Dashboard Project" = tabel daftar proyek (route lama 'dashboard') -> index()
+    // "Timeline Project"  = Gantt mini SLA per proyek               -> TimelineController
     Route::middleware('permission:dashboard.view')->group(function () {
-        Route::get('/', [DashboardController::class, 'index'])->name('home');
+        Route::get('/', [DashboardController::class, 'home'])->name('home');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/timeline', [\App\Http\Controllers\TimelineController::class, 'index'])->name('timeline');
     });
+
+    // "Dashboard" = ringkasan manajemen (nilai kontrak, pipeline, grafik).
+    // Izin TERPISAH supaya Surveyor tidak melihat angka kontrak.
+    Route::middleware('permission:dashboard.overview')
+        ->get('/dashboard/overview', [DashboardController::class, 'overview'])->name('dashboard.overview');
+
+    // "Dashboard Pembayaran" — rekap semua Invoice/DP/Kwitansi lintas
+    // proyek + sisa tagihan per proyek. Sama seperti Invoice, izinnya
+    // 'invoices.view' (Surveyor tidak punya, sesuai akses invoice lain).
+    Route::middleware('permission:invoices.view')
+        ->get('/dashboard/pembayaran', [\App\Http\Controllers\PaymentDashboardController::class, 'index'])->name('dashboard.pembayaran');
     Route::middleware('permission:reports.export')
         ->get('/dashboard/export-excel', [DashboardController::class, 'exportExcel'])->name('dashboard.exportExcel');
 
@@ -64,6 +80,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('/proposals/{project}', [ProposalController::class, 'destroy'])->name('proposals.destroy');
         Route::post('/proposals/{project}/approve', [ProposalController::class, 'markApproved'])->name('proposals.markApproved');
 
+        // --- Proposal: Batal / Aktifkan kembali (Batch 7) ---
+        // Non-destruktif: data proyek tetap utuh, hanya status yang berubah.
+        Route::post('/proposals/{project}/cancel', [ProposalController::class, 'cancel'])->name('proposals.cancel');
+        Route::post('/proposals/{project}/reactivate', [ProposalController::class, 'reactivate'])->name('proposals.reactivate');
+
         // --- Proposal: editor teks baku per-bab (override; Batch 3) ---
         Route::get('/proposals/{project}/texts', [ProposalController::class, 'editTexts'])->name('proposals.texts');
         Route::put('/proposals/{project}/texts/{key}', [ProposalController::class, 'updateText'])->name('proposals.texts.update');
@@ -88,6 +109,20 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:survey.manage')->group(function () {
         Route::post('/projects/{project}/survey-data', [ProjectController::class, 'inputSurveyData'])->name('projects.inputSurveyData');
         Route::post('/projects/{project}/final-report-number', [ProjectController::class, 'inputFinalReportNumber'])->name('projects.inputFinalReportNumber');
+        // --- Alur review SLA Final, tahap 1 (Surveyor): ajukan review ---
+        Route::post('/projects/{project}/review/submit', [ProjectController::class, 'submitForReview'])->name('projects.review.submit');
+    });
+
+    // --- Alur review SLA Final, tahap 2 (Reviewer) — gerbangnya JABATAN
+    //     (User::isReviewer()), bukan izin/role, jadi TIDAK dibungkus
+    //     middleware 'permission:...'. Dicek langsung di controller.
+    Route::post('/projects/{project}/review/approve', [ProjectController::class, 'approveReview'])->name('projects.review.approve');
+    Route::post('/projects/{project}/review/reject-to-surveyor', [ProjectController::class, 'rejectReviewToSurveyor'])->name('projects.review.rejectToSurveyor');
+
+    // --- Alur review SLA Final, tahap 3 (Admin Produksi) ---
+    Route::middleware('permission:proposals.manage')->group(function () {
+        Route::post('/projects/{project}/review/confirm', [ProjectController::class, 'confirmReviewApproval'])->name('projects.review.confirm');
+        Route::post('/projects/{project}/review/reject-to-reviewer', [ProjectController::class, 'rejectReviewToReviewer'])->name('projects.review.rejectToReviewer');
     });
 
     // --- Invoice: lihat (termasuk cetak PDF invoice/kwitansi) ---
@@ -97,9 +132,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoices/{invoice}/kwitansi', [InvoiceController::class, 'exportKwitansi'])->name('invoices.exportKwitansi');
     });
     // --- Invoice: kelola (terbitkan/verifikasi/batalkan) ---
+    // "invoices.store" = SATU pintu terbit invoice, fleksibel berapa
+    // kali/termin (menggantikan generateDp/generateFinal lama).
     Route::middleware('permission:invoices.manage')->group(function () {
-        Route::post('/projects/{project}/invoices/dp', [InvoiceController::class, 'generateDp'])->name('invoices.generateDp');
-        Route::post('/projects/{project}/invoices/final', [InvoiceController::class, 'generateFinal'])->name('invoices.generateFinal');
+        Route::post('/projects/{project}/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+        Route::post('/projects/{project}/draft-complete', [ProjectController::class, 'markDraftComplete'])->name('projects.markDraftComplete');
         Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->name('invoices.markAsPaid');
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
     });

@@ -57,8 +57,8 @@
                 </p>
             </div>
 
-            {{-- Pelaksana Inspeksi & Admin --}}
-            <div data-bio="mappi" class="hidden">
+            {{-- Nomor MAPPI — tampil untuk SEMUA jabatan (tiap penilai/staf punya nomor keanggotaan MAPPI). --}}
+            <div>
                 <label class="block text-sm font-medium text-gray-700">Nomor MAPPI</label>
                 <input type="text" name="mappi_no" value="{{ old('mappi_no') }}"
                        placeholder="Contoh: 13-S-04682"
@@ -73,7 +73,7 @@
                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
             </div>
 
-            {{-- Penanggung Jawab (penandatangan proposal) --}}
+            {{-- Penanggung Jawab (penandatangan proposal) & Reviewer --}}
             <div data-bio="pj" class="hidden space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Status Partner</label>
@@ -129,18 +129,16 @@
 </div>
 
 <script>
-    // Field biodata yang tampil menyesuaikan Jabatan:
-    //   Pelaksana Inspeksi / Admin -> Nomor MAPPI
-    //   Penilai                    -> Nomor RMK
-    //   Penanggung Jawab           -> Status Partner + nomor izin Penilai Publik
+    // Nomor MAPPI selalu tampil (semua jabatan). Field lain menyesuaikan Jabatan:
+    //   Penilai                     -> Nomor RMK
+    //   Penanggung Jawab / Reviewer -> Status Partner + nomor izin Penilai Publik dll.
     // Input yang tersembunyi tetap ikut ter-submit sehingga nilainya tidak
     // hilang saat Jabatan diganti.
     function toggleBiodataFields() {
         var j = document.getElementById('jabatan_select').value;
         var groups = {
-            mappi: (j === 'Pelaksana Inspeksi' || j === 'Admin'),
             rmk:   (j === 'Penilai'),
-            pj:    (j === 'Penanggung Jawab'),
+            pj:    (j === 'Penanggung Jawab' || j === 'Reviewer'),
         };
         Object.keys(groups).forEach(function (key) {
             document.querySelectorAll('[data-bio="' + key + '"]').forEach(function (el) {

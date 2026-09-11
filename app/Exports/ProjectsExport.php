@@ -47,6 +47,7 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
     {
         return [
             'No. Proposal',
+            'Tanggal Proposal',
             'Status',
             'Jenis Proposal',
             'Pemberi Tugas',
@@ -60,10 +61,11 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             'Penilai Lapangan',
             'Tanggal Survei',
             'Estimasi Selesai',
-            'Total Invoice DP',
-            'Status Invoice DP',
-            'Total Invoice Pelunasan',
-            'Status Invoice Pelunasan',
+            'Jumlah Invoice Diterbitkan',
+            'Total Ditagihkan (Rp)',
+            'Total Dibayar (Rp)',
+            'Sisa Tagihan (Rp)',
+            'Status Pembayaran',
             'Nomor Laporan Resmi',
             'Tanggal Dibuat',
         ];
@@ -74,11 +76,14 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
      */
     public function map($project): array
     {
-        $dpInvoice    = $project->invoices->firstWhere('invoice_type', 'DP');
-        $finalInvoice = $project->invoices->firstWhere('invoice_type', 'Pelunasan');
+        $totalBilled = (float) $project->invoices->sum('amount');
+        $statusPembayaran = $project->invoices->isEmpty()
+            ? 'Belum Ada Invoice'
+            : ($project->is_fully_paid ? 'Lunas' : 'Belum Lunas');
 
         return [
             $project->proposal_number,
+            ($project->proposal_date ?? $project->created_at)->format('d-m-Y'),
             $project->status,
             $project->proposal_purpose,
             $project->instructingClient->client_name ?? '-',
@@ -92,10 +97,11 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $project->assigned_appraiser ?? '-',
             $project->survey_date?->format('d-m-Y') ?? '-',
             $project->estimated_completion_date_formatted ?? '-',
-            $dpInvoice ? (float) $dpInvoice->amount : 0,
-            $dpInvoice->status ?? '-',
-            $finalInvoice ? (float) $finalInvoice->amount : 0,
-            $finalInvoice->status ?? '-',
+            $project->invoices->count(),
+            $totalBilled,
+            (float) $project->total_paid,
+            (float) $project->remaining_balance,
+            $statusPembayaran,
             $project->final_report_number ?? '-',
             $project->created_at->format('d-m-Y'),
         ];
