@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\ProjectsExport;
 use App\Models\Invoice;
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -25,8 +26,41 @@ class DashboardController extends Controller
      */
     public function home()
     {
-        $canSeeInvoices = auth()->user()->hasPermission('invoices.view');
+        $user           = auth()->user();
+        $canSeeInvoices = $user->hasPermission('invoices.view');
         $mineId         = auth()->id();
+
+        // Kartu "Proyek Selesai" — khusus jabatan Penilai/Pelaksana Inspeksi
+        // (dihitung dari assigned_appraiser_id, proyek yg jadi tanggung
+        // jawab lapangannya) dan Reviewer (dihitung dari reviewed_by_user_id,
+        // proyek yg pernah dia tandai "Sudah Direview"). Null = jabatan lain,
+        // kartu tidak ditampilkan.
+        $completedCount = null;
+        if (in_array($user->jabatan, [User::JABATAN_PENILAI, User::JABATAN_PELAKSANA_INSPEKSI], true)) {
+            $completedCount = Project::where('assigned_appraiser_id', $mineId)
+                ->where('status', Project::STATUS_SELESAI)
+                ->count();
+        } elseif ($user->jabatan === User::JABATAN_REVIEWER) {
+            $completedCount = Project::where('reviewed_by_user_id', $mineId)
+                ->where('status', Project::STATUS_SELESAI)
+                ->count();
+        }
+
+        // "Menunggu Review Anda" — proyek yang sudah disubmit Surveyor tapi
+        // belum ditandai direview siapa pun (review_status = submitted).
+        // Ditampilkan utk jabatan Reviewer (bisa langsung bertindak) DAN
+        // Administrator (supaya tetap bisa memantau/verifikasi walau bukan
+        // Reviewer). Reviewer TIDAK dibatasi ke proyek tertentu — siapa pun
+        // berjabatan Reviewer boleh ambil proyek mana pun yang mengantre
+        // (lihat ProjectController@approveReview, gerbangnya jabatan bukan
+        // penugasan per-proyek).
+        $pendingReview = collect();
+        if ($user->jabatan === User::JABATAN_REVIEWER || $user->isAdministrator()) {
+            $pendingReview = Project::with('instructingClient', 'reviewSubmittedBy')
+                ->where('review_status', Project::REVIEW_SUBMITTED)
+                ->orderBy('review_submitted_at')
+                ->get();
+        }
 
         $active = Project::with('instructingClient')
             ->active()
@@ -85,6 +119,8 @@ class DashboardController extends Controller
             'attention'       => $attention->sortBy('rank')->values()->take(8),
             'weekRange'       => now()->startOfWeek()->translatedFormat('d M')
                                  . ' – ' . now()->endOfWeek()->translatedFormat('d M'),
+            'completedCount'  => $completedCount,
+            'pendingReview'   => $pendingReview,
         ]);
     }
 
@@ -93,14 +129,62 @@ class DashboardController extends Controller
      * proyek dalam bentuk tabel, dengan filter status & pencarian ringan
      * di sisi query (bukan JS DataTables) supaya tetap ringan.
      */
+    /**
+     * Ekspresi SQL: tambahkan N HARI KERJA (Senin–Jumat, Sabtu/Minggu libur)
+     * ke sebuah tanggal — padanan Carbon::addWeekdays() yang dipakai accessor
+     * estimated_completion_date & estimated_final_completion_date di model.
+     *
+     * Dipakai untuk mengurutkan kolom SLA. Tanpa ini urutannya harus memakai
+     * hari kalender dan bisa meleset dari tenggat yang sebenarnya ditampilkan.
+     *
+     * Rumusnya: dari hari kerja, N hari kerja = N hari kalender + 2 hari untuk
+     * setiap akhir pekan yang terlewati, yaitu FLOOR((dow + N) / 5) * 2 dengan
+     * dow = WEEKDAY() (0 = Senin ... 6 = Minggu). Kalau tanggal awalnya jatuh
+     * di akhir pekan, Carbon menggeser ke Senin berikutnya lalu menghitung
+     * sisanya — jadi ditangani sebagai cabang terpisah.
+     */
+    private function addBusinessDaysSql(string $dateExpr, string $daysExpr): string
+    {
+        // Cabang akhir pekan: geser ke Senin, lalu sisa (N-1) hari kerja.
+        $shifted    = "DATE_ADD($dateExpr, INTERVAL (7 - WEEKDAY($dateExpr)) DAY)";
+        $restDays   = "GREATEST($daysExpr - 1, 0)";
+        $weekendArm = "DATE_ADD($shifted, INTERVAL (FLOOR($restDays / 5) * 2 + $restDays) DAY)";
+
+        // Cabang hari kerja biasa.
+        $weekdayArm = "DATE_ADD($dateExpr, INTERVAL (FLOOR((WEEKDAY($dateExpr) + $daysExpr) / 5) * 2 + $daysExpr) DAY)";
+
+        // N = 0 berarti tanggal itu sendiri (Carbon juga begitu, termasuk kalau
+        // tanggalnya jatuh di akhir pekan) — harus dicek lebih dulu, kalau tidak
+        // cabang akhir pekan akan menggesernya ke Senin.
+        return "CASE WHEN ($daysExpr) <= 0 THEN $dateExpr"
+            . " WHEN WEEKDAY($dateExpr) >= 5 THEN $weekendArm"
+            . " ELSE $weekdayArm END";
+    }
+
     public function index(Request $request)
     {
-        $query = Project::with('instructingClient')->latest();
+        // invoices di-eager-load karena kolom "Sisa Tagihan" memakai accessor
+        // remaining_balance yang menghitung dari relasi invoices — tanpa ini
+        // jadi N+1 (1 query per baris tabel).
+        $query = Project::with(['instructingClient', 'assignedAppraiser', 'invoices']);
+
         // Filter "Proyek Saya" — menampilkan HANYA proyek yang
         // assigned_appraiser_id-nya cocok dengan user yang sedang login.
         // Tersedia untuk SEMUA role (bukan cuma Surveyor) karena Admin
         // Produksi pun kadang mau lihat "yang jadi tanggung jawab saya".
-        if ($request->boolean('mine')) {
+        //
+        // Default toggle-nya: kalau parameter `mine` SAMA SEKALI tidak ada
+        // di URL (baru masuk dari sidebar, bukan habis klik salah satu
+        // pill), Surveyor diutamakan lihat "Proyek Saya" duluan — kerjaan
+        // hariannya cuma proyek yang jadi tanggung jawabnya, jadi lebih
+        // relevan daripada daftar SEMUA proyek. Role lain tetap default ke
+        // "Semua Proyek" seperti biasa. Pill "Semua Proyek" sendiri kirim
+        // `mine=0` eksplisit (lihat view), jadi klik eksplisit tetap dihormati.
+        $mine = $request->has('mine')
+            ? $request->boolean('mine')
+            : auth()->user()->role?->slug === \App\Models\Role::SURVEYOR;
+
+        if ($mine) {
             $query->where('assigned_appraiser_id', auth()->id());
         }
         if ($request->filled('status')) {
@@ -113,16 +197,126 @@ class DashboardController extends Controller
                 $q->where('proposal_number', 'like', "%{$keyword}%")
                   ->orWhereHas('instructingClient', function ($sub) use ($keyword) {
                       $sub->where('client_name', 'like', "%{$keyword}%");
+                  })
+                  ->orWhereHas('intendedUsers', function ($sub) use ($keyword) {
+                      $sub->where('client_name', 'like', "%{$keyword}%");
                   });
             });
         }
 
-        $projects = $query->paginate(15)->withQueryString();
+        // ---------- Filter tambahan (2026-09-14, feedback user) ----------
+        if ($request->filled('purpose')) {
+            $query->where('proposal_purpose', $request->purpose);
+        }
+        if ($request->filled('appraiser')) {
+            $query->where('assigned_appraiser_id', $request->appraiser);
+        }
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->from);
+        }
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->to);
+        }
+
+        // ---------- Pengurutan ----------
+        // Whitelist kolom supaya isi query string tidak bisa dipakai menyuntik
+        // SQL lewat orderBy.
+        $sortable = ['created_at', 'proposal_number', 'purpose', 'status', 'fee', 'deadline'];
+
+        // Default berbeda per tab (2026-09-14, feedback user):
+        //  - "Semua Proyek" : terbaru dulu — hasilnya mudah ditebak.
+        //  - "Proyek Saya"  : tenggat SLA paling mepet dulu — tab ini dibuka
+        //    untuk melihat tanggung jawab sendiri, jadi praktis jadi daftar
+        //    "kerjakan dari atas". Klik header manapun tetap menimpa default.
+        $defaultSort = $mine ? 'deadline' : 'created_at';
+        $defaultDir  = $mine ? 'asc' : 'desc';
+
+        $sort = $request->get('sort', $defaultSort);
+        if (!in_array($sort, $sortable, true)) {
+            $sort = $defaultSort;
+        }
+        $dir = $request->filled('dir')
+            ? ($request->get('dir') === 'asc' ? 'asc' : 'desc')
+            : $defaultDir;
+
+        if ($sort === 'fee') {
+            // Kolom yang DITAMPILKAN adalah total_fee (accessor: Fee + PPN bila
+            // belum termasuk + Transport), bukan kolom service_fee. Mengurutkan
+            // service_fee mentah bikin urutan terlihat kacau — mis. proyek
+            // Rp 5.500.000 belum-PPN tampil Rp 6.105.000, jadi harusnya di ATAS
+            // proyek Rp 6.000.000 sudah-PPN. Jadi rumus total_fee diulang di SQL.
+            $rate = (float) config('kjpp.ppn_rate', 0.11);
+            $query->orderByRaw(
+                '(CASE WHEN fee_ppn_included = 1 THEN service_fee ELSE service_fee * (1 + ?) END'
+                . ' + COALESCE(transport_cost, 0)) ' . $dir,
+                [$rate]
+            );
+        } elseif ($sort === 'deadline') {
+            // Harus mengikuti FASE SLA yang sedang ditampilkan di kolom SLA:
+            // kalau hasil penilaian sudah dikonfirmasi, yang berlaku adalah SLA
+            // Laporan Final (review_approved_at + sla_final_days); kalau belum,
+            // SLA Draft (survey_date + sla_draft_days). Mengurutkan selalu pakai
+            // tenggat Draft bikin isi kolom terlihat tidak urut.
+            $deadlineExpr = 'CASE WHEN review_approved_at IS NOT NULL AND sla_final_days IS NOT NULL'
+                . ' THEN ' . $this->addBusinessDaysSql('review_approved_at', 'sla_final_days')
+                . ' ELSE ' . $this->addBusinessDaysSql('survey_date', 'COALESCE(sla_draft_days, 0)') . ' END';
+
+            // Proyek yang kolom SLA-nya kosong (belum ada penilai/tanggal survei,
+            // atau sudah Selesai/Batal) selalu ditaruh paling bawah — bukan
+            // nyelip di tengah hanya karena tanggal surveinya kebetulan cocok.
+            $query->orderByRaw(
+                '(survey_date IS NULL OR assigned_appraiser IS NULL OR status IN (?, ?)) asc',
+                [Project::STATUS_SELESAI, Project::STATUS_BATAL]
+            )->orderByRaw($deadlineExpr . ' ' . $dir);
+        } else {
+            $column = match ($sort) {
+                'proposal_number' => 'proposal_number',
+                'purpose'         => 'proposal_purpose',
+                'status'          => 'status',
+                default           => 'created_at',
+            };
+            $query->orderBy($column, $dir);
+        }
+
+        // Urutan sekunder yang stabil — tanpa ini, baris dengan nilai sortir
+        // sama bisa berpindah-pindah posisi antar halaman.
+        if ($sort !== 'created_at') {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $perPage = (int) $request->get('per_page', 15);
+        if (!in_array($perPage, [15, 25, 50, 100], true)) {
+            $perPage = 15;
+        }
+
+        $projects = $query->paginate($perPage)->withQueryString();
 
         // Dipakai untuk filter dropdown status di view (termasuk "Batal").
-        $statusOptions = Project::STATUSES;
+        $statusOptions    = Project::STATUSES;
+        $purposeOptions   = Project::query()->select('proposal_purpose')->distinct()
+            ->orderBy('proposal_purpose')->pluck('proposal_purpose')->filter()->values();
+        $appraiserOptions = \App\Models\User::whereIn(
+            'id',
+            Project::whereNotNull('assigned_appraiser_id')->distinct()->pluck('assigned_appraiser_id')
+        )->orderBy('name')->get(['id', 'name']);
 
-        return view('dashboard.index', compact('projects', 'statusOptions'));
+        // Live search (lihat initLiveSearch() di layouts/app.blade.php) minta
+        // fragmen hasil saja lewat header X-Requested-With, bukan halaman
+        // penuh — supaya browser tak perlu render ulang seluruh layout +
+        // kompilasi CSS Tailwind tiap pencarian.
+        // Dikirim ke view supaya panah indikator kolom aktif ikut benar saat
+        // urutannya berasal dari default per-tab (bukan dari query string).
+        $currentSort = $sort;
+        $currentDir  = $dir;
+
+        if ($request->ajax()) {
+            return view('dashboard._project_results', compact('projects', 'currentSort', 'currentDir'));
+        }
+
+        return view('dashboard.index', compact(
+            'projects', 'statusOptions', 'purposeOptions', 'appraiserOptions', 'mine',
+            'currentSort', 'currentDir'
+        ));
     }
 
     /**

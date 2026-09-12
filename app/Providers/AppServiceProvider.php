@@ -20,6 +20,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Nama bulan Indonesia ("Agustus") di semua translatedFormat() —
+        // proposal, invoice/kwitansi, timeline, dashboard, dll. Carbon
+        // punya locale sendiri terpisah dari App::setLocale(), jadi harus
+        // di-set eksplisit; disamakan dengan config('app.locale') (APP_LOCALE)
+        // supaya satu sumber kebenaran, bukan di-hardcode 'id' di sini.
+        \Carbon\Carbon::setLocale(config('app.locale'));
+
         // Jembatan supaya @can('proposals.manage'), @canany([...]), dan
         // Gate::allows('invoices.view') di seluruh aplikasi otomatis
         // mengecek lewat hasPermission() custom kita — TANPA perlu

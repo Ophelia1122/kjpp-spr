@@ -27,6 +27,10 @@ class RolePermissionSeeder extends Seeder
 
         ['key' => 'survey.view',      'label' => 'Lihat Data Survei Lapangan',                        'group' => 'Survei Lapangan'],
         ['key' => 'survey.manage',    'label' => 'Kelola Data Survei (Input Penilai/Tanggal, Cetak Surat Tugas)', 'group' => 'Survei Lapangan'],
+        ['key' => 'assignment_letter.manage', 'label' => 'Isi Nomor/Tanggal/Barcode Surat Tugas & Pilih Reviewer', 'group' => 'Survei Lapangan'],
+
+        ['key' => 'final_report.manage', 'label' => 'Isi Nomor Laporan Resmi & Tanggal Final',        'group' => 'Laporan Akhir'],
+        ['key' => 'final_report.view',   'label' => 'Lihat Nomor Laporan Resmi & Tanggal Final',       'group' => 'Laporan Akhir'],
 
         ['key' => 'clients.view',     'label' => 'Lihat Daftar Klien',                                'group' => 'Klien'],
         ['key' => 'clients.manage',   'label' => 'Kelola Klien (Tambah/Edit/Hapus)',                   'group' => 'Klien'],
@@ -53,21 +57,23 @@ class RolePermissionSeeder extends Seeder
     private const ROLE_PERMISSIONS = [
         Role::ADMIN_PRODUKSI => [
             'dashboard.view', 'dashboard.overview', 'proposals.view', 'proposals.manage',
-            'survey.view', 'survey.manage',
+            'survey.view', 'survey.manage', 'final_report.manage',
             'clients.view', 'clients.manage',
             'invoices.view', 'reports.view',
         ],
         Role::ADMIN_KEUANGAN => [
             'dashboard.view', 'dashboard.overview', 'proposals.view',
-            'invoices.view', 'invoices.manage', 'tax_invoice.manage',
-            'survey.view', 'clients.view',
+            'invoices.view', 'invoices.manage', 'tax_invoice.manage', 'final_report.manage',
+            'survey.view', 'assignment_letter.manage', 'clients.view',
             'reports.view', 'reports.export',
         ],
         // Surveyor SENGAJA tanpa dashboard.overview — tidak melihat angka
         // nilai kontrak / pipeline keuangan. Beranda & Timeline tetap bisa.
+        // final_report.view (bukan .manage) — Nomor Laporan Resmi urusan
+        // Admin Produksi/Keuangan, Surveyor cuma perlu lihat (2026-09-14).
         Role::SURVEYOR => [
             'dashboard.view', 'proposals.view',
-            'survey.view', 'survey.manage',
+            'survey.view', 'survey.manage', 'final_report.view',
             'clients.view',
         ],
     ];

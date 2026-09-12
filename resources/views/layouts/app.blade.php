@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="{{ auth()->check() && auth()->user()->dark_mode ? 'dark' : '' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Internal Web-App KJPP')</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+        @custom-variant dark (&:where(.dark, .dark *));
+    </style>
     <style>
         /* ---- Transisi halus lintas fitur ---- */
         :root { --ease: cubic-bezier(.16,.84,.44,1); }
@@ -36,9 +39,24 @@
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
         }
+
+        /* Default mode gelap utk SEMUA input/select/textarea teks — Tailwind
+           preflight reset bg jadi transparent + warna teks browser bawaan
+           (hitam), jadi tanpa ini kolom form jadi tak terbaca di atas kartu
+           gelap. Tak ada elemen form yg punya kelas dark warna sendiri
+           di codebase (dicek via grep) jadi aman pakai spesifisitas normal. */
+        .dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="color"]),
+        .dark select,
+        .dark textarea {
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+        .dark input::placeholder, .dark textarea::placeholder {
+            color: #6b7280;
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 dark:bg-gray-950">
     <div class="flex min-h-screen">
 
         {{-- ===================== OVERLAY (mobile, klik untuk tutup sidebar) ===================== --}}
@@ -83,7 +101,7 @@
                         <a href="{{ route('dashboard') }}"
                         class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
                                 {{ request()->routeIs('dashboard') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                            <span>📊</span> Dashboard Project
+                            <span>📊</span> List Project
                         </a>
                         <a href="{{ route('timeline') }}"
                         class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
@@ -102,7 +120,7 @@
                     @endcan
 
                     {{-- "Buat Proposal Baru" sengaja TIDAK di sidebar — aksinya
-                         lewat tombol "+ Buat Proposal Baru" di Dashboard Project. --}}
+                         lewat tombol "+ Buat Proposal Baru" di List Project. --}}
 
                     @can('clients.view')
                         <a href="{{ route('clients.index') }}"
@@ -165,12 +183,26 @@
                             <span class="block truncate text-xs text-gray-400">{{ auth()->user()->role->name ?? '-' }} · Profil Saya</span>
                         </span>
                     </a>
-                    <form action="{{ route('logout') }}" method="POST" class="mt-2">
-                        @csrf
-                        <button type="submit" class="w-full text-left text-sm text-red-400 hover:text-red-300">
-                            🚪 Logout
-                        </button>
-                    </form>
+
+                    {{-- 2 kolom: Logout (kiri) + toggle mode gelap/terang (kanan). --}}
+                    <div class="mt-2 grid grid-cols-2 items-center gap-2">
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="text-left text-sm text-red-400 hover:text-red-300">
+                                🚪 Logout
+                            </button>
+                        </form>
+
+                        <label class="inline-flex items-center justify-self-end gap-2 cursor-pointer" title="Mode Gelap/Terang">
+                            <span id="themeToggleIcon" class="text-xs">{{ auth()->user()->dark_mode ? '☀️' : '🌙' }}</span>
+                            <span class="relative inline-block h-5 w-9 shrink-0">
+                                <input type="checkbox" id="themeToggleCheckbox" class="peer sr-only" onchange="toggleTheme()"
+                                       {{ auth()->user()->dark_mode ? 'checked' : '' }}>
+                                <span class="absolute inset-0 rounded-full bg-gray-600 transition-colors peer-checked:bg-blue-600"></span>
+                                <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-4"></span>
+                            </span>
+                        </label>
+                    </div>
                 </div>
             @endauth
         </aside>
@@ -190,35 +222,35 @@
 
             <main class="flex-1 px-4 lg:px-8 py-6">
                 @if (session('success'))
-                    <div class="mb-4 rounded-md bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 flex items-start justify-between gap-3">
+                    <div class="mb-4 rounded-md bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
                         <span>✅ {{ session('success') }}</span>
-                        <button type="button" onclick="this.closest('div').remove()" class="text-green-500 hover:text-green-700 leading-none">&times;</button>
+                        <button type="button" onclick="this.closest('div').remove()" class="text-green-500 hover:text-green-700 dark:hover:text-green-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if (session('error'))
-                    <div class="mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 flex items-start justify-between gap-3">
+                    <div class="mb-4 rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
                         <span>⚠️ {{ session('error') }}</span>
-                        <button type="button" onclick="this.closest('div').remove()" class="text-red-500 hover:text-red-700 leading-none">&times;</button>
+                        <button type="button" onclick="this.closest('div').remove()" class="text-red-500 hover:text-red-700 dark:hover:text-red-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if (session('warning'))
-                    <div class="mb-4 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-4 py-3 flex items-start justify-between gap-3">
+                    <div class="mb-4 rounded-md bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
                         <span>⚠️ {{ session('warning') }}</span>
-                        <button type="button" onclick="this.closest('div').remove()" class="text-yellow-500 hover:text-yellow-700 leading-none">&times;</button>
+                        <button type="button" onclick="this.closest('div').remove()" class="text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if (session('info'))
-                    <div class="mb-4 rounded-md bg-blue-50 border border-blue-200 text-blue-800 text-sm px-4 py-3 flex items-start justify-between gap-3">
+                    <div class="mb-4 rounded-md bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
                         <span>ℹ️ {{ session('info') }}</span>
-                        <button type="button" onclick="this.closest('div').remove()" class="text-blue-500 hover:text-blue-700 leading-none">&times;</button>
+                        <button type="button" onclick="this.closest('div').remove()" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if ($errors->any())
-                    <div class="mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3">
+                    <div class="mb-4 rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 text-sm px-4 py-3">
                         <p class="font-semibold mb-1">⚠️ Terjadi kesalahan input:</p>
                         <ul class="list-disc list-inside space-y-0.5">
                             @foreach ($errors->all() as $error)
@@ -242,6 +274,78 @@
             document.getElementById('sidebar').classList.add('-translate-x-full');
             document.getElementById('sidebarOverlay').classList.add('hidden');
         }
+
+        function toggleTheme() {
+            const isDark = document.getElementById('themeToggleCheckbox').checked;
+            document.documentElement.classList.toggle('dark', isDark);
+            document.getElementById('themeToggleIcon').textContent = isDark ? '☀️' : '🌙';
+            fetch('{{ route('profile.toggleTheme') }}', {
+                method: 'PUT',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+            }).catch(() => {});
+        }
+
+        // ===================== LIVE SEARCH (debounce 1 detik, tanpa reload) =====================
+        // Dipakai bareng di semua halaman berkotak cari (Dashboard Project,
+        // Daftar Klien, Kelola Pengguna, Kelola Rekening Bank, Dashboard
+        // Pembayaran). Server mengenali fetch() ini via header
+        // X-Requested-With lalu balas HANYA fragmen HTML hasil (bukan
+        // halaman penuh) — jadi Tailwind browser-CDN TIDAK perlu kompilasi
+        // ulang CSS tiap pencarian, beda dengan submit form biasa.
+        function initLiveSearch(opts) {
+            const form = document.querySelector(opts.form);
+            const results = document.querySelector(opts.results);
+            if (!form || !results) return;
+
+            let debounceTimer = null;
+
+            function runSearch(url) {
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(r => r.text())
+                    .then(html => {
+                        results.innerHTML = html;
+                        history.pushState(null, '', url);
+                    })
+                    .catch(() => { window.location = url; });
+            }
+
+            function buildUrl() {
+                const params = new URLSearchParams(new FormData(form));
+                return form.action + '?' + params.toString();
+            }
+
+            form.querySelectorAll('input[type="text"], input[type="search"]').forEach((input) => {
+                input.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => runSearch(buildUrl()), 1000);
+                });
+            });
+            form.querySelectorAll('select').forEach((select) => {
+                select.addEventListener('change', () => {
+                    clearTimeout(debounceTimer);
+                    runSearch(buildUrl());
+                });
+            });
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                runSearch(buildUrl());
+            });
+
+            // Cegat klik paginasi (di dalam <nav> bawaan Laravel) supaya
+            // pindah halaman juga tanpa reload; tombol aksi per-baris
+            // (lihat/edit/hapus dsb) di luar <nav> dibiarkan jalan normal.
+            results.addEventListener('click', (e) => {
+                const link = e.target.closest('a');
+                if (!link || !link.closest('nav[role="navigation"]')) return;
+                e.preventDefault();
+                runSearch(link.href);
+            });
+        }
     </script>
+    @stack('scripts')
 </body>
 </html>

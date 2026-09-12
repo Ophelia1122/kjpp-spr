@@ -23,6 +23,30 @@ class Project extends Model
     public const STATUS_BATAL             = 'Batal';
 
     /**
+     * Label PENDEK status untuk badge di tabel daftar proyek (2026-09-14,
+     * feedback user — "In-Progress / Scheduled" dan "Menunggu Persetujuan
+     * Klien" membuat kolom status jadi terlalu lebar).
+     *
+     * Sengaja hanya label tampilan: nilai yang TERSIMPAN di database tetap
+     * versi panjang, jadi tidak perlu migrasi data dan filter status, export
+     * Excel, serta seluruh pengecekan status di controller tetap jalan.
+     */
+    public const STATUS_SHORT_LABELS = [
+        self::STATUS_DRAFT            => 'Draft',
+        self::STATUS_WAITING_APPROVAL => 'Menunggu Klien',
+        self::STATUS_DP_INVOICING     => 'Invoice DP',
+        self::STATUS_IN_PROGRESS      => 'In-Progress',
+        self::STATUS_PELUNASAN        => 'Pelunasan',
+        self::STATUS_SELESAI          => 'Selesai',
+        self::STATUS_BATAL            => 'Batal',
+    ];
+
+    public function getStatusShortAttribute(): string
+    {
+        return self::STATUS_SHORT_LABELS[$this->status] ?? $this->status;
+    }
+
+    /**
      * Urutan kanonik status untuk dropdown filter & widget dashboard.
      * "Batal" ditaruh paling akhir karena bukan bagian dari alur normal.
      */
@@ -70,6 +94,23 @@ class Project extends Model
     public const REVIEW_REVIEWED  = 'reviewed';
     public const REVIEW_APPROVED  = 'approved';
 
+    /**
+     * Skema pembayaran (2026-09-14, feedback user): sebagian klien baru
+     * bayar di tengah/akhir pengerjaan, tanpa DP di muka. Dipilih SEKALI
+     * saat proposal masih Draft/Menunggu Persetujuan (lihat
+     * ProposalController) — PAYMENT_SCHEME_LATER membuka tombol "Mulai
+     * Pekerjaan (Tanpa DP)" di kartu Aksi Tersedia (lihat
+     * ProjectController::startWorkWithoutDp()). Invoicing sesudahnya
+     * tetap fleksibel seperti biasa, tidak ada perubahan di situ.
+     */
+    public const PAYMENT_SCHEME_DP    = 'DP di Awal';
+    public const PAYMENT_SCHEME_LATER = 'Bayar Nanti';
+
+    public const PAYMENT_SCHEMES = [
+        self::PAYMENT_SCHEME_DP,
+        self::PAYMENT_SCHEME_LATER,
+    ];
+
     protected $fillable = [
         'proposal_number',
         'proposal_date',
@@ -85,6 +126,7 @@ class Project extends Model
         'sla_draft_days',
         'sla_final_days',
         'proposal_purpose',
+        'payment_scheme',
         'psak_classification',
         'financial_reporting_date',
         'is_public_company',
@@ -95,8 +137,13 @@ class Project extends Model
         'bank_id',
         'tax_invoice_number',
         'tax_invoice_date',
+        'assignment_letter_number',
+        'assignment_letter_date',
+        'assignment_letter_barcode',
         'survey_date',
         'final_report_number',
+        'final_report_date',
+        'final_report_notes',
         'status',
         'status_before_cancel',
         'cancelled_at',
@@ -123,6 +170,8 @@ class Project extends Model
         'survey_date'               => 'date',
         'financial_reporting_date'  => 'date',
         'tax_invoice_date'          => 'date',
+        'final_report_date'         => 'date',
+        'assignment_letter_date'    => 'date',
         'cancelled_at'              => 'datetime',
         'is_public_company'         => 'boolean',
         'review_submitted_at'       => 'datetime',
@@ -135,6 +184,15 @@ class Project extends Model
     public function isCancelled(): bool
     {
         return $this->status === self::STATUS_BATAL;
+    }
+
+    /**
+     * Skema "Bayar Nanti" — boleh mulai kerja lapangan tanpa invoice/DP
+     * lebih dulu lewat ProjectController::startWorkWithoutDp().
+     */
+    public function isPaymentDeferred(): bool
+    {
+        return $this->payment_scheme === self::PAYMENT_SCHEME_LATER;
     }
 
     /**
@@ -314,6 +372,19 @@ class Project extends Model
     public function signedBy()
     {
         return $this->belongsTo(User::class, 'signed_by_user_id');
+    }
+
+    /**
+     * Daftar petugas yang dicetak di tabel "Adapun petugas kami" pada
+     * Surat Tugas — jumlah & komposisi jabatan bebas per proyek (mis. 2
+     * Penilai + 1 Reviewer, atau 1 Reviewer + 1 Penilai + 1 Pelaksana
+     * Inspeksi). Nama/Jabatan/No. MAPPI yang tercetak diambil dari
+     * biodata user masing-masing (lihat ProjectAssignmentStaff), bukan
+     * dari field terpisah di sini. Diurutkan sesuai urutan ditambahkan.
+     */
+    public function assignmentStaff()
+    {
+        return $this->hasMany(ProjectAssignmentStaff::class)->orderBy('sort_order')->orderBy('id');
     }
 
     /**
@@ -552,14 +623,14 @@ class Project extends Model
     public function getStatusBadgeClassesAttribute(): string
     {
         return match ($this->status) {
-            self::STATUS_DRAFT            => 'bg-gray-100 text-gray-700 border border-gray-300',
-            self::STATUS_WAITING_APPROVAL => 'bg-blue-100 text-blue-700 border border-blue-300',
-            self::STATUS_DP_INVOICING     => 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-            self::STATUS_IN_PROGRESS      => 'bg-green-100 text-green-700 border border-green-300',
-            self::STATUS_PELUNASAN        => 'bg-orange-100 text-orange-700 border border-orange-300',
-            self::STATUS_SELESAI          => 'bg-emerald-100 text-emerald-800 border border-emerald-300',
-            self::STATUS_BATAL           => 'bg-rose-100 text-rose-700 border border-rose-300',
-            default                       => 'bg-gray-100 text-gray-700 border border-gray-300',
+            self::STATUS_DRAFT            => 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
+            self::STATUS_WAITING_APPROVAL => 'bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+            self::STATUS_DP_INVOICING     => 'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
+            self::STATUS_IN_PROGRESS      => 'bg-green-100 text-green-700 border border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+            self::STATUS_PELUNASAN        => 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
+            self::STATUS_SELESAI          => 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
+            self::STATUS_BATAL           => 'bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800',
+            default                       => 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
         };
     }
 

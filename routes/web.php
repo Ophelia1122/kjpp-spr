@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.updatePassword');
+    Route::put('/profile/theme', [\App\Http\Controllers\ProfileController::class, 'toggleTheme'])->name('profile.toggleTheme');
 
     // --- Dashboard ---
     // "Beranda"           = dashboard operasional SEMUA role        -> home()
@@ -85,6 +86,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/proposals/{project}/cancel', [ProposalController::class, 'cancel'])->name('proposals.cancel');
         Route::post('/proposals/{project}/reactivate', [ProposalController::class, 'reactivate'])->name('proposals.reactivate');
 
+        // --- Skema "Bayar Nanti": mulai kerja lapangan tanpa DP (2026-09-14) ---
+        Route::post('/projects/{project}/start-without-dp', [ProjectController::class, 'startWorkWithoutDp'])->name('projects.startWithoutDp');
+
         // --- Proposal: editor teks baku per-bab (override; Batch 3) ---
         Route::get('/proposals/{project}/texts', [ProposalController::class, 'editTexts'])->name('proposals.texts');
         Route::put('/proposals/{project}/texts/{key}', [ProposalController::class, 'updateText'])->name('proposals.texts.update');
@@ -105,13 +109,25 @@ Route::middleware('auth')->group(function () {
     // --- Survei Lapangan: lihat (termasuk cetak Surat Tugas — dokumen hasil, bukan aksi ubah data) ---
     Route::middleware('permission:survey.view')
         ->get('/projects/{project}/surat-tugas', [ProjectController::class, 'exportSuratTugas'])->name('projects.exportSuratTugas');
+    // --- Surat Tugas: isi Nomor/Tanggal/Barcode + kelola daftar petugas (Administrator & Admin Keuangan) ---
+    Route::middleware('permission:assignment_letter.manage')->group(function () {
+        Route::put('/projects/{project}/assignment-letter', [ProjectController::class, 'updateAssignmentLetter'])->name('projects.updateAssignmentLetter');
+        Route::post('/projects/{project}/assignment-letter/staff', [ProjectController::class, 'addAssignmentStaff'])->name('projects.assignmentStaff.store');
+        Route::delete('/projects/{project}/assignment-letter/staff/{staff}', [ProjectController::class, 'removeAssignmentStaff'])->name('projects.assignmentStaff.destroy');
+        Route::post('/projects/{project}/assignment-letter/barcode', [ProjectController::class, 'uploadAssignmentLetterBarcode'])->name('projects.assignmentLetterBarcode.store');
+        Route::delete('/projects/{project}/assignment-letter/barcode', [ProjectController::class, 'deleteAssignmentLetterBarcode'])->name('projects.assignmentLetterBarcode.destroy');
+    });
     // --- Survei Lapangan: kelola (input data) ---
     Route::middleware('permission:survey.manage')->group(function () {
         Route::post('/projects/{project}/survey-data', [ProjectController::class, 'inputSurveyData'])->name('projects.inputSurveyData');
-        Route::post('/projects/{project}/final-report-number', [ProjectController::class, 'inputFinalReportNumber'])->name('projects.inputFinalReportNumber');
         // --- Alur review SLA Final, tahap 1 (Surveyor): ajukan review ---
         Route::post('/projects/{project}/review/submit', [ProjectController::class, 'submitForReview'])->name('projects.review.submit');
     });
+
+    // --- Nomor Laporan Resmi: Admin Produksi & Admin Keuangan (2026-09-14,
+    //     feedback user — BUKAN Surveyor, beda dari data survei lapangan) ---
+    Route::middleware('permission:final_report.manage')
+        ->post('/projects/{project}/final-report-number', [ProjectController::class, 'inputFinalReportNumber'])->name('projects.inputFinalReportNumber');
 
     // --- Alur review SLA Final, tahap 2 (Reviewer) — gerbangnya JABATAN
     //     (User::isReviewer()), bukan izin/role, jadi TIDAK dibungkus
@@ -138,6 +154,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/projects/{project}/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
         Route::post('/projects/{project}/draft-complete', [ProjectController::class, 'markDraftComplete'])->name('projects.markDraftComplete');
         Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->name('invoices.markAsPaid');
+        Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
     });
 

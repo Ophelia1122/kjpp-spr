@@ -55,6 +55,7 @@ class ProposalController extends Controller
             'sla_draft_days'           => $validated['sla_draft_days'],
             'sla_final_days'           => $validated['sla_final_days'],
             'proposal_purpose'         => $validated['proposal_purpose'],
+            'payment_scheme'           => $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP,
             'psak_classification'      => $validated['psak_classification'] ?? null,
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
             'is_public_company'        => $request->boolean('is_public_company'),
@@ -85,8 +86,8 @@ class ProposalController extends Controller
      */
     public function edit(Project $project)
     {
-        if ($project->status !== Project::STATUS_DRAFT) {
-            abort(403, 'Proposal hanya bisa diedit selama masih berstatus Draft Proposal.');
+        if ($project->status === Project::STATUS_SELESAI || $project->isCancelled()) {
+            abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
         }
 
         $project->load('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy');
@@ -109,8 +110,8 @@ class ProposalController extends Controller
 
     public function update(Request $request, Project $project)
     {
-        if ($project->status !== Project::STATUS_DRAFT) {
-            abort(403, 'Proposal hanya bisa diedit selama masih berstatus Draft Proposal.');
+        if ($project->status === Project::STATUS_SELESAI || $project->isCancelled()) {
+            abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
         }
 
         if ($request->has('psak_classification') && is_array($request->psak_classification)) {
@@ -121,7 +122,7 @@ class ProposalController extends Controller
 
         $validated = $this->validateProposal($request, $project);
 
-        $project->update([
+        $updateData = [
             'proposal_number'          => $validated['proposal_number'],
             'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
@@ -142,7 +143,17 @@ class ProposalController extends Controller
             'psak_classification'      => $validated['psak_classification'] ?? null,
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
             'is_public_company'        => $request->boolean('is_public_company'),
-        ]);
+        ];
+
+        // Skema pembayaran hanya boleh diubah selagi Draft/Menunggu
+        // Persetujuan (field-nya juga cuma dirender editable di blade
+        // pada status itu) — di luar itu nilai lama dipertahankan supaya
+        // tidak ada perubahan diam-diam lewat request yang dimanipulasi.
+        if (in_array($project->status, [Project::STATUS_DRAFT, Project::STATUS_WAITING_APPROVAL], true)) {
+            $updateData['payment_scheme'] = $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP;
+        }
+
+        $project->update($updateData);
 
         $project->intendedUsers()->sync($validated['intended_user_ids']);
 
@@ -469,6 +480,11 @@ class ProposalController extends Controller
             'sla_draft_days'           => 'required|integer|min:1|max:365',
             'sla_final_days'           => 'required|integer|min:1|max:365',
             'proposal_purpose'         => 'required|in:Jual Beli,Penjaminan Utang,Lelang,Pelaporan Keuangan',
+            // Skema pembayaran hanya relevan/bisa diubah selagi Draft/
+            // Menunggu Persetujuan (lihat blade create/edit) — kalau field
+            // tidak dikirim (mis. edit setelah lewat tahap itu), diabaikan
+            // di store()/update() dan nilai lama dipertahankan.
+            'payment_scheme'           => 'nullable|in:' . implode(',', Project::PAYMENT_SCHEMES),
             'psak_classification'      => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|string|max:255',
             'financial_reporting_date' => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|date',
             'is_public_company'        => 'nullable|boolean',

@@ -59,6 +59,20 @@ class ProfileController extends Controller
         return redirect()->route('profile.show')->with('success', 'Biodata profil berhasil diperbarui.');
     }
 
+    /**
+     * Toggle preferensi tampilan (light/dark) — tersimpan di akun user
+     * sendiri (bukan localStorage) supaya ikut terbawa lintas perangkat.
+     * Dipanggil via fetch() dari tombol di sidebar; sengaja tanpa redirect,
+     * cukup balas status baru supaya JS tinggal update class <html>.
+     */
+    public function toggleTheme(Request $request)
+    {
+        $user = Auth::user();
+        $user->update(['dark_mode' => ! $user->dark_mode]);
+
+        return response()->json(['dark_mode' => $user->dark_mode]);
+    }
+
     public function updatePassword(Request $request)
     {
         $validated = $request->validate([

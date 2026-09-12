@@ -22,6 +22,10 @@ class ClientController extends Controller
 
         $clients = $query->paginate(20)->withQueryString();
 
+        if ($request->ajax()) {
+            return view('clients._results', compact('clients'));
+        }
+
         return view('clients.index', compact('clients'));
     }
 

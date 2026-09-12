@@ -3,13 +3,13 @@
 @section('content')
 <div class="max-w-lg mx-auto py-16 text-center">
     <div class="text-6xl mb-4">🔒</div>
-    <h1 class="text-2xl font-bold text-gray-900 mb-2">Akses Ditolak</h1>
-    <p class="text-gray-600 mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2 dark:text-gray-100">Akses Ditolak</h1>
+    <p class="text-gray-600 mb-6 dark:text-gray-400">
         {{ $exception->getMessage() ?: 'Anda tidak memiliki izin untuk mengakses halaman ini.' }}
     </p>
 
     @auth
-        <p class="text-sm text-gray-400 mb-6">
+        <p class="text-sm text-gray-400 mb-6 dark:text-gray-500">
             Anda login sebagai <strong>{{ auth()->user()->name }}</strong>
             dengan role <strong>{{ auth()->user()->role->name ?? '-' }}</strong>.
             Kalau menurut Anda ini seharusnya bisa diakses, hubungi Administrator

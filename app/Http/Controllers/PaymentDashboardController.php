@@ -34,6 +34,12 @@ class PaymentDashboardController extends Controller
 
         $invoices = $query->paginate(20)->withQueryString();
 
+        // Live search hanya butuh fragmen tabel invoice ini — skip hitung
+        // kartu ringkasan & proyek sisa tagihan (tak berubah oleh filter q/status).
+        if ($request->ajax()) {
+            return view('dashboard._invoice_results', compact('invoices'));
+        }
+
         // Ringkasan GLOBAL (tidak ikut filter/paginasi di atas) supaya
         // kartu angka tetap stabil apa pun pencarian yang sedang aktif.
         $amounts = Invoice::selectRaw('status, SUM(amount) as total')->groupBy('status')->pluck('total', 'status');

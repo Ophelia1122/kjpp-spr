@@ -27,11 +27,12 @@
 
     <div class="relative w-full max-w-sm">
         <div class="rise text-center mb-7">
-            <div class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/15 backdrop-blur">
-                <span class="text-xl font-bold tracking-tight text-white">SPR</span>
+            <div class="mx-auto mb-3 flex items-center justify-center gap-2">
+                <img src="{{ asset('images/logo-spr-icon.png') }}" alt="" class="h-13 w-auto">
+                <span class="text-3xl font-bold italic tracking-tight text-white" style="font-family: Georgia, 'Times New Roman', serif;">SPR</span>
             </div>
             <div class="text-lg font-semibold text-white">KJPP Sugianto Prasodjo &amp; Rekan</div>
-            <div class="text-sm text-slate-400">Internal Web-App</div>
+            <div class="text-sm text-slate-400">Workshop Kebagusan</div>
         </div>
 
         <div class="rise rise-1 rounded-2xl border border-white/10 bg-white/[.06] p-6 shadow-2xl backdrop-blur-xl space-y-4">

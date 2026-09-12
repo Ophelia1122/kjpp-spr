@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable([
-    'name', 'email', 'password', 'role_id', 'is_active',
+    'name', 'email', 'password', 'role_id', 'is_active', 'dark_mode',
     // Biodata profesi (lihat migration 2024_01_10_000001) — dipakai untuk
     // mengisi blok tanda tangan & Penjelasan Status Penilai pada proposal
     // saat user ini jadi penandatangan.
@@ -55,6 +55,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'dark_mode' => 'boolean',
         ];
     }
 
@@ -101,5 +102,18 @@ class User extends Authenticatable
     public function isReviewer(): bool
     {
         return $this->jabatan === self::JABATAN_REVIEWER;
+    }
+
+    /**
+     * Boleh menekan tombol "Tandai Sudah Direview" / "Kembalikan ke
+     * Surveyor" (2026-09-13, feedback user): Reviewer (jabatan) ATAU
+     * Administrator (role) — kadang Penanggung Jawab yang me-review
+     * langsung lewat akun Administrator-nya, bukan Reviewer. Ini SEBATAS
+     * izin menekan tombolnya; siapa yang tercatat sebagai "direview oleh"
+     * tetap auth()->id() apa adanya, tidak dipalsukan jadi nama Reviewer.
+     */
+    public function canActAsReviewer(): bool
+    {
+        return $this->isReviewer() || $this->isAdministrator();
     }
 }

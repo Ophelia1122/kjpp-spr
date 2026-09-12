@@ -1,308 +1,424 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-4xl mx-auto py-8">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-xl font-semibold text-gray-900">Buat Proposal Penawaran Baru</h1>
-        <a href="{{ route('dashboard') }}" class="text-sm text-gray-500 hover:text-gray-700">&larr; Kembali ke Dashboard</a>
+@php
+    // ---------- Helper kelas border untuk field yang error ----------
+    $errCls = fn ($f) => $errors->has($f)
+        ? 'border-red-400 ring-1 ring-red-300 dark:border-red-500'
+        : 'border-gray-300 dark:border-gray-600';
+
+    // ---------- Repopulasi setelah validasi gagal ----------
+    // Klien & objek penilaian dibangun lewat JS, jadi tidak ikut terbawa
+    // old() secara otomatis. Di sini datanya diambil ulang dari DB lalu
+    // dititipkan ke JS lewat window.__BOOT__ (2026-09-14, feedback user —
+    // sebelumnya semua objek yang sudah diketik hilang begitu validasi gagal).
+    $oldInstructing = old('instructing_client_id')
+        ? \App\Models\Client::find(old('instructing_client_id'))
+        : null;
+    $oldIntended = \App\Models\Client::whereIn('id', (array) old('intended_user_ids', []))->get();
+    $oldObjects = array_values((array) old('objects', []));
+    $oldPsak = (array) old('psak_classification', []);
+@endphp
+
+<div class="max-w-4xl mx-auto py-8 space-y-6">
+
+    {{-- ===================== HEADER ===================== --}}
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Buat Proposal Penawaran Baru</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Lengkapi seluruh bagian di bawah, lalu simpan untuk men-generate dokumen proposal.
+            </p>
+        </div>
+        <a href="{{ route('dashboard') }}"
+           class="shrink-0 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            &larr; Kembali ke Dashboard
+        </a>
     </div>
 
-    <form action="{{ route('proposals.store') }}" method="POST" class="space-y-6 bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+    {{-- ===================== NAVIGASI CEPAT ===================== --}}
+    <div class="sticky top-14 lg:top-3 z-20 flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1.5 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+        <div id="quickNav" class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+            <a href="#section-identitas" data-target="section-identitas" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Identitas</a>
+            <a href="#section-pihak" data-target="section-pihak" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Pihak Terkait</a>
+            <a href="#section-lingkup" data-target="section-lingkup" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Lingkup &amp; SLA</a>
+            <a href="#section-biaya" data-target="section-biaya" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Biaya</a>
+            <a href="#section-objek" data-target="section-objek" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Objek Penilaian</a>
+        </div>
+    </div>
+
+    <form id="proposalForm" action="{{ route('proposals.store') }}" method="POST" class="space-y-6">
         @csrf
 
-        {{-- ============ NOMOR PROPOSAL (70%) + TANGGAL PROPOSAL (30%) — 1 BARIS ============ --}}
-        <div class="grid grid-cols-1 sm:grid-cols-10 gap-4">
-            <div class="sm:col-span-7">
-                <label class="block text-sm font-medium text-gray-700">Nomor Proposal</label>
-                <input type="text" name="proposal_number" required value="{{ old('proposal_number') }}"
-                       autocomplete="off" spellcheck="false"
-                       placeholder="00000/2.0131-00/KJPPSPR-PRO/APP/_/2026"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm font-mono">
-                <p class="mt-1 text-xs text-gray-400">
-                    Diinput manual sesuai nomor resmi yang diterbitkan sistem terintegrasi Kantor Pusat.
-                </p>
-            </div>
-            <div class="sm:col-span-3">
-                <label class="block text-sm font-medium text-gray-700">Tanggal Proposal</label>
-                {{-- Diketik/tampil dd/mm/yyyy; ikon kalender membuka date picker native.
-                     Yang disubmit = hidden #proposal_date_iso (yyyy-mm-dd). --}}
-                <div class="relative mt-1">
-                    <input type="text" id="proposal_date_display" required
-                           placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" maxlength="10"
-                           class="w-full rounded-md border-gray-300 shadow-sm pr-10">
-                    <button type="button" id="proposal_date_pick" tabindex="-1" aria-label="Pilih dari kalender"
-                            class="absolute inset-y-0 right-0 grid w-10 place-items-center text-gray-400 hover:text-gray-600">
-                        <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0V11.25A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-                        </svg>
-                    </button>
-                    <input type="date" id="proposal_date_picker" tabindex="-1" aria-hidden="true"
-                           class="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0">
+        {{-- ============================================================
+             KARTU 1 — IDENTITAS PROPOSAL
+             ============================================================ --}}
+        <div id="section-identitas" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
+            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Identitas Proposal</h2>
+
+            <div class="space-y-4">
+                {{-- Nomor (70%) + Tanggal (30%) — 1 baris di layar lebar --}}
+                <div class="grid grid-cols-1 sm:grid-cols-10 gap-4">
+                    <div class="sm:col-span-7">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Nomor Proposal
+                            @include('partials.icon-info', ['tip' => 'Diinput manual sesuai nomor resmi yang diterbitkan sistem terintegrasi Kantor Pusat.'])
+                        </label>
+                        <input type="text" name="proposal_number" required value="{{ old('proposal_number') }}"
+                               autocomplete="off" spellcheck="false"
+                               placeholder="00000/2.0131-00/KJPPSPR-PRO/APP/_/2026"
+                               class="mt-1 w-full rounded-md shadow-sm font-mono {{ $errCls('proposal_number') }}">
+                        @error('proposal_number')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Tanggal Proposal
+                            @include('partials.icon-info', ['tip' => 'Tanggal ini tercetak di kop dokumen. Boleh diisi mundur.'])
+                        </label>
+                        {{-- Diketik/tampil dd/mm/yyyy; ikon kalender membuka date picker native.
+                             Yang disubmit = hidden #proposal_date_iso (yyyy-mm-dd). --}}
+                        <div class="relative mt-1">
+                            <input type="text" id="proposal_date_display" required
+                                   placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" maxlength="10"
+                                   class="w-full rounded-md shadow-sm pr-10 {{ $errCls('proposal_date') }}">
+                            <button type="button" id="proposal_date_pick" tabindex="-1" aria-label="Pilih dari kalender"
+                                    class="absolute inset-y-0 right-0 grid w-10 place-items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">
+                                <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0V11.25A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+                                </svg>
+                            </button>
+                            <input type="date" id="proposal_date_picker" tabindex="-1" aria-hidden="true" lang="id"
+                                   class="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0">
+                        </div>
+                        <input type="hidden" name="proposal_date" id="proposal_date_iso"
+                               value="{{ old('proposal_date', now()->toDateString()) }}">
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Format dd/mm/yyyy</p>
+                        @error('proposal_date')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
                 </div>
-                <input type="hidden" name="proposal_date" id="proposal_date_iso"
-                       value="{{ old('proposal_date', now()->toDateString()) }}">
-                <p class="mt-1 text-xs text-gray-400">
-                    Format dd/mm/yyyy — atau klik ikon kalender. Tercetak di kop dokumen; boleh mundur.
-                </p>
-            </div>
-        </div>
 
-        {{-- ===================== DASAR PERMINTAAN PENILAIAN (MANUAL) ===================== --}}
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Dasar Permintaan Penilaian</label>
-            <textarea name="request_basis" rows="2"
-                      placeholder="Contoh: yang kami terima melalui Pesan WhatsApp permintaan penilaian tanggal 07 September 2026"
-                      class="mt-1 w-full rounded-md border-gray-300 shadow-sm">{{ old('request_basis') }}</textarea>
-            <p class="mt-1 text-xs text-gray-400">
-                Mengisi bagian kosong pada kalimat pembuka proposal:
-                &ldquo;Sesuai dengan informasi permintaan penilaian <span class="italic">[teks ini]</span>, mengenai permohonan jasa Penilai&hellip;&rdquo;.
-                Boleh dikosongkan (nanti tampil titik-titik untuk diisi manual di dokumen).
-            </p>
-        </div>
-
-        {{-- ===================== PENANDATANGAN PROPOSAL ===================== --}}
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Penandatangan Proposal</label>
-            <select name="signed_by_user_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                <option value="">-- Penandatangan baku kantor ({{ config('kjpp.signatory.name') }}) --</option>
-                @foreach ($signers as $signer)
-                    <option value="{{ $signer->id }}" @selected(old('signed_by_user_id') == $signer->id)>{{ $signer->name }}</option>
-                @endforeach
-            </select>
-            <p class="mt-1 text-xs text-gray-400">
-                Daftar diambil dari pengguna aktif berjabatan <span class="font-medium">Penanggung Jawab</span>.
-                Nama &amp; nomor izin (MAPPI, RMK, Izin Menkeu, STTD OJK, Klasifikasi) pada blok tanda tangan
-                proposal mengikuti biodata pengguna yang dipilih. Kosongkan untuk memakai penandatangan baku.
-            </p>
-            @if ($signers->isEmpty())
-                <p class="mt-1 text-xs text-amber-600">
-                    Belum ada pengguna aktif berjabatan &ldquo;Penanggung Jawab&rdquo;. Lengkapi lewat menu Kelola Pengguna.
-                </p>
-            @endif
-        </div>
-
-        {{-- ===================== PIHAK YANG MENYETUJUI ===================== --}}
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Pihak yang Menyetujui</label>
-            <input type="text" name="approver_name" value="{{ old('approver_name') }}"
-                   placeholder="Kosongkan = otomatis pakai nama Pemberi Tugas"
-                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-            <p class="mt-1 text-xs text-gray-400">
-                Nama pihak pada kolom &ldquo;Menyetujui,&rdquo; di blok tanda tangan. Isi bila yang menyetujui
-                berbeda dari Pemberi Tugas (mis. bank, sementara Pemberi Tugas-nya PT — atau sebaliknya).
-            </p>
-        </div>
-
-        {{-- ===================== REKENING BANK ===================== --}}
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Rekening Bank Pembayaran</label>
-            <select name="bank_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                <option value="">-- Rekening baku kantor (default) --</option>
-                @foreach ($banks as $bank)
-                    <option value="{{ $bank->id }}" @selected(old('bank_id') == $bank->id)>
-                        {{ $bank->bank_name }}{{ $bank->branch ? ' (' . $bank->branch . ')' : '' }} — {{ $bank->account_number }}{{ $bank->is_default ? ' · default' : '' }}
-                    </option>
-                @endforeach
-            </select>
-            <p class="mt-1 text-xs text-gray-400">
-                Dipakai di blok &ldquo;Rekening Bank&rdquo; proposal &amp; PDF Invoice. Kosongkan untuk memakai
-                rekening default. Daftar dikelola di menu <span class="font-medium">Kelola Rekening Bank</span>.
-            </p>
-        </div>
-
-        {{-- ===================== PEMBERI TUGAS (AJAX COMBOBOX) ===================== --}}
-        <div class="relative">
-            <label class="block text-sm font-medium text-gray-700">Nama Klien (Pemberi Tugas)</label>
-            <div class="flex gap-2 mt-1">
-                <div class="relative flex-1">
-                    <input type="text" id="instructing_client_search" autocomplete="off"
-                           placeholder="Ketik nama klien untuk mencari..."
-                           class="w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    <div id="instructing_client_results"
-                         class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto"></div>
-                </div>
-                <button type="button" onclick="openClientModal('instructing')"
-                        class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
-                    + Klien Baru
-                </button>
-            </div>
-            <div id="instructing_client_chip" class="hidden mt-2 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 text-sm px-3 py-1.5 rounded-full">
-                <span id="instructing_client_chip_text"></span>
-                <button type="button" onclick="clearInstructingClient()" class="text-blue-500 hover:text-blue-700">&times;</button>
-            </div>
-            <input type="hidden" name="instructing_client_id" id="instructing_client_id" required>
-        </div>
-
-        {{-- ===================== PENGGUNA LAPORAN (AJAX COMBOBOX, MULTI) ===================== --}}
-        <div class="relative">
-            <label class="block text-sm font-medium text-gray-700">Pengguna Laporan (bisa lebih dari satu)</label>
-            <div class="flex gap-2 mt-1">
-                <div class="relative flex-1">
-                    <input type="text" id="intended_user_search" autocomplete="off"
-                           placeholder="Ketik nama klien untuk mencari..."
-                           class="w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    <div id="intended_user_results"
-                         class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto"></div>
-                </div>
-                <button type="button" onclick="openClientModal('intended')"
-                        class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
-                    + Klien Baru
-                </button>
-            </div>
-            <div id="intended_user_chips" class="flex flex-wrap gap-2 mt-2"></div>
-            <div id="intended_user_hidden_inputs"></div>
-        </div>
-
-        <hr>
-
-        {{-- ===================== JENIS PROPOSAL & LAPORAN ===================== --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Jenis Proposal</label>
-                <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
-                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                    <option value="Jual Beli">Jual Beli</option>
-                    <option value="Penjaminan Utang">Penjaminan Utang</option>
-                    <option value="Lelang">Lelang</option>
-                    <option value="Pelaporan Keuangan">Pelaporan Keuangan (LK Properti)</option>
-                </select>
-                <p class="mt-1 text-xs text-gray-400" id="purpose_hint"></p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Jenis Laporan</label>
-                <select name="report_style" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                    <option value="Long Report" @selected(old('report_style') === 'Long Report')>Long Report — Laporan Terinci (Comprehensive Style)</option>
-                    <option value="Short Report" @selected(old('report_style') === 'Short Report')>Short Report — Laporan Ringkas (Short Form)</option>
-                </select>
-            </div>
-        </div>
-
-        {{-- ===================== SLA (HARI KERJA, INPUT MANUAL) ===================== --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">SLA Laporan Draft/Resume (hari kerja)</label>
-                <input type="number" name="sla_draft_days" min="1" max="365" required
-                       value="{{ old('sla_draft_days') }}" placeholder="Contoh: 3"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                <p class="mt-1 text-xs text-gray-400">Dihitung sejak inspeksi lapangan & penerimaan data terakhir.</p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">SLA Laporan Final (hari kerja)</label>
-                <input type="number" name="sla_final_days" min="1" max="365" required
-                       value="{{ old('sla_final_days') }}" placeholder="Contoh: 5"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                <p class="mt-1 text-xs text-gray-400">Dihitung sejak Laporan Draft/Resume disetujui Pemberi Tugas.</p>
-            </div>
-        </div>
-
-        <div id="lk_fields" class="hidden space-y-4 rounded-md border border-dashed border-blue-300 bg-blue-50 p-4">
-            <p class="text-sm font-medium text-blue-800">Detail Khusus Pelaporan Keuangan</p>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Klasifikasi PSAK</label>
-                <select name="psak_classification[]" multiple class="mt-1 w-full rounded-md border-gray-300 shadow-sm h-24">
-                    <option value="Aset Tetap (PSAK 16)">Aset Tetap (PSAK 16)</option>
-                    <option value="Properti Investasi (PSAK 13)">Properti Investasi (PSAK 13)</option>
-                    <option value="Persediaan (PSAK 14)">Persediaan (PSAK 14)</option>
-                    <option value="Aset Tidak Berwujud (PSAK 19)">Aset Tidak Berwujud (PSAK 19)</option>
-                </select>
-                <p class="text-xs text-gray-400 mt-1">Bisa pilih lebih dari satu (Ctrl/Cmd + klik).</p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Tanggal Pelaporan Keuangan (Cut-off)</label>
-                <input type="date" name="financial_reporting_date" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-            </div>
-            <label class="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="is_public_company" value="1" class="rounded border-gray-300">
-                Klien adalah Perusahaan Terbuka (menampilkan klausul POJK 28/POJK.04/2021)
-            </label>
-        </div>
-
-        <hr>
-
-        {{-- ===================== BIAYA JASA PENILAIAN ===================== --}}
-        <div class="space-y-4 rounded-md border border-gray-200 p-4">
-            <p class="text-sm font-medium text-gray-700">Biaya Jasa Penilaian</p>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {{-- Dasar permintaan penilaian --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Status PPN</label>
-                    <select name="fee_ppn_included" id="fee_ppn_included" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                        <option value="1" @selected(old('fee_ppn_included', '1') == '1')>Sudah termasuk PPN</option>
-                        <option value="0" @selected(old('fee_ppn_included') === '0')>Belum termasuk PPN (11%)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Format Biaya</label>
-                    <select name="fee_breakdown" id="fee_breakdown" onchange="toggleFeeBreakdown()" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                        <option value="0" @selected(old('fee_breakdown', '0') == '0')>All-in (langsung)</option>
-                        <option value="1" @selected(old('fee_breakdown') === '1')>Rincian (breakdown)</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Dasar Permintaan Penilaian
+                        @include('partials.icon-info', ['tip' => 'Mengisi bagian kosong pada kalimat pembuka proposal: "Sesuai dengan informasi permintaan penilaian [teks ini], mengenai permohonan jasa Penilai…". Boleh dikosongkan — nanti tampil titik-titik untuk diisi manual di dokumen.'])
+                    </label>
+                    <textarea name="request_basis" rows="2"
+                              placeholder="Contoh: yang kami terima melalui Pesan WhatsApp permintaan penilaian tanggal 07 September 2026"
+                              class="mt-1 w-full rounded-md shadow-sm {{ $errCls('request_basis') }}">{{ old('request_basis') }}</textarea>
+                    @error('request_basis')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
             </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700" id="service_fee_label">Nilai Dasar Biaya (Rp)</label>
-                <input type="text" id="service_fee_display" inputmode="numeric" autocomplete="off" required
-                       placeholder="Contoh: 10.000.000"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                <input type="hidden" name="service_fee" id="service_fee_raw">
-                <p class="mt-1 text-xs text-gray-400" id="service_fee_hint"></p>
-            </div>
-
-            <div id="transport_cost_wrap" class="hidden">
-                <label class="block text-sm font-medium text-gray-700">Biaya Transport &amp; Akomodasi (Rp)</label>
-                <input type="text" id="transport_cost_display" inputmode="numeric" autocomplete="off"
-                       placeholder="Contoh: 6.000.000"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
-                <input type="hidden" name="transport_cost" id="transport_cost_raw">
-            </div>
-
-            <p class="text-sm text-gray-600" id="fee_total_preview"></p>
         </div>
 
-        <hr>
+        {{-- ============================================================
+             KARTU 2 — PIHAK TERKAIT
+             ============================================================ --}}
+        <div id="section-pihak" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
+            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Pihak Terkait</h2>
 
-        {{-- ===================== OBJEK PENILAIAN (DINAMIS, BISA LEBIH DARI 1) ===================== --}}
-        <div>
-            <div class="flex items-center justify-between mb-2">
-                <label class="block text-sm font-medium text-gray-700">
-                    Identifikasi Objek Penilaian dan Kepemilikan
-                </label>
+            <div class="space-y-4">
+                {{-- Pemberi Tugas (AJAX combobox) --}}
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Klien (Pemberi Tugas)</label>
+                    <div class="flex gap-2 mt-1">
+                        <div class="relative flex-1">
+                            <input type="text" id="instructing_client_search" autocomplete="off"
+                                   placeholder="Ketik nama klien untuk mencari..."
+                                   class="w-full rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 {{ $errCls('instructing_client_id') }}">
+                            <div id="instructing_client_results"
+                                 class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"></div>
+                        </div>
+                        <button type="button" onclick="openClientModal('instructing')" title="Tambah klien baru"
+                                class="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
+                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                            </svg>
+                            Klien Baru
+                        </button>
+                    </div>
+                    {{-- display diatur lewat style inline, bukan class "hidden":
+                         di build Tailwind CDN yang dipakai, .inline-flex menang
+                         atas .hidden sehingga chip kosong sempat ikut terlihat. --}}
+                    <div id="instructing_client_chip" style="display:none" class="mt-2 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 text-sm px-3 py-1.5 rounded-full dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
+                        <span id="instructing_client_chip_text"></span>
+                        <button type="button" onclick="clearInstructingClient()" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">&times;</button>
+                    </div>
+                    <input type="hidden" name="instructing_client_id" id="instructing_client_id" required>
+                    @error('instructing_client_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+
+                {{-- Pengguna Laporan (AJAX combobox, multi) --}}
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Pengguna Laporan (bisa lebih dari satu)</label>
+                    <div class="flex gap-2 mt-1">
+                        <div class="relative flex-1">
+                            <input type="text" id="intended_user_search" autocomplete="off"
+                                   placeholder="Ketik nama klien untuk mencari..."
+                                   class="w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600">
+                            <div id="intended_user_results"
+                                 class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"></div>
+                        </div>
+                        <button type="button" onclick="openClientModal('intended')" title="Tambah klien baru"
+                                class="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
+                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                            </svg>
+                            Klien Baru
+                        </button>
+                    </div>
+                    <div id="intended_user_chips" class="flex flex-wrap gap-2 mt-2"></div>
+                    <div id="intended_user_hidden_inputs"></div>
+                    @error('intended_user_ids')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+
+                {{-- Penandatangan Proposal --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Penandatangan Proposal
+                        @include('partials.icon-info', ['tip' => 'Daftar diambil dari pengguna aktif berjabatan "Penanggung Jawab". Nama & nomor izin (MAPPI, RMK, Izin Menkeu, STTD OJK, Klasifikasi) pada blok tanda tangan mengikuti biodata pengguna yang dipilih. Kosongkan untuk memakai penandatangan baku.'])
+                    </label>
+                    <select name="signed_by_user_id" class="mt-1 w-full rounded-md shadow-sm {{ $errCls('signed_by_user_id') }}">
+                        <option value="">-- Penandatangan baku kantor ({{ config('kjpp.signatory.name') }}) --</option>
+                        @foreach ($signers as $signer)
+                            <option value="{{ $signer->id }}" @selected(old('signed_by_user_id') == $signer->id)>{{ $signer->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('signed_by_user_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    @if ($signers->isEmpty())
+                        <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                            Belum ada pengguna aktif berjabatan &ldquo;Penanggung Jawab&rdquo;. Lengkapi lewat menu Kelola Pengguna.
+                        </p>
+                    @endif
+                </div>
+
+                {{-- Pihak yang Menyetujui --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Pihak yang Menyetujui
+                        @include('partials.icon-info', ['tip' => 'Nama pihak pada kolom "Menyetujui," di blok tanda tangan. Isi bila yang menyetujui berbeda dari Pemberi Tugas (mis. bank, sementara Pemberi Tugas-nya PT — atau sebaliknya).'])
+                    </label>
+                    <input type="text" name="approver_name" value="{{ old('approver_name') }}"
+                           placeholder="Kosongkan = otomatis pakai nama Pemberi Tugas"
+                           class="mt-1 w-full rounded-md shadow-sm {{ $errCls('approver_name') }}">
+                    @error('approver_name')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+            </div>
+        </div>
+
+        {{-- ============================================================
+             KARTU 3 — LINGKUP PEKERJAAN & SLA
+             ============================================================ --}}
+        <div id="section-lingkup" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
+            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Lingkup Pekerjaan &amp; SLA</h2>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Proposal</label>
+                        <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
+                                class="mt-1 w-full rounded-md shadow-sm {{ $errCls('proposal_purpose') }}">
+                            @foreach (['Jual Beli', 'Penjaminan Utang', 'Lelang', 'Pelaporan Keuangan'] as $purpose)
+                                <option value="{{ $purpose }}" @selected(old('proposal_purpose') === $purpose)>
+                                    {{ $purpose === 'Pelaporan Keuangan' ? 'Pelaporan Keuangan (LK Properti)' : $purpose }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" id="purpose_hint"></p>
+                        @error('proposal_purpose')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Laporan</label>
+                        <select name="report_style" class="mt-1 w-full rounded-md shadow-sm {{ $errCls('report_style') }}">
+                            <option value="Long Report" @selected(old('report_style') === 'Long Report')>Long Report — Laporan Terinci (Comprehensive Style)</option>
+                            <option value="Short Report" @selected(old('report_style') === 'Short Report')>Short Report — Laporan Ringkas (Short Form)</option>
+                        </select>
+                        @error('report_style')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            SLA Laporan Draft/Resume (hari kerja)
+                            @include('partials.icon-info', ['tip' => 'Dihitung sejak inspeksi lapangan & penerimaan data terakhir.'])
+                        </label>
+                        <input type="number" name="sla_draft_days" min="1" max="365" required
+                               value="{{ old('sla_draft_days') }}" placeholder="Contoh: 3"
+                               class="mt-1 w-full rounded-md shadow-sm {{ $errCls('sla_draft_days') }}">
+                        @error('sla_draft_days')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            SLA Laporan Final (hari kerja)
+                            @include('partials.icon-info', ['tip' => 'Dihitung sejak Laporan Draft/Resume disetujui Pemberi Tugas.'])
+                        </label>
+                        <input type="number" name="sla_final_days" min="1" max="365" required
+                               value="{{ old('sla_final_days') }}" placeholder="Contoh: 5"
+                               class="mt-1 w-full rounded-md shadow-sm {{ $errCls('sla_final_days') }}">
+                        @error('sla_final_days')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                {{-- Blok khusus Pelaporan Keuangan --}}
+                <div id="lk_fields" class="hidden space-y-4 rounded-md border border-dashed border-blue-300 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-900/30">
+                    <p class="text-sm font-medium text-blue-800 dark:text-blue-300">Detail Khusus Pelaporan Keuangan</p>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Klasifikasi PSAK
+                            @include('partials.icon-info', ['tip' => 'Bisa pilih lebih dari satu (Ctrl/Cmd + klik).'])
+                        </label>
+                        <select name="psak_classification[]" multiple class="mt-1 w-full rounded-md border-gray-300 shadow-sm h-24 dark:border-gray-600">
+                            @foreach (['Aset Tetap (PSAK 16)', 'Properti Investasi (PSAK 13)', 'Persediaan (PSAK 14)', 'Aset Tidak Berwujud (PSAK 19)'] as $psak)
+                                <option value="{{ $psak }}" @selected(in_array($psak, $oldPsak, true))>{{ $psak }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Pelaporan Keuangan (Cut-off)</label>
+                        <input type="date" name="financial_reporting_date" lang="id" value="{{ old('financial_reporting_date') }}"
+                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" name="is_public_company" value="1" @checked(old('is_public_company'))
+                               class="rounded border-gray-300 dark:border-gray-600">
+                        Klien adalah Perusahaan Terbuka (menampilkan klausul POJK 28/POJK.04/2021)
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        {{-- ============================================================
+             KARTU 4 — BIAYA & PEMBAYARAN
+             ============================================================ --}}
+        <div id="section-biaya" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
+            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Biaya &amp; Pembayaran</h2>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status PPN</label>
+                        <select name="fee_ppn_included" id="fee_ppn_included" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                            <option value="1" @selected(old('fee_ppn_included', '1') == '1')>Sudah termasuk PPN</option>
+                            <option value="0" @selected(old('fee_ppn_included') === '0')>Belum termasuk PPN (11%)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Format Biaya</label>
+                        <select name="fee_breakdown" id="fee_breakdown" onchange="toggleFeeBreakdown()" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                            <option value="0" @selected(old('fee_breakdown', '0') == '0')>All-in (langsung)</option>
+                            <option value="1" @selected(old('fee_breakdown') === '1')>Rincian (breakdown)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" id="service_fee_label">Nilai Dasar Biaya (Rp)</label>
+                    <input type="text" id="service_fee_display" inputmode="numeric" autocomplete="off" required
+                           value="{{ old('service_fee') ? number_format((float) old('service_fee'), 0, ',', '.') : '' }}"
+                           placeholder="Contoh: 10.000.000"
+                           class="mt-1 w-full rounded-md shadow-sm {{ $errCls('service_fee') }}">
+                    <input type="hidden" name="service_fee" id="service_fee_raw" value="{{ old('service_fee') }}">
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" id="service_fee_hint"></p>
+                    @error('service_fee')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+
+                <div id="transport_cost_wrap" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Biaya Transport &amp; Akomodasi (Rp)</label>
+                    <input type="text" id="transport_cost_display" inputmode="numeric" autocomplete="off"
+                           value="{{ old('transport_cost') ? number_format((float) old('transport_cost'), 0, ',', '.') : '' }}"
+                           placeholder="Contoh: 6.000.000"
+                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                    <input type="hidden" name="transport_cost" id="transport_cost_raw" value="{{ old('transport_cost') }}">
+                </div>
+
+                <p class="text-sm text-gray-600 dark:text-gray-400" id="fee_total_preview"></p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Skema Pembayaran
+                            @include('partials.icon-info', ['tip' => '"Bayar Nanti" untuk klien yang baru bayar di tengah atau di akhir pengerjaan, tanpa DP lebih dulu — proyek bisa langsung mulai kerja lapangan tanpa menunggu invoice dibayar. Pilihan ini terkunci begitu proyek mulai diproses.'])
+                        </label>
+                        <select name="payment_scheme" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                            <option value="DP di Awal" @selected(old('payment_scheme', 'DP di Awal') === 'DP di Awal')>DP di Awal (standar)</option>
+                            <option value="Bayar Nanti" @selected(old('payment_scheme') === 'Bayar Nanti')>Bayar Nanti (tanpa DP di awal)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Rekening Bank Pembayaran
+                            @include('partials.icon-info', ['tip' => 'Dipakai di blok "Rekening Bank" proposal & PDF Invoice. Kosongkan untuk memakai rekening default. Daftar dikelola di menu Kelola Rekening Bank.'])
+                        </label>
+                        <select name="bank_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                            <option value="">-- Rekening baku kantor (default) --</option>
+                            @foreach ($banks as $bank)
+                                <option value="{{ $bank->id }}" @selected(old('bank_id') == $bank->id)>
+                                    {{ $bank->bank_name }}{{ $bank->branch ? ' (' . $bank->branch . ')' : '' }} — {{ $bank->account_number }}{{ $bank->is_default ? ' · default' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- ============================================================
+             KARTU 5 — OBJEK PENILAIAN
+             ============================================================ --}}
+        <div id="section-objek" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
+                    Identifikasi Objek Penilaian &amp; Kepemilikan
+                    @include('partials.icon-info', ['tip' => 'Setiap objek wajib diisi lokasi, bentuk/jenis hak, dan atas nama secara manual — sesuai format tabel "Identifikasi Obyek Penilaian" pada dokumen resmi KJPP.'])
+                </h2>
                 <button type="button" onclick="addObjectRow()"
-                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
-                    + Tambah Objek
+                        class="inline-flex shrink-0 items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                    <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                    Tambah Objek
                 </button>
             </div>
-            <p class="text-xs text-gray-400 mb-3">
-                Setiap objek wajib diisi lokasi, bentuk/jenis hak, dan atas nama secara manual —
-                sesuai format tabel "Identifikasi Obyek Penilaian" pada dokumen resmi KJPP.
-            </p>
 
-            <div id="objects_container" class="space-y-4"></div>
-        </div>
-
-        <div class="pt-2">
-            <button type="submit" class="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium">
-                Simpan & Generate Proposal
-            </button>
+            <div id="objects_container" class="space-y-3"></div>
         </div>
     </form>
 </div>
 
+@include('proposals._form_actions', [
+    'cancelUrl' => route('dashboard'),
+    'cancelTip' => 'Batalkan dan kembali ke Dashboard',
+    'saveLabel' => 'Simpan',
+    'saveTip'   => 'Simpan & Generate Proposal',
+    'saveTone'  => 'emerald',
+])
+
 {{-- =============== TEMPLATE 1 BARIS OBJEK PENILAIAN (di-clone via JS) =============== --}}
 <template id="object_row_template">
-    <div class="object-row border border-gray-200 rounded-md p-4 bg-gray-50 relative">
-        <div class="flex items-center justify-between mb-3">
-            <span class="object-row-number text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-full w-6 h-6 flex items-center justify-center">1</span>
-            <button type="button" class="remove-object-btn text-red-500 hover:text-red-700 text-sm font-medium">
-                🗑 Hapus Objek
+    <div class="object-row border border-gray-200 rounded-md bg-gray-50 relative dark:border-gray-700 dark:bg-gray-900">
+        {{-- Header kartu objek: bisa diklik untuk melipat (2026-09-14, feedback
+             user — dengan 5 objek form jadi sangat panjang). --}}
+        <div class="flex items-center gap-2 px-3 py-2">
+            <button type="button" class="object-toggle flex min-w-0 flex-1 items-center gap-2 text-left">
+                <span class="object-row-number shrink-0 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-full w-6 h-6 flex items-center justify-center dark:text-gray-300 dark:bg-gray-800 dark:border-gray-600">1</span>
+                <span class="object-summary min-w-0 flex-1 truncate text-sm text-gray-500 dark:text-gray-400">Objek baru — belum diisi</span>
+                <svg class="object-chevron h-4 w-4 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/>
+                </svg>
+            </button>
+            <button type="button" title="Hapus Objek"
+                    class="remove-object-btn grid h-7 w-7 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-900/30 dark:hover:text-rose-300">
+                <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                </svg>
             </button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-600">Kategori Aset/Properti</label>
-                <select class="object-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm" required>
+        <div class="object-body grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-200 p-3 dark:border-gray-700">
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Kategori Aset/Properti</label>
+                <select class="object-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600" required>
                     <option value="">-- Pilih Kategori --</option>
                     <option value="Real Properti - Tanah">Real Properti - Tanah</option>
                     <option value="Real Properti - Bangunan">Real Properti - Bangunan</option>
@@ -316,48 +432,48 @@
             </div>
 
             {{-- Field khusus kategori "Lainnya" --}}
-            <div class="other-category-fields hidden col-span-2">
-                <label class="block text-xs font-medium text-gray-600">Sebutkan Jenis Aset/Properti</label>
-                <input type="text" class="object-custom-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+            <div class="other-category-fields hidden sm:col-span-2">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Sebutkan Jenis Aset/Properti</label>
+                <input type="text" class="object-custom-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600"
                        placeholder="Contoh: Kapal / Pesawat / Hak Sewa / Tanaman Keras">
             </div>
 
             {{-- Field khusus Real Properti --}}
             <div class="real-property-fields hidden">
-                <label class="block text-xs font-medium text-gray-600">Luas Tanah (m²)</label>
-                <input type="number" step="0.01" min="0" class="object-land-area mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Luas Tanah (m²)</label>
+                <input type="number" step="0.01" min="0" class="object-land-area mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
             </div>
             <div class="real-property-fields hidden">
-                <label class="block text-xs font-medium text-gray-600">Luas Bangunan (m²)</label>
-                <input type="number" step="0.01" min="0" class="object-building-area mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Luas Bangunan (m²)</label>
+                <input type="number" step="0.01" min="0" class="object-building-area mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
             </div>
 
             {{-- Field khusus Personal Properti --}}
-            <div class="personal-property-fields hidden col-span-2">
-                <label class="block text-xs font-medium text-gray-600">Jumlah Unit</label>
-                <input type="number" min="0" class="object-unit-quantity mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm">
+            <div class="personal-property-fields hidden sm:col-span-2">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Jumlah Unit</label>
+                <input type="number" min="0" class="object-unit-quantity mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
             </div>
 
-            <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-600">Lokasi Objek</label>
-                <textarea rows="2" class="object-location mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm" required
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Lokasi Objek</label>
+                <textarea rows="2" class="object-location mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600" required
                           placeholder="Masukkan alamat lengkap beserta kelurahan, kecamatan, kota/kabupaten dan Provinsi"></textarea>
             </div>
 
             <div>
-                <label class="block text-xs font-medium text-gray-600">Bentuk/Jenis Hak Atas Tanah</label>
-                <input type="text" class="object-ownership-form mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm" required
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Bentuk/Jenis Hak Atas Tanah</label>
+                <input type="text" class="object-ownership-form mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600" required
                        placeholder="Contoh: Tunggal - SHGB No. 11948">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600">Atas Nama</label>
-                <input type="text" class="object-owner-name mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm" required
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Atas Nama</label>
+                <input type="text" class="object-owner-name mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600" required
                        placeholder="Contoh: PT. Kembang Griya Cahaya">
             </div>
 
-            <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-600">Catatan Tambahan (opsional)</label>
-                <input type="text" class="object-notes mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Catatan Tambahan (opsional)</label>
+                <input type="text" class="object-notes mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600"
                        placeholder="Contoh: Rumah Tinggal 2 Lantai / sesuai list yang diterima">
             </div>
         </div>
@@ -366,38 +482,47 @@
 
 {{-- =============== MODAL POPUP KLIEN BARU (Tailwind) =============== --}}
 <div id="clientModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Tambah Klien Baru</h2>
-            <button type="button" onclick="closeClientModal()" class="text-gray-400 hover:text-gray-600">&times;</button>
+            <button type="button" onclick="closeClientModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
         </div>
-        <div id="clientModalErrors" class="hidden mb-3 text-sm text-red-600"></div>
+        <div id="clientModalErrors" class="hidden mb-3 text-sm text-red-600 dark:text-red-400"></div>
         <div class="space-y-3">
             <div>
-                <label class="block text-sm font-medium text-gray-700">Nama Klien</label>
-                <input type="text" id="modal_client_name" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Klien</label>
+                <input type="text" id="modal_client_name" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700">Jenis Klien</label>
-                <select id="modal_client_type" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Klien</label>
+                <select id="modal_client_type" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
                     <option value="Perbankan">Perbankan</option>
                     <option value="Korporat">Korporat</option>
                     <option value="Perorangan">Perorangan</option>
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700">Alamat</label>
-                <textarea id="modal_client_address" rows="2" class="mt-1 w-full rounded-md border-gray-300 shadow-sm"></textarea>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Alamat</label>
+                <textarea id="modal_client_address" rows="2" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600"></textarea>
             </div>
         </div>
         <div class="mt-5 flex justify-end gap-2">
             <button type="button" onclick="closeClientModal()"
-                    class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50">Batal</button>
+                    class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
             <button type="button" onclick="submitNewClient()"
                     class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Simpan</button>
         </div>
     </div>
 </div>
+
+{{-- Data repopulasi setelah validasi gagal (klien & objek dibangun via JS). --}}
+<script>
+    window.__BOOT__ = {
+        objects: @json($oldObjects),
+        instructing: @json($oldInstructing ? ['id' => $oldInstructing->id, 'client_name' => $oldInstructing->client_name] : null),
+        intended: @json($oldIntended->map(fn ($c) => ['id' => $c->id, 'client_name' => $c->client_name])->values()),
+    };
+</script>
 
 <script>
     // ============================================================
@@ -406,7 +531,7 @@
     let objectCounter = 0; // index unik, TIDAK di-reset saat hapus baris
                             // (array PHP tetap valid walau index tidak berurutan)
 
-    function addObjectRow() {
+    function addObjectRow(data) {
         const template = document.getElementById('object_row_template');
         const clone = template.content.cloneNode(true);
         const row = clone.querySelector('.object-row');
@@ -425,9 +550,33 @@
         row.querySelector('.object-owner-name').name = `objects[${index}][owner_name]`;
         row.querySelector('.object-notes').name = `objects[${index}][notes]`;
 
+        // Isi ulang nilai lama (dipakai saat validasi gagal)
+        if (data) {
+            const setVal = (sel, key) => {
+                const el = row.querySelector(sel);
+                if (el && data[key] != null) el.value = data[key];
+            };
+            setVal('.object-category', 'asset_category');
+            setVal('.object-custom-category', 'custom_category');
+            setVal('.object-land-area', 'land_area');
+            setVal('.object-building-area', 'building_area');
+            setVal('.object-unit-quantity', 'unit_quantity');
+            setVal('.object-location', 'location');
+            setVal('.object-ownership-form', 'ownership_form');
+            setVal('.object-owner-name', 'owner_name');
+            setVal('.object-notes', 'notes');
+        }
+
         // Toggle field Real Properti vs Personal Properti sesuai kategori
         const categorySelect = row.querySelector('.object-category');
-        categorySelect.addEventListener('change', () => toggleObjectFields(row));
+        categorySelect.addEventListener('change', () => {
+            toggleObjectFields(row);
+            updateObjectSummary(row);
+        });
+        row.querySelector('.object-location').addEventListener('input', () => updateObjectSummary(row));
+
+        // Lipat/buka kartu objek
+        row.querySelector('.object-toggle').addEventListener('click', () => setObjectCollapsed(row, !isObjectCollapsed(row)));
 
         // Tombol hapus baris ini
         row.querySelector('.remove-object-btn').addEventListener('click', () => {
@@ -436,7 +585,32 @@
         });
 
         document.getElementById('objects_container').appendChild(row);
+        toggleObjectFields(row);
+        updateObjectSummary(row);
         renumberObjectRows();
+        return row;
+    }
+
+    function isObjectCollapsed(row) {
+        return row.querySelector('.object-body').style.display === 'none';
+    }
+
+    function setObjectCollapsed(row, collapsed) {
+        // Pakai style inline, bukan class "hidden" — .grid menang atas .hidden
+        // di build Tailwind CDN yang dipakai aplikasi ini.
+        row.querySelector('.object-body').style.display = collapsed ? 'none' : '';
+        row.querySelector('.object-chevron').style.transform = collapsed ? 'rotate(180deg)' : '';
+    }
+
+    function updateObjectSummary(row) {
+        const category = row.querySelector('.object-category').value;
+        const location = (row.querySelector('.object-location').value || '').trim();
+        const summary = row.querySelector('.object-summary');
+        if (!category && !location) {
+            summary.textContent = 'Objek baru — belum diisi';
+            return;
+        }
+        summary.textContent = [category, location].filter(Boolean).join(' — ');
     }
 
     function toggleObjectFields(row) {
@@ -466,8 +640,17 @@
         if (rows.length === 0) addObjectRow();
     }
 
-    // Mulai dengan 1 baris kosong saat halaman dimuat
-    document.addEventListener('DOMContentLoaded', addObjectRow);
+    // Baris objek yang terlipat berisi field 'required' yang tidak terlihat —
+    // browser akan memblokir submit tanpa pesan yang jelas. Jadi buka semua
+    // sebelum validasi berjalan (click) dan saat ada field invalid (capture).
+    function expandAllObjectRows() {
+        document.querySelectorAll('#objects_container .object-row').forEach(row => setObjectCollapsed(row, false));
+    }
+    document.getElementById('submitProposalBtn').addEventListener('click', expandAllObjectRows);
+    document.getElementById('proposalForm').addEventListener('invalid', (e) => {
+        const row = e.target.closest('.object-row');
+        if (row) setObjectCollapsed(row, false);
+    }, true);
 
     // ============================================================
     // STATE: klien yang sedang dipilih
@@ -497,13 +680,13 @@
 
     function renderResults(container, clients, onPick) {
         if (clients.length === 0) {
-            container.innerHTML = `<div class="px-3 py-2 text-sm text-gray-400">Tidak ditemukan. Coba "+ Klien Baru".</div>`;
+            container.innerHTML = `<div class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">Tidak ditemukan. Coba "+ Klien Baru".</div>`;
         } else {
             container.innerHTML = clients.map(c => `
                 <button type="button" data-id="${c.id}" data-name="${c.client_name.replace(/"/g, '&quot;')}"
-                        class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-0">
-                    <div class="font-medium text-gray-800">${c.client_name}</div>
-                    <div class="text-xs text-gray-400">${c.client_type}</div>
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-0 dark:hover:bg-blue-900/30 dark:border-gray-800">
+                    <div class="font-medium text-gray-800 dark:text-gray-200">${c.client_name}</div>
+                    <div class="text-xs text-gray-400 dark:text-gray-500">${c.client_type}</div>
                 </button>
             `).join('');
             container.querySelectorAll('button[data-id]').forEach(btn => {
@@ -530,7 +713,7 @@
         instructingClient = client;
         document.getElementById('instructing_client_id').value = client.id;
         document.getElementById('instructing_client_chip_text').textContent = client.client_name;
-        document.getElementById('instructing_client_chip').classList.remove('hidden');
+        document.getElementById('instructing_client_chip').style.display = 'inline-flex';
         instructingInput.value = '';
         instructingInput.classList.add('hidden');
     }
@@ -538,7 +721,7 @@
     function clearInstructingClient() {
         instructingClient = null;
         document.getElementById('instructing_client_id').value = '';
-        document.getElementById('instructing_client_chip').classList.add('hidden');
+        document.getElementById('instructing_client_chip').style.display = 'none';
         instructingInput.classList.remove('hidden');
     }
 
@@ -570,9 +753,9 @@
         const hiddenBox = document.getElementById('intended_user_hidden_inputs');
 
         chipBox.innerHTML = intendedUsers.map(u => `
-            <span class="inline-flex items-center gap-2 bg-gray-100 border border-gray-200 text-gray-700 text-sm px-3 py-1.5 rounded-full">
+            <span class="inline-flex items-center gap-2 bg-gray-100 border border-gray-200 text-gray-700 text-sm px-3 py-1.5 rounded-full dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
                 ${u.client_name}
-                <button type="button" onclick="removeIntendedUser(${u.id})" class="text-gray-400 hover:text-gray-600">&times;</button>
+                <button type="button" onclick="removeIntendedUser(${u.id})" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
             </span>
         `).join('');
 
@@ -713,7 +896,7 @@
     maskMoney('transport_cost_display', 'transport_cost_raw', recalcFeeTotal);
     document.getElementById('fee_ppn_included').addEventListener('change', recalcFeeTotal);
 
-    document.getElementById('service_fee_display').closest('form').addEventListener('submit', (e) => {
+    document.getElementById('proposalForm').addEventListener('submit', (e) => {
         const only = digits(document.getElementById('service_fee_display').value);
         document.getElementById('service_fee_raw').value = only;
         document.getElementById('transport_cost_raw').value = digits(document.getElementById('transport_cost_display').value);
@@ -721,7 +904,9 @@
             e.preventDefault();
             document.getElementById('service_fee_display').classList.add('border-red-400');
             document.getElementById('service_fee_display').focus();
+            return;
         }
+        formSubmitting = true; // matikan peringatan "keluar halaman"
     });
 
     toggleFeeBreakdown();
@@ -741,7 +926,87 @@
         document.getElementById('lk_fields').classList.toggle('hidden', purpose !== 'Pelaporan Keuangan');
         document.getElementById('purpose_hint').textContent = purposeHints[purpose] ?? '';
     }
-    document.addEventListener('DOMContentLoaded', toggleLkFields);
+
+    // ============================================================
+    // PERINGATAN KELUAR HALAMAN — form ini panjang, salah tekan
+    // back/tutup tab berarti mengetik ulang semuanya.
+    // ============================================================
+    let formDirty = false;
+    let formSubmitting = false;
+    document.getElementById('proposalForm').addEventListener('input', () => { formDirty = true; });
+    document.getElementById('proposalForm').addEventListener('change', () => { formDirty = true; });
+    window.addEventListener('beforeunload', (e) => {
+        if (!formDirty || formSubmitting) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+    document.getElementById('cancelProposalLink').addEventListener('click', (e) => {
+        if (formDirty && !confirm('Keluar dari halaman ini? Data proposal yang sudah diisi akan hilang.')) {
+            e.preventDefault();
+        } else {
+            formSubmitting = true; // sudah dikonfirmasi, jangan tanya dua kali
+        }
+    });
+
+    // ============================================================
+    // INISIALISASI
+    // ============================================================
+    function initProposalForm() {
+        const boot = window.__BOOT__ || {};
+
+        if (Array.isArray(boot.objects) && boot.objects.length) {
+            boot.objects.forEach(o => addObjectRow(o));
+        } else {
+            addObjectRow();
+        }
+
+        if (boot.instructing) setInstructingClient(boot.instructing);
+        (boot.intended || []).forEach(addIntendedUser);
+
+        toggleLkFields();
+        recalcFeeTotal();
+        initQuickNav();
+    }
+
+    // ============================================================
+    // NAVIGASI CEPAT — scrollspy sederhana (pola sama dgn halaman detail)
+    // ============================================================
+    function initQuickNav() {
+        const nav = document.getElementById('quickNav');
+        if (!nav) return;
+        const links = Array.from(nav.querySelectorAll('[data-target]'));
+        const sections = [];
+        links.forEach(link => {
+            const el = document.getElementById(link.dataset.target);
+            if (el) sections.push(el);
+        });
+        if (sections.length === 0) return;
+
+        function setActive(id) {
+            links.forEach(link => {
+                const active = link.dataset.target === id;
+                link.classList.toggle('bg-blue-600', active);
+                link.classList.toggle('text-white', active);
+                link.classList.toggle('text-gray-500', !active);
+                link.classList.toggle('dark:text-gray-400', !active);
+            });
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) setActive(entry.target.id);
+            });
+        }, { rootMargin: '-96px 0px -70% 0px' });
+
+        sections.forEach(el => observer.observe(el));
+        setActive(sections[0].id);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initProposalForm);
+    } else {
+        initProposalForm();
+    }
 
     /* ===== Tanggal Proposal — tampil/ketik dd/mm/yyyy, submit ISO (yyyy-mm-dd) ===== */
     (function () {
