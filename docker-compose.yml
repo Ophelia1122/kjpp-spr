@@ -1,53 +1,44 @@
-version: "3.8"
+# Deploy KJPP ke UGREEN NAS — lihat docs/tutorial-install-ugreen-nas.md
+# Semua nilai ${...} dibaca dari file .env di folder yang sama.
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    image: kjpp-app:latest
     container_name: kjpp-app
     restart: unless-stopped
     ports:
-      # Ubah "8080" sesuai port kosong di NAS Anda (cek di Container Manager)
+      # Ganti 8080 kalau port itu sudah dipakai aplikasi lain di NAS.
       - "8080:80"
-    environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_KEY: ${APP_KEY}
-      APP_URL: ${APP_URL:-http://localhost:8080}
-      DB_CONNECTION: mysql
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-kjpp_db}
-      DB_USERNAME: ${DB_USERNAME:-kjpp_user}
-      DB_PASSWORD: ${DB_PASSWORD}
     volumes:
-      # Storage & PDF hasil generate disimpan permanen di disk NAS,
-      # tidak hilang saat container di-restart/update image.
+      # .env dipakai Laravel & compose; storage permanen di disk NAS.
+      - ./.env:/var/www/html/.env:ro
       - ./storage-data:/var/www/html/storage
     depends_on:
       db:
         condition: service_healthy
+    mem_limit: 2g
     networks:
       - kjpp-network
 
   db:
-    image: mysql:8.0
+    image: mysql:8.4
     container_name: kjpp-db
     restart: unless-stopped
+    command: ["--innodb-buffer-pool-size=512M"]
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-kjpp_db}
-      MYSQL_USER: ${DB_USERNAME:-kjpp_user}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
-      # Data MySQL disimpan permanen di folder NAS -> aman dari restart/upgrade
       - ./mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+    mem_limit: 1g
     networks:
       - kjpp-network
 

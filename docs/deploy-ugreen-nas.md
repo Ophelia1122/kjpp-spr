@@ -52,14 +52,11 @@ opcache.max_accelerated_files=20000
 opcache.validate_timestamps=0
 ```
 
-Urutan perintah tiap deploy:
+Semua setelan di atas **sudah dipasang** di file deploy (`Dockerfile`, `docker/php-production.ini`,
+`docker/php-fpm-kjpp.conf`, `docker/env.nas.example`). Saat container start, `docker/entrypoint.sh`
+otomatis menjalankan `storage:link`, `migrate --force`, dan `optimize`.
 
-```bash
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan optimize
-php artisan storage:link
-```
+**Langkah pemasangan lengkap: [`tutorial-install-ugreen-nas.md`](tutorial-install-ugreen-nas.md).**
 
 ## 2. Tailwind masih dari CDN (opsional untuk diubah)
 

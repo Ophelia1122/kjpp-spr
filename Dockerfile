@@ -1,8 +1,6 @@
 FROM php:8.3-fpm
 
-# --- Install dependency sistem yang dibutuhkan Laravel + generate .docx/PDF ---
-#     libreoffice-writer + java + font: untuk konversi .docx -> PDF
-#     (proposal: Word = master, PDF = hasil render LibreOffice atas .docx tsb)
+# --- Dependency sistem: Laravel + nginx/supervisor + LibreOffice (proposal .docx -> PDF) ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -16,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2-dev \
     nginx \
     supervisor \
+    fontconfig \
     libreoffice-writer \
     libreoffice-java-common \
     default-jre-headless \
@@ -30,30 +29,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         bcmath \
         gd \
         zip \
+        opcache \
     && rm -rf /var/lib/apt/lists/*
 
-# Path binary LibreOffice untuk App\Services\DocxToPdf (di Debian: 'soffice' on PATH).
+# Path binary LibreOffice untuk App\Services\DocxToPdf.
 ENV LIBREOFFICE_BIN=soffice
 
-# --- Install Composer ---
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# --- Copy source code aplikasi ---
 COPY . .
 
-# --- Install dependency PHP (production, tanpa dev-dependencies) ---
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# --- Permission storage & cache (wajib untuk Laravel) ---
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Font Arial Narrow (berlisensi, tidak ada di git): kalau file public/fonts/*.ttf
+# ikut disalin ke folder proyek NAS, pasang ke sistem supaya LibreOffice
+# memakainya. Kalau tidak ada, LibreOffice memakai Liberation Sans Narrow.
+RUN mkdir -p /usr/share/fonts/truetype/kjpp \
+    && (cp public/fonts/*.ttf /usr/share/fonts/truetype/kjpp/ 2>/dev/null || true) \
+    && fc-cache -f
 
-# --- Config Nginx & Supervisor (menjalankan nginx + php-fpm dalam 1 container) ---
 COPY docker/nginx.conf /etc/nginx/sites-available/default
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/php-production.ini /usr/local/etc/php/conf.d/zz-kjpp.ini
+COPY docker/php-fpm-kjpp.conf /usr/local/etc/php-fpm.d/zz-kjpp.conf
+COPY docker/entrypoint.sh /usr/local/bin/kjpp-entrypoint
+
+# sed: buang CRLF kalau file sempat tersimpan dengan format Windows.
+RUN sed -i 's/\r$//' /usr/local/bin/kjpp-entrypoint \
+    && chmod +x /usr/local/bin/kjpp-entrypoint \
+    && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+ENTRYPOINT ["/usr/local/bin/kjpp-entrypoint"]
