@@ -3,7 +3,7 @@
 @section('title', 'Kelola Rekening Bank')
 
 @section('content')
-<div class="max-w-4xl mx-auto py-8 space-y-6">
+<div class="max-w-7xl mx-auto py-8 space-y-6">
 
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>

@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Proposal ' . $project->proposal_number)
+
 @section('content')
 @php
     // ---------- Helper kelas border untuk field yang error ----------
@@ -57,7 +59,7 @@
     $transportValue   = old('transport_cost', $project->transport_cost ? (int) $project->transport_cost : '');
 @endphp
 
-<div class="max-w-4xl mx-auto py-8 space-y-6">
+<div class="max-w-5xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
     <div class="flex flex-wrap items-start justify-between gap-4">

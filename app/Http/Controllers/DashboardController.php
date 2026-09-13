@@ -34,6 +34,13 @@ class DashboardController extends Controller
             && $user->jabatan !== User::JABATAN_REVIEWER;
         $mineId         = auth()->id();
 
+        // Administrator, Admin Produksi, General Admin & jabatan Admin melihat
+        // angka SELURUH kantor (2026-09-13, feedback user). Jabatan lapangan
+        // (Penilai, Pelaksana Inspeksi) & Reviewer tetap hanya tugasnya sendiri,
+        // walaupun role akunnya Administrator.
+        $officeWide = $user->seesOfficeWide();
+        $scope = fn ($q) => $officeWide ? $q : $q->where('assigned_appraiser_id', $mineId);
+
         // Kartu "Proyek Selesai" — khusus jabatan Penilai/Pelaksana Inspeksi
         // (dihitung dari assigned_appraiser_id, proyek yg jadi tanggung
         // jawab lapangannya) dan Reviewer (dihitung dari reviewed_by_user_id,
@@ -68,7 +75,7 @@ class DashboardController extends Controller
 
         $active = Project::with('instructingClient')
             ->active()
-            ->where('assigned_appraiser_id', $mineId)
+            ->tap($scope)
             ->get();
 
         // Proyek yang sudah punya jadwal (survey_date + sla_draft_days terisi).
@@ -79,7 +86,7 @@ class DashboardController extends Controller
                                ->sortBy('sla_days_remaining');
 
         $surveyWeekCount = Project::where('status', '!=', Project::STATUS_BATAL)
-            ->where('assigned_appraiser_id', $mineId)
+            ->tap($scope)
             ->whereBetween('survey_date', [
                 now()->startOfWeek()->toDateString(),
                 now()->endOfWeek()->toDateString(),
@@ -90,7 +97,7 @@ class DashboardController extends Controller
         if ($canSeeInvoices) {
             $unpaid = Invoice::with('project.instructingClient')
                 ->where('status', Invoice::STATUS_UNPAID)
-                ->whereHas('project', fn ($q) => $q->where('assigned_appraiser_id', $mineId))
+                ->whereHas('project', $scope)
                 ->get()
                 ->filter(fn ($inv) => $inv->project && ! $inv->project->isCancelled());
         }
@@ -125,6 +132,7 @@ class DashboardController extends Controller
                                  . ' – ' . now()->endOfWeek()->translatedFormat('d M'),
             'completedCount'  => $completedCount,
             'pendingReview'   => $pendingReview,
+            'officeWide'      => $officeWide,
         ]);
     }
 
@@ -170,7 +178,7 @@ class DashboardController extends Controller
         // invoices di-eager-load karena kolom "Sisa Tagihan" memakai accessor
         // remaining_balance yang menghitung dari relasi invoices — tanpa ini
         // jadi N+1 (1 query per baris tabel).
-        $query = Project::with(['instructingClient', 'assignedAppraiser', 'invoices']);
+        $query = Project::with(['instructingClient', 'assignedAppraiser', 'invoices', 'valuationObjects']);
 
         // Filter "Proyek Saya" — menampilkan HANYA proyek yang
         // assigned_appraiser_id-nya cocok dengan user yang sedang login.
@@ -188,11 +196,35 @@ class DashboardController extends Controller
             ? $request->boolean('mine')
             : auth()->user()->role?->slug === \App\Models\Role::SURVEYOR;
 
+        // Role admin (bukan Reviewer) tidak punya tab "Proyek Saya"
+        // (2026-09-13, feedback user) — selalu Semua Proyek.
+        if (auth()->user()->seesOfficeWide()) {
+            $mine = false;
+        }
+
         if ($mine) {
             $query->where('assigned_appraiser_id', auth()->id());
         }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        // Filter dari kartu angka Beranda (2026-09-13, feedback user). Rumusnya
+        // disamakan dengan hitungan kartu di DashboardController@home.
+        $focus = $request->get('focus');
+        if ($focus === 'active') {
+            $query->active();
+        } elseif ($focus === 'overdue') {
+            $query->active()
+                ->whereNotNull('survey_date')
+                ->where('sla_draft_days', '>', 0)
+                ->whereRaw($this->addBusinessDaysSql('survey_date', 'sla_draft_days') . ' < CURDATE()');
+        } elseif ($focus === 'survey_week') {
+            $query->where('status', '!=', Project::STATUS_BATAL)
+                ->whereBetween('survey_date', [
+                    now()->startOfWeek()->toDateString(),
+                    now()->endOfWeek()->toDateString(),
+                ]);
         }
 
         if ($request->filled('q')) {

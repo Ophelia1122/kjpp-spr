@@ -44,6 +44,15 @@ class Invoice extends Model
         return $this->invoice_date ?? $this->created_at;
     }
 
+    /**
+     * Umur invoice (hari kalender) sejak tanggal terbit — dipakai untuk
+     * menandai tagihan tertunggak di Dashboard Pembayaran.
+     */
+    public function getAgeDaysAttribute(): int
+    {
+        return (int) $this->display_date->copy()->startOfDay()->diffInDays(now()->startOfDay());
+    }
+
     public function project()
     {
         return $this->belongsTo(Project::class);

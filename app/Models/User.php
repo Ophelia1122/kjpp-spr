@@ -95,6 +95,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Melihat angka SELURUH kantor di Beranda & tidak butuh tab "Proyek Saya"
+     * (2026-09-13, feedback user): role Administrator / Admin Produksi /
+     * General Admin atau jabatan Admin. Jabatan Reviewer, Penilai & Pelaksana
+     * Inspeksi tetap berbasis tugas pribadi walaupun role akunnya admin.
+     */
+    public function seesOfficeWide(): bool
+    {
+        if (in_array($this->jabatan, [self::JABATAN_REVIEWER, self::JABATAN_PENILAI, self::JABATAN_PELAKSANA_INSPEKSI], true)) {
+            return false;
+        }
+
+        return in_array($this->role?->slug, [Role::ADMINISTRATOR, Role::ADMIN_PRODUKSI, Role::ADMIN_KEUANGAN], true)
+            || $this->jabatan === self::JABATAN_ADMIN;
+    }
+
+    /**
      * Berjabatan "Reviewer" — gerbang akses tombol "Tandai Sudah Direview" /
      * "Kembalikan ke Surveyor" pada alur review SLA Final. SENGAJA dicek
      * dari jabatan (biodata), BUKAN dari Role/izin sistem — siapa pun bisa

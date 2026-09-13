@@ -47,6 +47,43 @@ class Project extends Model
     }
 
     /**
+     * Nomor proposal versi ringkas untuk tabel: 5 karakter awal + "…" +
+     * 2 segmen terakhir (bulan/tahun), mis.
+     * "0023/2.0031-06/KJPPSPR-PRO/APR/06/2026" -> "0023/…/06/2026".
+     * Nomor pendek (mis. "PRO/KJPP/2026/001") ditampilkan utuh.
+     */
+    /**
+     * Ringkasan objek penilaian untuk List Project (2026-09-13, feedback
+     * user): kategori pertama + jumlah kategori lain, mis. "Tanah +2".
+     * 'full' berisi daftar lengkap untuk tooltip.
+     */
+    public function getObjectSummaryAttribute(): array
+    {
+        $labels = $this->valuationObjects->map(fn ($o) => $o->short_label)->filter()->unique()->values();
+
+        if ($labels->isEmpty()) {
+            return ['short' => $this->asset_type ?: '—', 'full' => (string) $this->asset_type];
+        }
+
+        return [
+            'short' => $labels->first() . ($labels->count() > 1 ? ' +' . ($labels->count() - 1) : ''),
+            'full'  => $labels->implode(', '),
+        ];
+    }
+
+    public function getProposalNumberShortAttribute(): string
+    {
+        $number   = (string) $this->proposal_number;
+        $segments = explode('/', $number);
+
+        if (mb_strlen($number) <= 20 || count($segments) < 4) {
+            return $number;
+        }
+
+        return mb_substr($number, 0, 5) . '…/' . implode('/', array_slice($segments, -2));
+    }
+
+    /**
      * Urutan kanonik status untuk dropdown filter & widget dashboard.
      * "Batal" ditaruh paling akhir karena bukan bagian dari alur normal.
      */

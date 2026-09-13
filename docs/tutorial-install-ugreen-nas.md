@@ -49,11 +49,14 @@ Semua perubahan sudah di-push ke branch `feat/proposal-word-pdf-and-rework`
 Buka PowerShell di laptop, jalankan:
 
 ```powershell
-& "C:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqldump.exe" -u root --single-transaction --routines --default-character-set=utf8mb4 spr_db > "$env:USERPROFILE\Desktop\kjpp_db.sql"
+& "C:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqldump.exe" -u root --single-transaction --routines --triggers --no-tablespaces --default-character-set=utf8mb4 "--result-file=$env:USERPROFILE\Desktop\kjpp_db.sql" spr_db
 ```
 
 Kalau MySQL Laragon memakai password, tambahkan `-p` (akan diminta mengetik password).
 Hasilnya file **`kjpp_db.sql`** di Desktop.
+
+> **Jangan pakai `> kjpp_db.sql`** di PowerShell Windows: hasilnya berformat UTF-16 dan **gagal diimpor**
+> ke MySQL di NAS. Selalu pakai opsi `--result-file` seperti di atas.
 
 ### B3. Catat APP_KEY laptop
 Buka `C:\laragon\www\kjpp-app\.env`, salin baris `APP_KEY=base64:....`. Nilai ini **harus sama** di NAS.
@@ -64,6 +67,9 @@ Buka `C:\laragon\www\kjpp-app\.env`, salin baris `APP_KEY=base64:....`. Nilai in
    `vendor`, `node_modules`, `storage\logs`, `.git`.
 3. Pastikan folder **`public\fonts`** (font Arial Narrow) **ikut tersalin** — tidak ada di GitHub.
 4. Salin juga `kjpp_db.sql` dari Desktop ke folder yang sama.
+5. **File upload lama** (misal barcode Surat Tugas) ada di `storage\app\public` laptop. Di NAS, salin ke
+   **`storage-data\app\public`** (bukan ke `storage\`), karena folder storage container diambil dari
+   `storage-data`.
 
 > Alternatif tanpa SMB: `git clone` repo di NAS lewat SSH, lalu salin `public/fonts` secara manual.
 

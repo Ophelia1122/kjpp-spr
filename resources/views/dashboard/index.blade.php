@@ -27,7 +27,11 @@
     if (request('to')) {
         $activeFilters[] = ['key' => 'to', 'label' => 'Sampai: ' . request('to')];
     }
-    $hasAdvancedFilter = request('purpose') || request('appraiser') || request('from') || request('to');
+    $focusLabels = ['active' => 'Proyek aktif', 'overdue' => 'Lewat deadline', 'survey_week' => 'Survei minggu ini'];
+    if (isset($focusLabels[request('focus')])) {
+        $activeFilters[] = ['key' => 'focus', 'label' => $focusLabels[request('focus')]];
+    }
+    $hasAdvancedFilter =request('purpose') || request('appraiser') || request('from') || request('to');
 @endphp
 
 <div class="max-w-7xl mx-auto py-8 space-y-6">
@@ -39,6 +43,10 @@
                  (2026-09-14, feedback user) — sebelumnya "Dashboard Project",
                  bertabrakan dengan menu "Dashboard" tepat di atasnya. --}}
             <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">List Project</h1>
+            {{-- Tab "Proyek Saya" disembunyikan untuk role admin (2026-09-13,
+                 feedback user) — mereka tidak ditugaskan ke lapangan. Jabatan
+                 Reviewer tetap melihatnya (lihat User::seesOfficeWide). --}}
+            @unless (auth()->user()->seesOfficeWide())
             <div class="flex gap-2 mt-2">
                 <a href="{{ route('dashboard', array_merge(request()->except(['mine', 'page']), ['mine' => 0])) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-full font-medium {{ !$mine ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600' }}">
@@ -55,6 +63,7 @@
                     Proyek Saya
                 </a>
             </div>
+            @endunless
         </div>
         <div class="flex gap-2">
             @can('reports.export')
@@ -85,6 +94,7 @@
         <input type="hidden" name="sort" value="{{ request('sort') }}">
         <input type="hidden" name="dir" value="{{ request('dir') }}">
         <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+        <input type="hidden" name="focus" value="{{ request('focus') }}">
 
         <div class="flex flex-wrap gap-3 items-end">
             <div class="flex-1 min-w-[220px]">

@@ -7,7 +7,6 @@
                     <th class="px-4 py-3">Nama Klien</th>
                     <th class="px-4 py-3">Alamat</th>
                     <th class="px-4 py-3">Jenis</th>
-                    <th class="px-4 py-3">Kontak</th>
                     <th class="px-4 py-3 text-center">Dipakai di Proyek</th>
                     <th class="px-4 py-3 text-center">Aksi</th>
                 </tr>
@@ -25,10 +24,6 @@
                              seperti Bank Mandiri bisa punya banyak cabang. --}}
                         <td class="px-4 py-3 text-xs text-gray-500 whitespace-pre-line dark:text-gray-400">{{ $client->address ?: '—' }}</td>
                         <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $client->client_type }}</td>
-                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
-                            {{ $client->contact_person ?? '-' }}
-                            @if ($client->phone)<br><span class="text-xs">{{ $client->phone }}</span>@endif
-                        </td>
                         <td class="px-4 py-3 text-center">
                             @if ($usageCount > 0)
                                 <span class="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">{{ $usageCount }} proyek</span>
@@ -75,7 +70,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-10 text-center text-gray-400 dark:text-gray-500">Belum ada klien.</td>
+                        <td colspan="5" class="px-4 py-10 text-center text-gray-400 dark:text-gray-500">Belum ada klien.</td>
                     </tr>
                 @endforelse
             </tbody>

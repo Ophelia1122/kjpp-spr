@@ -11,7 +11,15 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::with('role')->orderBy('name');
+        // Login Terakhir (2026-09-14) diambil dari log aktivitas auth.login.
+        $query = User::with('role')
+            ->addSelect(['last_login_at' => \App\Models\AuditLog::select('created_at')
+                ->whereColumn('user_id', 'users.id')
+                ->where('action', 'auth.login')
+                ->latest()
+                ->limit(1)])
+            ->withCasts(['last_login_at' => 'datetime'])
+            ->orderBy('name');
 
         if ($request->filled('q')) {
             $query->where('name', 'like', '%' . $request->q . '%')

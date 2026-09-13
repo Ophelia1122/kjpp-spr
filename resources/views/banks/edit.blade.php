@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Rekening Bank')
+
 @section('content')
 <div class="max-w-lg mx-auto py-8">
     <div class="flex items-center justify-between mb-6">

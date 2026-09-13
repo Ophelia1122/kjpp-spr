@@ -8,7 +8,7 @@
 @endphp
 
 @section('content')
-<div class="max-w-4xl mx-auto py-8 space-y-6">
+<div class="max-w-5xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
     <div class="flex items-start justify-between gap-4">

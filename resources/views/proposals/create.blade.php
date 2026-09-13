@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Buat Proposal')
+
 @section('content')
 @php
     // ---------- Helper kelas border untuk field yang error ----------
@@ -24,7 +26,7 @@
     $oldPsak = (array) old('psak_classification', []);
 @endphp
 
-<div class="max-w-4xl mx-auto py-8 space-y-6">
+<div class="max-w-5xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
     <div class="flex flex-wrap items-start justify-between gap-4">

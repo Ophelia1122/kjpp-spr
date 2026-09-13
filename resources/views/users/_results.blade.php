@@ -6,8 +6,10 @@
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
                     <th class="px-4 py-3">Nama</th>
                     <th class="px-4 py-3">Email</th>
-                    <th class="px-4 py-3">Role</th>
-                    <th class="px-4 py-3">Jabatan</th>
+                    {{-- Keterangan singkat supaya Role vs Jabatan tidak tertukar (2026-09-14). --}}
+                    <th class="px-4 py-3">Role <span class="block text-[10px] font-normal normal-case tracking-normal text-gray-400 dark:text-gray-500">menu yang bisa dibuka</span></th>
+                    <th class="px-4 py-3">Jabatan <span class="block text-[10px] font-normal normal-case tracking-normal text-gray-400 dark:text-gray-500">tugas &amp; tanda tangan</span></th>
+                    <th class="px-4 py-3 whitespace-nowrap">Login Terakhir</th>
                     <th class="px-4 py-3 text-center">Status</th>
                     <th class="px-4 py-3 text-center w-24">Aksi</th>
                 </tr>
@@ -24,6 +26,10 @@
                         <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $user->email }}</td>
                         <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $user->role->name ?? '-' }}</td>
                         <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $user->jabatan ?? '-' }}</td>
+                        <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap dark:text-gray-400"
+                            title="{{ $user->last_login_at?->translatedFormat('d F Y, H:i') }}">
+                            {{ $user->last_login_at ? $user->last_login_at->locale('id')->diffForHumans() : 'Belum pernah' }}
+                        </td>
                         <td class="px-4 py-3 text-center">
                             @if ($user->is_active)
                                 <span class="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Aktif</span>
@@ -62,7 +68,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-4 py-10 text-center text-gray-400 dark:text-gray-500">Belum ada pengguna.</td></tr>
+                    <tr><td colspan="7" class="px-4 py-10 text-center text-gray-400 dark:text-gray-500">Belum ada pengguna.</td></tr>
                 @endforelse
             </tbody>
         </table>

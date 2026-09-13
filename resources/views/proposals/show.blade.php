@@ -1,7 +1,9 @@
 @extends('layouts.app')
 
+@section('title', 'Proposal ' . $project->proposal_number)
+
 @section('content')
-<div class="max-w-4xl mx-auto py-8 space-y-6">
+<div class="max-w-5xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
     @php
@@ -58,22 +60,25 @@
                     <form action="{{ route('proposals.reactivate', $project) }}" method="POST"
                           onsubmit="return confirm('Aktifkan kembali proyek {{ $project->proposal_number }}? Status akan kembali ke: {{ $project->status_before_cancel ?: \App\Models\Project::STATUS_DRAFT }}.')">
                         @csrf
-                        <button type="submit" title="Aktifkan Kembali"
-                                class="grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
+                        {{-- Tooltip instan (bukan label teks, 2026-09-14 feedback user). --}}
+                        <button type="submit" aria-label="Aktifkan Kembali"
+                                class="group relative grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
                             <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>
                             </svg>
+                            <span class="pointer-events-none absolute right-0 top-full z-20 mt-1 hidden whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg group-hover:block">Aktifkan kembali proyek</span>
                         </button>
                     </form>
                 @else
                     <form action="{{ route('proposals.cancel', $project) }}" method="POST"
                           onsubmit="return confirm('Batalkan proyek {{ $project->proposal_number }}? Data TIDAK dihapus — status menjadi Batal dan bisa diaktifkan kembali kapan saja.')">
                         @csrf
-                        <button type="submit" title="Batalkan Project"
-                                class="grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-900/30 dark:hover:text-rose-300">
+                        <button type="submit" aria-label="Batalkan Project"
+                                class="group relative grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-900/30 dark:hover:text-rose-300">
                             <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 1 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
                             </svg>
+                            <span class="pointer-events-none absolute right-0 top-full z-20 mt-1 hidden whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg group-hover:block">Batalkan proyek (data tetap tersimpan)</span>
                         </button>
                     </form>
                 @endif
@@ -212,8 +217,9 @@
             <div class="sm:col-span-2">
                 <dt class="text-gray-500 dark:text-gray-400">Pemberi Tugas</dt>
                 <dd class="font-medium text-gray-900 dark:text-gray-100">
+                    {{-- Label jenis klien (Korporat/Perorangan/Perbankan) tidak ditampilkan,
+                         disamakan dengan form input (2026-09-14, feedback user). --}}
                     {{ $project->instructingClient->client_name }}
-                    <span class="text-gray-400 font-normal dark:text-gray-500">({{ $project->instructingClient->client_type }})</span>
                 </dd>
                 <dd class="text-gray-600 text-xs mt-0.5 whitespace-pre-line dark:text-gray-400">{{ $project->instructingClient->address ?: '(alamat belum diisi pada data klien)' }}</dd>
             </div>
@@ -223,7 +229,6 @@
                     @foreach ($project->intendedUsers as $user)
                         <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 dark:bg-gray-900 dark:border-gray-700">
                             <span class="font-semibold text-gray-700 dark:text-gray-300">{{ $loop->iteration }}. {{ $user->client_name }}</span>
-                            <span class="text-gray-400 font-normal dark:text-gray-500">({{ $user->client_type }})</span>
                             <span class="text-gray-500 dark:text-gray-400">— {{ $user->address ?: '(alamat belum diisi pada data klien)' }}</span>
                         </div>
                     @endforeach
@@ -681,7 +686,7 @@
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
                                     Rp {{ number_format($inv->amount, 0, ',', '.') }} —
                                     <span class="{{ $inv->status === 'Paid' ? 'text-green-600 font-semibold' : 'text-orange-500' }}">
-                                        {{ $inv->status === 'Paid' ? 'Lunas' : 'Belum Dibayar' }}
+                                        {{ $inv->status === 'Paid' ? 'Dibayar' : 'Belum Dibayar' }}
                                     </span>
                                     @if ($inv->status === 'Paid' && $inv->kwitansi_number)
                                         &middot; Kwitansi {{ $inv->kwitansi_number }}
@@ -716,7 +721,7 @@
                                         @include('partials.icon-pencil')
                                     </button>
                                     @if ($inv->status !== 'Paid')
-                                        <button type="button" onclick="openVerifyPaidModal('{{ route('invoices.markAsPaid', $inv) }}')" title="Verifikasi Lunas"
+                                        <button type="button" onclick="openVerifyPaidModal('{{ route('invoices.markAsPaid', $inv) }}')" title="Tandai Dibayar"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 dark:text-gray-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
                                             <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
@@ -728,7 +733,7 @@
                                          teks kalau sudah Lunas supaya tidak terklik tanpa sadar. --}}
                                     <form action="{{ route('invoices.destroy', $inv) }}" method="POST"
                                           onsubmit="return confirm({{ $inv->status === 'Paid'
-                                                ? \Illuminate\Support\Js::from("Invoice {$inv->invoice_number} sudah berstatus Lunas dengan kwitansi {$inv->kwitansi_number}. Yakin ingin menghapusnya? Aksi ini tidak bisa dibatalkan.")
+                                                ? \Illuminate\Support\Js::from("Invoice {$inv->invoice_number} sudah berstatus Dibayar dengan kwitansi {$inv->kwitansi_number}. Yakin ingin menghapusnya? Aksi ini tidak bisa dibatalkan.")
                                                 : \Illuminate\Support\Js::from("Batalkan invoice {$inv->invoice_number}?") }})">
                                         @csrf
                                         @method('DELETE')
@@ -1146,7 +1151,7 @@
                 <button type="button" onclick="closeVerifyPaidModal()"
                         class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
                 <button type="submit"
-                        class="px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700">Konfirmasi Lunas</button>
+                        class="px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700">Konfirmasi Dibayar</button>
             </div>
         </form>
     </div>

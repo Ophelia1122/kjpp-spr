@@ -56,19 +56,23 @@
     {{-- Ukuran font isi tabel diseragamkan 11px (2026-09-14, feedback user) —
          sebelumnya campur 14px/12px/11px per kolom sehingga baris terlihat
          tidak rata. Diatur sekali di <table>, sel-selnya tinggal mewarisi. --}}
-    <table class="min-w-[1180px] w-full text-[11px]">
+    {{-- min-w diturunkan 1180 -> 1040px (2026-09-13): nomor proposal kini
+         diringkas, sehingga tabel muat di layar laptop tanpa geser samping. --}}
+    {{-- Font dinaikkan 11 -> 12px (2026-09-13, feedback user, uji coba). --}}
+    <table class="min-w-[1040px] w-full text-[12px]">
         <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
-            <tr class="text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
+            <tr class="text-center text-[12px] font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
                 @php
                     $cols = [
                         ['key' => 'proposal_number', 'label' => 'No. Proposal',  'class' => 'px-3 py-3'],
                         ['key' => null,              'label' => 'Pemberi Tugas', 'class' => 'px-3 py-3 min-w-[190px]'],
                         ['key' => 'status',          'label' => 'Status',        'class' => 'px-3 py-3 w-[126px]'],
                         ['key' => 'deadline',        'label' => 'SLA',           'class' => 'px-3 py-3 w-[104px]', 'tip' => 'Urutkan berdasarkan tenggat SLA — yang paling mepet di atas'],
-                        ['key' => 'fee',             'label' => 'Fee Jasa',      'class' => 'px-3 py-3 whitespace-nowrap w-[118px]'],
-                        ['key' => null,              'label' => 'Sisa Tagihan',  'class' => 'px-3 py-3 whitespace-nowrap w-[118px]'],
+                        // Fee Jasa & Sisa Tagihan dihapus (2026-09-13, feedback user) —
+                        // sudah ada di Dashboard Pembayaran. Diganti kolom Alamat objek.
                         ['key' => 'purpose',         'label' => 'Jenis',         'class' => 'px-3 py-3 w-[112px]'],
                         ['key' => null,              'label' => 'Objek',         'class' => 'px-3 py-3 min-w-[140px]'],
+                        ['key' => null,              'label' => 'Alamat',        'class' => 'px-3 py-3 min-w-[220px]'],
                         ['key' => null,              'label' => 'Aksi',          'class' => 'px-3 py-3 w-[100px]'],
                     ];
                 @endphp
@@ -97,18 +101,23 @@
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             @forelse ($projects as $project)
-                @php $sla = $activeSlaFor($project); @endphp
+                @php
+                    $sla       = $activeSlaFor($project);
+                    $obj       = $project->object_summary;
+                    $locations = $project->valuationObjects->pluck('location')->filter()->values();
+                    $firstAddr = $locations->first() ?? $project->asset_address;
+                @endphp
                 {{-- Seluruh baris bisa diklik menuju detail (2026-09-14, feedback
                      user) — sebelumnya harus tepat mengenai ikon mata yang kecil.
                      Ikon aksi di kolom terakhir menghentikan propagasi klik. --}}
                 <tr data-href="{{ route('proposals.show', $project) }}"
                     class="project-row cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-900/20 {{ $project->status === \App\Models\Project::STATUS_BATAL ? 'opacity-60' : '' }}">
-                    {{-- Nomor proposal dijaga tetap 1 baris (whitespace-nowrap) —
-                         dipatahkan jadi 3-4 baris justru bikin tinggi baris
-                         melar dan susah dipindai. Ukuran font dikecilkan supaya
-                         nomor terpanjang tetap muat. --}}
-                    <td class="px-3 py-3 font-semibold text-gray-900 whitespace-nowrap dark:text-gray-100">
-                        {{ $project->proposal_number }}
+                    {{-- Nomor proposal 1 baris & diringkas (5 karakter awal …
+                         bulan/tahun) supaya tabel tidak perlu digeser ke samping.
+                         Nomor lengkap muncul sebagai tooltip. --}}
+                    <td class="px-3 py-3 font-semibold text-gray-900 whitespace-nowrap dark:text-gray-100"
+                        title="{{ $project->proposal_number }}">
+                        {{ $project->proposal_number_short }}
                     </td>
                     <td class="px-3 py-3 text-gray-700 dark:text-gray-300">{{ $project->instructingClient->client_name ?? '-' }}</td>
                     <td class="px-3 py-3 text-center">
@@ -128,18 +137,15 @@
                             <span class="text-gray-300 dark:text-gray-600">—</span>
                         @endif
                     </td>
-                    <td class="px-3 py-3 text-right text-gray-700 whitespace-nowrap tabular-nums dark:text-gray-300">
-                        Rp {{ number_format($project->total_fee, 0, ',', '.') }}
-                    </td>
-                    <td class="px-3 py-3 text-right whitespace-nowrap tabular-nums">
-                        @if ($project->remaining_balance > 0)
-                            <span class="font-medium text-amber-600 dark:text-amber-400">Rp {{ number_format($project->remaining_balance, 0, ',', '.') }}</span>
-                        @else
-                            <span class="font-medium text-emerald-600 dark:text-emerald-400">Lunas</span>
+                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400">{{ $project->proposal_purpose }}</td>
+                    {{-- Objek diringkas "kategori pertama +N" (2026-09-13); daftar lengkap di tooltip. --}}
+                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400" title="{{ $obj['full'] }}">{{ $obj['short'] }}</td>
+                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400" title="{{ $locations->implode(' | ') ?: $firstAddr }}">
+                        <span class="line-clamp-2">{{ $firstAddr ?: '—' }}</span>
+                        @if ($locations->count() > 1)
+                            <span class="text-[11px] text-blue-600 dark:text-blue-400">+{{ $locations->count() - 1 }} objek lain</span>
                         @endif
                     </td>
-                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400">{{ $project->proposal_purpose }}</td>
-                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400">{{ $project->asset_type }}</td>
                     <td class="px-3 py-3">
                         <div class="flex justify-center items-center gap-1.5" data-row-actions>
                             <a href="{{ route('proposals.show', $project) }}" title="Lihat / kelola"
@@ -189,12 +195,18 @@
      kartu daripada digeser ke samping terus (2026-09-14, feedback user). --}}
 <div class="lg:hidden space-y-3">
     @forelse ($projects as $project)
-        @php $sla = $activeSlaFor($project); @endphp
+        @php
+                    $sla       = $activeSlaFor($project);
+                    $obj       = $project->object_summary;
+                    $locations = $project->valuationObjects->pluck('location')->filter()->values();
+                    $firstAddr = $locations->first() ?? $project->asset_address;
+                @endphp
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3 dark:bg-gray-800 dark:border-gray-700 {{ $project->status === \App\Models\Project::STATUS_BATAL ? 'opacity-60' : '' }}">
             <a href="{{ route('proposals.show', $project) }}" class="block">
                 <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                        <p class="font-semibold text-gray-900 break-words dark:text-gray-100">{{ $project->proposal_number }}</p>
+                        {{-- Kartu HP disamakan dengan tabel desktop (2026-09-13, feedback user). --}}
+                        <p class="font-semibold text-gray-900 dark:text-gray-100" title="{{ $project->proposal_number }}">{{ $project->proposal_number_short }}</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400">{{ $project->instructingClient->client_name ?? '-' }}</p>
                     </div>
                     <span class="shrink-0 inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $project->status_badge_classes }}"
@@ -204,20 +216,16 @@
                 </div>
 
                 <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    {{ $project->proposal_purpose }}@if ($project->asset_type) &middot; {{ $project->asset_type }} @endif
+                    {{ $project->proposal_purpose }} &middot; {{ $obj['short'] }}
+                </p>
+                <p class="mt-1 text-xs text-gray-500 line-clamp-2 dark:text-gray-400">
+                    📍 {{ $firstAddr ?: '—' }}
+                    @if ($locations->count() > 1)
+                        <span class="text-blue-600 dark:text-blue-400">+{{ $locations->count() - 1 }} objek lain</span>
+                    @endif
                 </p>
 
                 <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                    <span class="text-gray-500 dark:text-gray-400">
-                        Fee <span class="font-medium tabular-nums text-gray-700 dark:text-gray-300">Rp {{ number_format($project->total_fee, 0, ',', '.') }}</span>
-                    </span>
-                    @if ($project->remaining_balance > 0)
-                        <span class="text-gray-500 dark:text-gray-400">
-                            Sisa <span class="font-medium tabular-nums text-amber-600 dark:text-amber-400">Rp {{ number_format($project->remaining_balance, 0, ',', '.') }}</span>
-                        </span>
-                    @else
-                        <span class="font-medium text-emerald-600 dark:text-emerald-400">Lunas</span>
-                    @endif
                     @if ($sla)
                         <span class="inline-flex items-center gap-1.5 {{ $sla['state'] === 'overdue' ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400' }}">
                             <span class="h-2 w-2 shrink-0 rounded-full {{ $slaDotTone[$sla['state']] ?? $slaDotTone['none'] }}"></span>

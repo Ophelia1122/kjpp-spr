@@ -14,7 +14,7 @@
 @endphp
 
 @section('content')
-<div class="max-w-6xl mx-auto py-8 space-y-6">
+<div class="max-w-7xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
     <div class="flex items-end justify-between flex-wrap gap-3">
@@ -24,7 +24,9 @@
                 Batang = rentang SLA draf laporan (tanggal survei &rarr; target selesai).
                 Bagian pekat = waktu berjalan, sisanya = sisa hari SLA.
             </p>
-            {{-- Filter cakupan — pola yang sama dengan Dashboard Project. --}}
+            {{-- Filter cakupan — pola yang sama dengan List Project, termasuk
+                 disembunyikan untuk role admin (2026-09-14, lihat User::seesOfficeWide). --}}
+            @unless (auth()->user()->seesOfficeWide())
             <div class="flex gap-2 mt-2">
                 <a href="{{ route('timeline', ['mine' => 0]) }}"
                    class="px-3 py-1 text-xs rounded-full font-medium {{ ! $mine ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }} dark:text-gray-400">
@@ -35,6 +37,7 @@
                     👤 Proyek Saya
                 </a>
             </div>
+            @endunless
         </div>
         {{-- Tombol "Dashboard Project" dihapus (2026-09-15, feedback user) —
              List Project sudah selalu ada di sidebar. --}}
@@ -96,7 +99,7 @@
                                 <a href="{{ route('proposals.show', $bar['project']) }}"
                                    class="block text-xs font-medium text-gray-900 truncate hover:text-blue-700 dark:text-gray-100 dark:hover:text-blue-300"
                                    title="{{ $bar['project']->proposal_number }}">
-                                    {{ $bar['project']->proposal_number }}
+                                    {{ $bar['project']->proposal_number_short }}
                                 </a>
                                 <span class="block text-[11px] text-gray-500 truncate dark:text-gray-400">
                                     {{ $bar['project']->instructingClient->client_name ?? '-' }}
@@ -202,11 +205,11 @@
                 <a href="{{ route('proposals.show', $p) }}"
                    class="flex items-center justify-between gap-4 px-5 py-3 border-t border-gray-100 hover:bg-blue-50/40 dark:hover:bg-blue-900/20 dark:border-gray-800">
                     <span class="min-w-0">
-                        <span class="block text-sm font-medium text-gray-900 truncate dark:text-gray-100">{{ $p->proposal_number }}</span>
+                        <span class="block text-sm font-medium text-gray-900 truncate dark:text-gray-100" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</span>
                         <span class="block text-xs text-gray-500 truncate dark:text-gray-400">{{ $p->instructingClient->client_name ?? '-' }}</span>
                     </span>
-                    <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}">
-                        {{ $p->status }}
+                    <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
+                        {{ $p->status_short }}
                     </span>
                 </a>
             @endforeach

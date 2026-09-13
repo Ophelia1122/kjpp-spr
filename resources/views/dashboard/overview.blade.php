@@ -66,7 +66,7 @@
         {{-- Pending / Belum Deal --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Pending</span>
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Belum Ada Pembayaran</span>
                 <span class="grid h-8 w-8 place-items-center rounded-md bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
                     <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
@@ -74,13 +74,13 @@
                 </span>
             </div>
             <div class="mt-2 text-3xl font-bold text-gray-900 tabular-nums dark:text-gray-100">{{ number_format($pendingCount, 0, ',', '.') }}</div>
-            <p class="text-xs text-gray-400 mt-1 dark:text-gray-500">Belum ada pembayaran</p>
+            <p class="text-xs text-gray-400 mt-1 dark:text-gray-500">Proposal aktif, klien belum membayar</p>
         </div>
 
         {{-- Deal --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Deal</span>
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Sudah Ada Pembayaran</span>
                 <span class="grid h-8 w-8 place-items-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                     <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
@@ -88,7 +88,7 @@
                 </span>
             </div>
             <div class="mt-2 text-3xl font-bold text-gray-900 tabular-nums dark:text-gray-100">{{ number_format($dealCount, 0, ',', '.') }}</div>
-            <p class="text-xs text-gray-400 mt-1 dark:text-gray-500">Sudah ada pembayaran</p>
+            <p class="text-xs text-gray-400 mt-1 dark:text-gray-500">Minimal satu invoice sudah dibayar</p>
         </div>
 
         {{-- Batal --}}
@@ -106,19 +106,8 @@
         </div>
     </div>
 
-    {{-- ===================== NILAI KONTRAK ===================== --}}
-    <div class="grid gap-4 sm:grid-cols-2">
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Total Nilai Kontrak Proposal</span>
-            <div class="mt-1 text-2xl font-bold text-gray-900 tabular-nums break-words dark:text-gray-100">{{ $rp($totalContractValue) }}</div>
-            <p class="text-xs text-gray-400 mt-1 dark:text-gray-500">Akumulasi seluruh proyek aktif (di luar Batal), sudah termasuk PPN &amp; transport.</p>
-        </div>
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Nilai Kontrak Deal</span>
-            <div class="mt-1 text-2xl font-bold text-emerald-700 tabular-nums break-words dark:text-emerald-400">{{ $rp($dealContractValue) }}</div>
-            <p class="text-xs text-gray-400 mt-1 dark:text-gray-500">Proyek yang sudah menerima pembayaran.</p>
-        </div>
-    </div>
+    {{-- Kartu "Nilai Kontrak" dihapus dari sini (2026-09-14, feedback user) —
+         angka uang cukup di Dashboard Pembayaran supaya tidak dobel. --}}
 
     {{-- ===================== STATUS BARS + DONUT PIPELINE ===================== --}}
     <div class="grid gap-6 lg:grid-cols-2">
@@ -129,7 +118,8 @@
             <div class="space-y-3">
                 @foreach ($statusCounts as $label => $count)
                     <div class="flex items-center gap-3 text-sm">
-                        <span class="w-44 shrink-0 text-gray-600 truncate dark:text-gray-400" title="{{ $label }}">{{ $label }}</span>
+                        {{-- Label status singkat, sama dengan List Project (2026-09-14). --}}
+                        <span class="w-32 shrink-0 text-gray-600 truncate dark:text-gray-400" title="{{ $label }}">{{ Project::STATUS_SHORT_LABELS[$label] ?? $label }}</span>
                         <span class="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden dark:bg-gray-800">
                             <span class="block h-full rounded-full"
                                   style="width: {{ $count ? max(4, round($count / $maxStatus * 100)) : 0 }}%; background: {{ $statusHex[$label] ?? '#9ca3af' }};"></span>
@@ -166,12 +156,12 @@
                 <ul class="space-y-2 text-sm">
                     <li class="flex items-center gap-2">
                         <span class="h-3 w-3 rounded-sm" style="background:#f59e0b"></span>
-                        <span class="text-gray-600 dark:text-gray-400">Pending</span>
+                        <span class="text-gray-600 dark:text-gray-400">Belum Ada Pembayaran</span>
                         <span class="ml-auto font-semibold text-gray-800 tabular-nums dark:text-gray-200">{{ $pendingCount }} <span class="text-gray-400 font-normal dark:text-gray-500">({{ $pPend }}%)</span></span>
                     </li>
                     <li class="flex items-center gap-2">
                         <span class="h-3 w-3 rounded-sm" style="background:#10b981"></span>
-                        <span class="text-gray-600 dark:text-gray-400">Deal</span>
+                        <span class="text-gray-600 dark:text-gray-400">Sudah Ada Pembayaran</span>
                         <span class="ml-auto font-semibold text-gray-800 tabular-nums dark:text-gray-200">{{ $dealCount }} <span class="text-gray-400 font-normal dark:text-gray-500">({{ $pDeal }}%)</span></span>
                     </li>
                     <li class="flex items-center gap-2">
@@ -241,13 +231,13 @@
                 @foreach ($recent as $p)
                     <tr class="hover:bg-blue-50/40 dark:hover:bg-blue-900/20 {{ $p->status === Project::STATUS_BATAL ? 'opacity-60' : '' }}">
                         <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">
-                            <a href="{{ route('proposals.show', $p) }}" class="hover:text-blue-700 dark:hover:text-blue-300">{{ $p->proposal_number }}</a>
+                            <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
                         </td>
                         <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->instructingClient->client_name ?? '-' }}</td>
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $p->proposal_purpose }}</td>
                         <td class="px-6 py-3">
-                            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}">
-                                {{ $p->status }}
+                            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
+                                {{ $p->status_short }}
                             </span>
                         </td>
                         <td class="px-6 py-3 text-gray-500 whitespace-nowrap dark:text-gray-400">{{ $p->created_at->translatedFormat('d M Y') }}</td>
@@ -287,12 +277,12 @@
                         @endphp
                         <tr class="hover:bg-blue-50/40 dark:hover:bg-blue-900/20">
                             <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">
-                                <a href="{{ route('proposals.show', $p) }}" class="hover:text-blue-700 dark:hover:text-blue-300">{{ $p->proposal_number }}</a>
+                                <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
                             </td>
                             <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->instructingClient->client_name ?? '-' }}</td>
                             <td class="px-6 py-3">
-                                <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}">
-                                    {{ $p->status }}
+                                <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
+                                    {{ $p->status_short }}
                                 </span>
                             </td>
                             <td class="px-6 py-3 text-right whitespace-nowrap">

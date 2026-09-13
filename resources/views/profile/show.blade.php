@@ -3,7 +3,7 @@
 @section('title', 'Profil Saya')
 
 @section('content')
-<div class="max-w-2xl mx-auto py-8 space-y-6">
+<div class="max-w-5xl mx-auto py-8 space-y-6">
 
     <div class="flex items-center gap-4">
         <span class="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-blue-600 text-lg font-semibold text-white uppercase">

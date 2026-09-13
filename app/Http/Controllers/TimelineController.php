@@ -72,6 +72,12 @@ class TimelineController extends Controller
                 \App\Models\User::JABATAN_PELAKSANA_INSPEKSI,
             ], true);
 
+        // Role admin tidak punya tab "Proyek Saya" — selalu Semua Proyek
+        // (2026-09-14, disamakan dengan List Project).
+        if (auth()->user()->seesOfficeWide()) {
+            $mine = false;
+        }
+
         $scoped = fn () => Project::with('instructingClient')
             ->when($mine, fn ($q) => $q->where('assigned_appraiser_id', auth()->id()));
 
