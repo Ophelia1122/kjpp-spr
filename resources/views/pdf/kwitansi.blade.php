@@ -3,97 +3,56 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 50px 60px; size: A4 landscape; }
-        body { font-family: 'Helvetica', sans-serif; font-size: 12px; color: #1a1a1a; line-height: 1.6; }
+        /* Dua lembar kwitansi identik dalam satu halaman A4, dipisah garis
+           putus-putus untuk digunting (2026-09-15, feedback user). Tinggi
+           tiap lembar dikunci (.copy) supaya garis potong selalu jatuh di
+           tengah halaman, berapa pun panjang nama klien/rekeningnya. */
+        @page { margin: 22px 40px; }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 9.8px; color: #000; line-height: 1.35; margin: 0; }
         table { width: 100%; border-collapse: collapse; }
-        .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .small { font-size: 10px; color: #333; }
-        .frame { border: 2px solid #1a1a1a; padding: 25px 35px; }
-        .label-col { width: 210px; vertical-align: top; padding: 6px 0; }
-        .val-col { vertical-align: top; padding: 6px 0; border-bottom: 1px dotted #999; }
-        .amount-box { border: 1px solid #333; padding: 10px 14px; font-weight: bold; font-size: 14px; }
+        .text-center { text-align: center; }
+        .bold { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .small { font-size: 8.4px; }
+
+        .copy { height: 516px; overflow: hidden; }
+
+        .box { border: 1.1px solid #000; padding: 5px 7px; }
+        .doc-title { font-size: 19px; font-weight: bold; text-align: center; }
+        .doc-sub { font-size: 11.5px; font-style: italic; text-align: center; }
+
+        .frame { border: 1.1px solid #000; margin-top: 9px; }
+        .frame td { padding: 4px 9px; vertical-align: top; }
+        .label-col { width: 130px; }
+        .dots { border-bottom: 1px dotted #999; }
+        .dots-row td { border-bottom: 1px dotted #999; }
+        table.breakdown td { padding: 0 4px 0 0; }
+
+        .amount-box { font-size: 18px; font-weight: bold; }
+        .checkbox { display: inline-block; width: 8px; height: 8px; border: 1px solid #000; margin-right: 3px; vertical-align: middle; }
+
+        .footer { margin-top: 8px; text-align: center; font-size: 7px; line-height: 1.3; color: #333; }
+
+        /* Garis potong. Glyph gunting butuh DejaVu Sans (bawaan dompdf) —
+           Helvetica tidak punya karakter itu. */
+        .cut { position: relative; height: 26px; }
+        .cut-line { position: absolute; top: 12px; left: -20px; right: -20px; border-top: 1px dashed #666; }
+        .cut-label { position: absolute; top: 5px; left: 0; right: 0; text-align: center; }
+        .cut-label span { background: #fff; padding: 0 6px; font-family: 'DejaVu Sans', sans-serif; font-size: 7px; color: #666; }
     </style>
 </head>
 <body>
 
-<div class="frame">
+    @include('pdf._kwitansi_copy')
 
-    {{-- ===================== KOP + JUDUL ===================== --}}
-    <table style="margin-bottom: 15px;">
-        <tr>
-            <td style="width: 90px;">
-                <img src="{{ config('kjpp.company_logo') }}" style="width: 75px;" alt="Logo">
-            </td>
-            <td>
-                <div style="font-size: 16px; font-weight: bold;">{{ config('kjpp.company_name') }}</div>
-                <div class="small">{{ config('kjpp.company_address') }}</div>
-                <div class="small">Telp: {{ config('kjpp.company_phone') }} | Email: {{ config('kjpp.company_email') }}</div>
-            </td>
-            <td style="width: 220px; text-align: right; vertical-align: top;">
-                <div style="font-size: 18px; font-weight: bold; letter-spacing: 1px;">KWITANSI</div>
-                <div class="small">(Receipt)</div>
-                <div class="small" style="margin-top: 6px;">No. {{ $invoice->invoice_number }}</div>
-                <div class="small">Tgl: {{ ($invoice->payment_date ?? now())->translatedFormat('d F Y') }}</div>
-            </td>
-        </tr>
-    </table>
-    <hr style="border-top: 2px solid #1a1a1a; margin-bottom: 15px;">
+    <div class="cut">
+        <div class="cut-line"></div>
+        <div class="cut-label"><span>&#9986; gunting di sini</span></div>
+    </div>
 
-    {{-- ===================== ISI KWITANSI ===================== --}}
-    <table style="margin-top: 10px;">
-        <tr>
-            <td class="label-col">Telah diterima dari <span class="small">(Received from)</span></td>
-            <td class="val-col"><strong>{{ $project->instructingClient->client_name }}</strong></td>
-        </tr>
-        <tr>
-            <td class="label-col">Uang sejumlah <span class="small">(The sum of)</span></td>
-            <td class="val-col">
-                <em>{{ \App\Helpers\Terbilang::make($invoice->amount) }}</em>
-            </td>
-        </tr>
-        <tr>
-            <td class="label-col">Untuk pembayaran <span class="small">(In payment of)</span></td>
-            <td class="val-col">
-                {{ $invoice->term_description ?? $invoice->invoice_type }}
-                — Jasa Penilaian {{ $project->asset_type }}, Proyek No. {{ $project->proposal_number }}
-                @if ($invoice->invoice_type === 'DP')
-                    (Uang Muka / Down Payment)
-                @else
-                    (Pelunasan Sisa Tagihan)
-                @endif
-            </td>
-        </tr>
-    </table>
-
-    {{-- ===================== NOMINAL BOX ===================== --}}
-    <table style="margin-top: 25px;">
-        <tr>
-            <td style="width: 60%;"></td>
-            <td style="width: 40%;">
-                <div class="amount-box text-center">
-                    Rp {{ number_format($invoice->amount, 0, ',', '.') }},-
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    {{-- ===================== TANDA TANGAN ===================== --}}
-    <table style="margin-top: 45px;">
-        <tr>
-            <td style="width: 50%;"></td>
-            <td style="width: 50%; text-align: center;">
-                <div class="small">Jakarta, {{ ($invoice->payment_date ?? now())->translatedFormat('d F Y') }}</div>
-                <div class="small">{{ config('kjpp.company_name') }}</div>
-                <div style="height: 65px;"></div>
-                <div style="border-top: 1px solid #333; width: 220px; margin: 0 auto;"></div>
-                <div class="small"><strong>Arief Rachman Setiady, S.M., M.M., MAPPI (Cert.)</strong></div>
-                <div class="small">Penilai Publik — Izin No. P-1.25.00690</div>
-            </td>
-        </tr>
-    </table>
-
-</div>
+    @include('pdf._kwitansi_copy')
 
 </body>
 </html>

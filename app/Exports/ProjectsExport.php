@@ -32,10 +32,14 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $keyword = $this->filters['q'];
             $query->where(function ($q) use ($keyword) {
                 $q->where('proposal_number', 'like', "%{$keyword}%")
-                  ->orWhere('property_owner_name', 'like', "%{$keyword}%");
+                  ->orWhereHas('instructingClient', function ($sub) use ($keyword) {
+                      $sub->where('client_name', 'like', "%{$keyword}%");
+                  });
             });
         }
-
+        if (!empty($this->filters['mine'])) {
+        $query->where('assigned_appraiser_id', auth()->id());
+        }
         return $query->get();
     }
 
@@ -43,23 +47,25 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
     {
         return [
             'No. Proposal',
+            'Tanggal Proposal',
             'Status',
             'Jenis Proposal',
             'Pemberi Tugas',
             'Pengguna Laporan',
-            'Pemilik Aset',
             'Jenis Objek',
             'Alamat Objek',
             'Jenis Laporan',
-            'SLA (Hari Kerja)',
+            'SLA Draft (Hari Kerja)',
+            'SLA Final (Hari Kerja)',
             'Fee Jasa (Rp)',
             'Penilai Lapangan',
             'Tanggal Survei',
             'Estimasi Selesai',
-            'Total Invoice DP',
-            'Status Invoice DP',
-            'Total Invoice Pelunasan',
-            'Status Invoice Pelunasan',
+            'Jumlah Invoice Diterbitkan',
+            'Total Ditagihkan (Rp)',
+            'Total Dibayar (Rp)',
+            'Sisa Tagihan (Rp)',
+            'Status Pembayaran',
             'Nomor Laporan Resmi',
             'Tanggal Dibuat',
         ];
@@ -70,28 +76,32 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
      */
     public function map($project): array
     {
-        $dpInvoice    = $project->invoices->firstWhere('invoice_type', 'DP');
-        $finalInvoice = $project->invoices->firstWhere('invoice_type', 'Pelunasan');
+        $totalBilled = (float) $project->invoices->sum('amount');
+        $statusPembayaran = $project->invoices->isEmpty()
+            ? 'Belum Ada Invoice'
+            : ($project->is_fully_paid ? 'Lunas' : 'Belum Lunas');
 
         return [
             $project->proposal_number,
+            ($project->proposal_date ?? $project->created_at)->format('d-m-Y'),
             $project->status,
             $project->proposal_purpose,
             $project->instructingClient->client_name ?? '-',
             $project->intendedUsers->pluck('client_name')->implode(', '),
-            $project->property_owner_name,
             $project->asset_type,
             $project->asset_address,
             $project->report_style,
-            $project->sla_days,
-            (float) $project->service_fee,
+            $project->sla_draft_days ?? '-',
+            $project->sla_final_days ?? '-',
+            (float) $project->total_fee,
             $project->assigned_appraiser ?? '-',
             $project->survey_date?->format('d-m-Y') ?? '-',
             $project->estimated_completion_date_formatted ?? '-',
-            $dpInvoice ? (float) $dpInvoice->amount : 0,
-            $dpInvoice->status ?? '-',
-            $finalInvoice ? (float) $finalInvoice->amount : 0,
-            $finalInvoice->status ?? '-',
+            $project->invoices->count(),
+            $totalBilled,
+            (float) $project->total_paid,
+            (float) $project->remaining_balance,
+            $statusPembayaran,
             $project->final_report_number ?? '-',
             $project->created_at->format('d-m-Y'),
         ];

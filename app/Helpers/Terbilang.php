@@ -30,6 +30,21 @@ class Terbilang
         return trim(self::convert($number)) . ' Rupiah';
     }
 
+    /**
+     * Versi terbilang polos tanpa "Rupiah" — dipakai mis. untuk jumlah
+     * hari kerja SLA di proposal: 7 => "tujuh", 14 => "empat belas".
+     */
+    public static function words(int $number): string
+    {
+        $number = abs($number);
+
+        if ($number === 0) {
+            return 'nol';
+        }
+
+        return mb_strtolower(trim(self::convert($number)));
+    }
+
     private static function convert(int $number): string
     {
         if ($number < 12) {

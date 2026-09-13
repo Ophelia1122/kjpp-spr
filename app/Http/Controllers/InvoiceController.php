@@ -9,151 +9,325 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class InvoiceController extends Controller
 {
+    /** Bulan -> angka romawi, dipakai kedua format nomor (Invoice & Kwitansi). */
+    private const ROMAN_MONTHS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
     /**
-     * Admin memilih skema termin (mis. "DP 50%") -> sistem menerbitkan
-     * Invoice DP dan mengubah status proyek jadi 'DP Invoicing'.
+     * SATU pintu terbit invoice — menggantikan generateDp()/generateFinal()
+     * lama yang mengasumsikan proyek SELALU tepat 2 tahap (DP + Pelunasan).
+     * Sekarang sistem TIDAK peduli ini termin ke berapa: staf isi Persentase
+     * ATAU Nominal (disinkronkan di form), lalu sistem cukup memvalidasi
+     * nominalnya tidak melebihi SISA tagihan (total_fee - yang sudah Paid).
+     * "invoice_type" tetap diisi (DP/Pelunasan) sekadar label riwayat —
+     * otomatis "Pelunasan" kalau invoice ini melunasi sisa tagihan.
      */
-    public function generateDp(Request $request, Project $project)
+    public function store(Request $request, Project $project)
     {
+        if ($project->isCancelled()) {
+            abort(403, 'Proyek berstatus Batal tidak dapat diterbitkan invoice.');
+        }
+
         $validated = $request->validate([
-            'dp_percentage'     => 'required|numeric|min:1|max:100',
-            'term_description'  => 'nullable|string|max:255',
+            'amount'           => 'required|numeric|min:1',
+            'percentage'       => 'nullable|numeric|min:0.01|max:100',
+            'term_description' => 'nullable|string|max:255',
+            'invoice_date'     => 'nullable|date',
         ]);
 
-        $amount = round(
-            $project->service_fee * ($validated['dp_percentage'] / 100),
-            2
-        );
+        $amount    = round((float) $validated['amount'], 2);
+        $remaining = $project->remaining_balance;
 
-        $invoice = Invoice::create([
-            'project_id'        => $project->id,
-            'invoice_number'    => $this->generateInvoiceNumber(Invoice::TYPE_DP),
-            'invoice_type'      => Invoice::TYPE_DP,
-            'amount'            => $amount,
-            'status'            => Invoice::STATUS_UNPAID,
-            'term_description'  => $validated['term_description']
-                ?? "DP {$validated['dp_percentage']}%",
-        ]);
+        if ($remaining <= 0) {
+            return back()->with('info', 'Tagihan proyek ini sudah lunas — tidak perlu invoice tambahan.');
+        }
 
-        $project->update(['status' => Project::STATUS_DP_INVOICING]);
+        // Toleransi Rp 1 utk pembulatan persentase/PPN.
+        if ($amount > $remaining + 1) {
+            return back()
+                ->withErrors(['amount' => 'Nominal melebihi sisa tagihan (Rp ' . number_format($remaining, 0, ',', '.') . ').'])
+                ->withInput();
+        }
 
-        return redirect()
-            ->route('invoices.show', $invoice)
-            ->with('success', "Invoice DP {$invoice->invoice_number} berhasil diterbitkan.");
-    }
-
-    /**
-     * Sisa tagihan (Pelunasan) = service_fee - total invoice DP yang sudah Paid.
-     * Dipanggil otomatis oleh ProjectController@markDraftCompleted.
-     */
-    public function generateFinal(Project $project)
-    {
-        $paidDp = $project->invoices()
-            ->where('invoice_type', Invoice::TYPE_DP)
-            ->where('status', Invoice::STATUS_PAID)
-            ->sum('amount');
-
-        $remaining = round($project->service_fee - $paidDp, 2);
+        $isFinal = $amount >= $remaining - 1; // invoice ini melunasi sisa tagihan
+        $type    = $isFinal ? Invoice::TYPE_PELUNASAN : Invoice::TYPE_DP;
 
         $invoice = Invoice::create([
             'project_id'       => $project->id,
-            'invoice_number'   => $this->generateInvoiceNumber(Invoice::TYPE_PELUNASAN),
-            'invoice_type'     => Invoice::TYPE_PELUNASAN,
-            'amount'           => $remaining,
+            'invoice_number'   => $this->nextInvoiceNumber(),
+            'invoice_date'     => $validated['invoice_date'] ?? now(),
+            'invoice_type'     => $type,
+            'amount'           => $amount,
+            'percentage'       => $validated['percentage'] ?? null,
             'status'           => Invoice::STATUS_UNPAID,
-            'term_description' => 'Pelunasan Sisa Tagihan',
+            'term_description' => $validated['term_description'] ?? ($isFinal ? 'Pelunasan Sisa Tagihan' : 'Termin Pembayaran'),
         ]);
 
+        // Invoice PERTAMA pada proyek yang masih Draft/Menunggu Persetujuan
+        // -> mulai proses penagihan (status DP Invoicing).
+        if (in_array($project->status, [Project::STATUS_DRAFT, Project::STATUS_WAITING_APPROVAL], true)) {
+            $project->update(['status' => Project::STATUS_DP_INVOICING]);
+        }
+
+        $sisaSetelahIni = max(0, $remaining - $amount);
+        \App\Helpers\AuditLogger::record(
+            'invoice.generated',
+            "Menerbitkan Invoice {$invoice->invoice_number} sebesar Rp " . number_format($amount, 0, ',', '.')
+                . " untuk proyek {$project->proposal_number} (sisa tagihan setelah ini: Rp " . number_format($sisaSetelahIni, 0, ',', '.') . ")",
+            $invoice
+        );
+
         return redirect()
-            ->route('invoices.show', $invoice)
-            ->with('success', "Invoice Pelunasan {$invoice->invoice_number} berhasil dibuat.");
+            ->route('proposals.show', $project)
+            ->with('success', "Invoice {$invoice->invoice_number} berhasil diterbitkan. Sisa tagihan: Rp " . number_format($sisaSetelahIni, 0, ',', '.') . '.');
     }
 
     /**
-     * Finance menandai invoice sebagai 'Paid'. Ini adalah TRIGGER UTAMA
-     * workflow: jika invoice DP -> buka fitur input penilai (status
-     * proyek jadi 'In-Progress / Scheduled').
+     * Edit nominal/keterangan invoice yang SUDAH ADA — mitigasi human
+     * error (2026-09-12, feedback user): salah input nominal/keterangan,
+     * atau baru sadar salahnya SETELAH invoice ditandai Paid. SENGAJA
+     * tidak dibatasi status (boleh untuk invoice Paid juga) — beda dari
+     * store() yang punya guard proyek-Batal, di sini cukup cek nominal
+     * baru tidak melebihi jatah yang tersedia (sisa tagihan + nominal
+     * invoice ini sendiri, karena invoice ini akan DIGANTI bukan ditambah).
+     * TIDAK mengubah status Paid/Unpaid atau kwitansi_number — itu tetap
+     * lewat markAsPaid() terpisah.
+     */
+    public function update(Request $request, Invoice $invoice)
+    {
+        $project = $invoice->project;
+
+        $validated = $request->validate([
+            'amount'           => 'required|numeric|min:1',
+            'term_description' => 'nullable|string|max:255',
+        ]);
+
+        $amount    = round((float) $validated['amount'], 2);
+        $available = (float) $project->remaining_balance + (float) $invoice->amount;
+
+        if ($amount > $available + 1) {
+            return back()
+                ->withErrors(['amount' => 'Nominal melebihi batas yang tersedia (Rp ' . number_format($available, 0, ',', '.') . ').'])
+                ->withInput();
+        }
+
+        $oldAmount = (float) $invoice->amount;
+        $isFinal   = $amount >= $available - 1;
+
+        $invoice->update([
+            'amount'           => $amount,
+            'term_description' => $validated['term_description'] ?: null,
+            'invoice_type'     => $isFinal ? Invoice::TYPE_PELUNASAN : Invoice::TYPE_DP,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'invoice.updated',
+            "Mengubah Invoice {$invoice->invoice_number}: nominal Rp " . number_format($oldAmount, 0, ',', '.')
+                . ' -> Rp ' . number_format($amount, 0, ',', '.')
+                . ($invoice->status === Invoice::STATUS_PAID ? ' (invoice sudah Lunas)' : ''),
+            $invoice
+        );
+
+        $this->revertToPelunasanIfNoLongerFullyPaid($project);
+
+        return back()->with('success', "Invoice {$invoice->invoice_number} berhasil diperbarui.");
+    }
+
+    /**
+     * Jaga konsistensi status vs saldo (2026-09-14, feedback user): kalau
+     * proyek SUDAH Selesai (artinya sempat lunas penuh) tapi invoice-nya
+     * diedit/dihapus sehingga saldo TIDAK lagi lunas penuh, status harus
+     * mundur ke Pelunasan — jangan dibiarkan "Selesai" dengan sisa
+     * tagihan yang menggantung. Dipanggil dari update() & destroy().
+     */
+    private function revertToPelunasanIfNoLongerFullyPaid(Project $project): void
+    {
+        $project->load('invoices');
+
+        if ($project->status === Project::STATUS_SELESAI && !$project->is_fully_paid) {
+            $project->update(['status' => Project::STATUS_PELUNASAN]);
+
+            \App\Helpers\AuditLogger::record(
+                'project.status_reverted',
+                "Status proyek {$project->proposal_number} dikembalikan dari Selesai ke Pelunasan — saldo tidak lagi lunas penuh (sisa Rp "
+                    . number_format($project->remaining_balance, 0, ',', '.') . ') setelah invoice diedit/dihapus',
+                $project
+            );
+        }
+    }
+
+    /**
+     * Finance menandai invoice sebagai 'Paid' DENGAN tanggal pembayaran
+     * manual (default hari ini kalau tidak diisi). Kwitansi baru diterbitkan
+     * (nomor dibuat) SAAT INI — kwitansi tidak mungkin ada sebelum uang
+     * benar diterima.
+     *
+     * Transisi status proyek BUKAN semata dari saldo (lunas != selesai
+     * kerja!) — harus tetap lewat gerbang pekerjaan lapangan:
+     *   DP Invoicing -> In-Progress   : pembayaran PERTAMA masuk, mulai
+     *     kerja lapangan (assign penilai, tanggal survei, dst).
+     *   Pelunasan -> Selesai          : HANYA kalau proyek sudah lewat
+     *     tahap Pelunasan (artinya draf laporan sudah ditandai selesai
+     *     lewat markDraftComplete()) DAN saldo lunas.
+     * BUG lama: kalau invoice PERTAMA kebetulan langsung menutup 100%
+     * sisa tagihan (mis. klien bayar lunas di muka tanpa termin DP), kode
+     * lama langsung lompat ke Selesai walau status masih DP Invoicing —
+     * padahal kerja lapangan (assign penilai/tanggal survei/SLA) belum
+     * pernah terjadi sama sekali. Sekarang status HANYA bisa mencapai
+     * Selesai lewat Pelunasan, jadi pembayaran 100% di muka tetap
+     * berhenti dulu di In-Progress sampai draf benar-benar ditandai
+     * selesai.
      */
     public function markAsPaid(Request $request, Invoice $invoice)
     {
-        $invoice->update([
-            'status'       => Invoice::STATUS_PAID,
-            'payment_date' => $request->input('payment_date', now()),
+        $validated = $request->validate([
+            'payment_date' => 'nullable|date',
         ]);
 
-        if ($invoice->invoice_type === Invoice::TYPE_DP) {
-            $invoice->project->update([
-                'status' => Project::STATUS_IN_PROGRESS,
-            ]);
+        $invoice->update([
+            'status'          => Invoice::STATUS_PAID,
+            'payment_date'    => $validated['payment_date'] ?? now(),
+            'kwitansi_number' => $invoice->kwitansi_number ?: $this->nextKwitansiNumber(),
+        ]);
+
+        $project = $invoice->project;
+        $project->load('invoices');
+
+        if ($project->status === Project::STATUS_PELUNASAN && $project->is_fully_paid) {
+            $project->update(['status' => Project::STATUS_SELESAI]);
+        } elseif ($project->status === Project::STATUS_DP_INVOICING) {
+            $project->update(['status' => Project::STATUS_IN_PROGRESS]);
         }
 
-        if ($invoice->invoice_type === Invoice::TYPE_PELUNASAN) {
-            $invoice->project->update([
-                'status' => Project::STATUS_SELESAI,
-            ]);
-        }
+        \App\Helpers\AuditLogger::record(
+            'invoice.paid',
+            "Mengubah status invoice {$invoice->invoice_number} menjadi Paid — kwitansi {$invoice->kwitansi_number} diterbitkan",
+            $invoice
+        );
 
-        return back()->with('success', "Invoice {$invoice->invoice_number} ditandai Paid.");
+        return back()->with('success', "Invoice {$invoice->invoice_number} ditandai Paid. Kwitansi {$invoice->kwitansi_number} diterbitkan.");
     }
 
     /**
-     * Export PDF Invoice resmi (Kop Surat, Detail Termin, Nominal,
-     * No Rekening Bank KJPP).
+     * Batalkan/hapus invoice yang salah input.
+     *
+     * GUARD DILONGGARKAN (2026-09-12, feedback user): sebelumnya invoice
+     * berstatus 'Paid' TIDAK BOLEH dihapus sama sekali (dianggap catatan
+     * akuntansi resmi). Sekarang boleh, khusus utk mitigasi human error —
+     * mis. staf salah klik "Verifikasi Lunas" padahal klien belum benar-
+     * benar transfer. Konfirmasi di UI (lihat proposals/show.blade.php)
+     * sengaja beda teksnya kalau invoice sudah Lunas, supaya tidak
+     * terklik tanpa sadar.
+     *
+     * KOREKSI STATUS OTOMATIS (2026-09-14, feedback user — merevisi
+     * catatan lama di sini yang bilang status TIDAK otomatis dikoreksi):
+     * kalau proyek sudah Selesai lalu invoice Paid-nya dihapus sehingga
+     * saldo tidak lagi lunas penuh, status dikembalikan ke Pelunasan
+     * lewat revertToPelunasanIfNoLongerFullyPaid() — supaya tidak ada
+     * proyek "Selesai" dengan sisa tagihan yang menggantung.
+     *
+     * Karena sekarang proyek boleh punya banyak invoice, status proyek
+     * HANYA dikembalikan ke Draft kalau invoice yang dihapus ini SATU-
+     * SATUNYA riwayat tagihan proyek (baru saja dibuat, belum ada apa-apa
+     * lagi) — kalau masih ada invoice lain, status dibiarkan apa adanya.
      */
+    public function destroy(Invoice $invoice)
+    {
+        $project = $invoice->project;
+        $invoiceNumber = $invoice->invoice_number;
+        $wasPaid = $invoice->status === Invoice::STATUS_PAID;
+
+        \App\Helpers\AuditLogger::record(
+            'invoice.cancelled',
+            "Membatalkan/menghapus Invoice {$invoiceNumber}" . ($wasPaid ? ' (SUDAH LUNAS, kwitansi ' . $invoice->kwitansi_number . ')' : ''),
+            $invoice
+        );
+
+        $invoice->delete();
+
+        $project->load('invoices');
+        if ($project->invoices->isEmpty() && $project->status === Project::STATUS_DP_INVOICING) {
+            $project->update(['status' => Project::STATUS_DRAFT]);
+        }
+
+        $this->revertToPelunasanIfNoLongerFullyPaid($project);
+
+        return back()->with('success', "Invoice {$invoiceNumber} berhasil dibatalkan/dihapus.");
+    }
+
     public function exportInvoice(Invoice $invoice)
     {
-        $invoice->load('project.instructingClient');
+        $invoice->load('project.instructingClient', 'project.valuationObjects', 'project.bank', 'project.signedBy');
+
+        // Rekening = pilihan proposal -> bank default -> fallback config lama.
+        $bank = $invoice->project->effectiveBank();
 
         $pdf = Pdf::loadView('pdf.invoice', [
             'invoice'    => $invoice,
             'project'    => $invoice->project,
-            'bank_info'  => config('kjpp.bank_account'),
+            'bank_info'  => $bank ? $bank->toClauseArray() : config('kjpp.bank_account'),
         ])->setPaper('a4', 'portrait');
 
         $safeFilename = str_replace(['/', '\\'], '-', $invoice->invoice_number);
         return $pdf->download("Invoice-{$safeFilename}.pdf");
     }
 
-    /**
-     * Export PDF Kwitansi resmi.
-     * GUARD KETAT: hanya bisa dicetak jika invoice sudah berstatus 'Paid',
-     * karena kwitansi adalah bukti PENERIMAAN uang, bukan tagihan.
-     * Mencetak kwitansi untuk invoice Unpaid akan menyesatkan secara
-     * akuntansi (seolah uang sudah diterima padahal belum).
-     */
     public function exportKwitansi(Invoice $invoice)
     {
         if ($invoice->status !== Invoice::STATUS_PAID) {
             abort(403, 'Kwitansi hanya dapat dicetak untuk invoice yang sudah berstatus Paid.');
         }
 
-        $invoice->load('project.instructingClient');
+        // Jaga-jaga data lama (Paid sebelum kolom kwitansi_number ada).
+        if (! $invoice->kwitansi_number) {
+            $invoice->update(['kwitansi_number' => $this->nextKwitansiNumber()]);
+        }
+
+        $invoice->load('project.instructingClient', 'project.valuationObjects', 'project.bank', 'project.signedBy');
+
+        $bank = $invoice->project->effectiveBank();
 
         $pdf = Pdf::loadView('pdf.kwitansi', [
-            'invoice' => $invoice,
-            'project' => $invoice->project,
-        ])->setPaper('a4', 'landscape');
+            'invoice'   => $invoice,
+            'project'   => $invoice->project,
+            'bank_info' => $bank ? $bank->toClauseArray() : config('kjpp.bank_account'),
+        ])->setPaper('a4', 'portrait');
 
-        $safeFilename = str_replace(['/', '\\'], '-', $invoice->invoice_number);
+        $safeFilename = str_replace(['/', '\\'], '-', $invoice->kwitansi_number);
         return $pdf->download("Kwitansi-{$safeFilename}.pdf");
     }
 
-    private function generateInvoiceNumber(string $type): string
+    /**
+     * Format baru: "000/KJPPSPR-INV-JKT/<romawi bulan>/<tahun>" — SATU
+     * urutan global (bukan lagi terpisah per tipe DP/Pelunasan), reset
+     * tiap tahun. 3 digit awal = nomor urut (bukan lagi 3 digit akhir
+     * seperti skema lama, karena posisi tahun & tipe di string sudah beda).
+     */
+    private function nextInvoiceNumber(): string
     {
-        $year   = now()->year;
-        $prefix = $type === Invoice::TYPE_DP ? 'INV-DP' : 'INV-PLN';
-        $count  = Invoice::where('invoice_type', $type)
-            ->whereYear('created_at', $year)
-            ->count() + 1;
-
-        return sprintf('%s/KJPP/%s/%03d', $prefix, $year, $count);
+        return $this->nextSequentialNumber('invoice_number', 'KJPPSPR-INV-JKT', 'created_at');
     }
 
-    /**
-     * Belum ada halaman detail invoice tersendiri di Fase 1 ini — invoice
-     * selalu dikelola dari dalam dashboard proyek (proposals.show), jadi
-     * route ini cukup redirect ke sana supaya link invoices.show tidak 404.
-     */
+    /** Format baru Kwitansi: "000/KJPPSPR-KEU-JK/<romawi bulan>/<tahun>". */
+    private function nextKwitansiNumber(): string
+    {
+        return $this->nextSequentialNumber('kwitansi_number', 'KJPPSPR-KEU-JK', 'payment_date');
+    }
+
+    private function nextSequentialNumber(string $numberColumn, string $suffix, string $dateColumn): string
+    {
+        $year  = now()->year;
+        $roman = self::ROMAN_MONTHS[now()->month - 1];
+
+        $last = Invoice::whereYear($dateColumn, $year)
+            ->whereNotNull($numberColumn)
+            ->orderByDesc('id')
+            ->value($numberColumn);
+
+        $next = $last ? ((int) explode('/', $last)[0]) + 1 : 1;
+
+        return sprintf('%03d/%s/%s/%d', $next, $suffix, $roman, $year);
+    }
+
     public function show(Invoice $invoice)
     {
         return redirect()->route('proposals.show', $invoice->project_id);

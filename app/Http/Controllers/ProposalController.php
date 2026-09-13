@@ -2,111 +2,597 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\Project;
+use App\Models\ProjectValuationObject;
+use App\Models\User;
+use App\Services\DocxToPdf;
+use App\Services\ProposalDocxBuilder;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Validation\Rule;
 
 class ProposalController extends Controller
 {
-    /**
-     * Menampilkan form pembuatan proposal baru.
-     * View: resources/views/proposals/create.blade.php
-     * (bukan lagi create_proposal.blade.php — file lama boleh dihapus
-     * setelah Anda pastikan create.blade.php berjalan baik).
-     */
     public function create()
     {
-        return view('proposals.create');
+        return view('proposals.create', [
+            'signers' => User::penanggungJawab()->orderBy('name')->get(),
+            'banks'   => $this->bankOptions(),
+        ]);
+    }
+
+    /** Daftar rekening bank untuk dropdown proposal (default di atas). */
+    private function bankOptions()
+    {
+        return Bank::orderByDesc('is_default')->orderBy('bank_name')->get();
     }
 
     /**
-     * Admin input data proyek & harga -> proposal_number di-generate otomatis
-     * -> status awal 'Draft Proposal'. SLA TIDAK disimpan manual, cukup
-     * dari accessor $project->sla_days (lihat Model Project).
+     * Nilai TA yang disimpan: hanya dicatat kalau format Rincian DAN TA tidak
+     * ditanggung klien. All-in = TA dianggap sudah di dalam Fee; reimburse =
+     * TA tidak ditagih sama sekali.
      */
+    /**
+     * Nama marketing yang disimpan: pilihan dropdown, KECUALI "Lainnya" — maka
+     * yang disimpan adalah nama yang diketik manual (2026-09-15, feedback user).
+     */
+    private function resolveMarketingName(array $validated): ?string
+    {
+        $choice = $validated['marketing_name'] ?? null;
+
+        if ($choice === 'Lainnya') {
+            return trim((string) ($validated['marketing_name_other'] ?? '')) ?: null;
+        }
+
+        return $choice ?: null;
+    }
+
+    private function billableTransportInput(Request $request, array $validated): ?float
+    {
+        if (! $request->boolean('fee_breakdown') || $request->boolean('transport_reimbursed')) {
+            return null;
+        }
+
+        return (float) ($validated['transport_cost'] ?? 0);
+    }
+
     public function store(Request $request)
     {
-        // Multi-select psak_classification datang sebagai array dari form;
-        // gabungkan jadi satu string sebelum divalidasi (kolom DB-nya string).
         if ($request->has('psak_classification') && is_array($request->psak_classification)) {
             $request->merge([
                 'psak_classification' => implode(', ', $request->psak_classification),
             ]);
         }
 
-        $validated = $request->validate([
-            'instructing_client_id'    => 'required|exists:clients,id',
-            'intended_user_ids'        => 'required|array|min:1',
-            'intended_user_ids.*'      => 'exists:clients,id',
-            'property_owner_name'      => 'required|string|max:255',
-            'asset_type'               => 'required|string|max:255',
-            'asset_address'            => 'required|string',
-            'service_fee'              => 'required|numeric|min:0',
-            'report_style'             => 'required|in:Terinci,Ringkas',
-            'proposal_purpose'         => 'required|in:Jual Beli,Penjaminan Utang,Lelang,Pelaporan Keuangan',
-
-            // Hanya wajib diisi jika proposal_purpose = 'Pelaporan Keuangan'
-            'psak_classification'      => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|string|max:255',
-            'financial_reporting_date' => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|date',
-            'is_public_company'        => 'nullable|boolean',
-        ]);
+        $validated = $this->validateProposal($request);
 
         $project = Project::create([
-            'proposal_number'          => $this->generateProposalNumber(),
+            'proposal_number'          => $validated['proposal_number'],
+            'proposal_date'            => $validated['proposal_date'],
+            'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
-            'property_owner_name'      => $validated['property_owner_name'],
-            'asset_type'               => $validated['asset_type'],
-            'asset_address'            => $validated['asset_address'],
+            'client_name'              => $validated['client_name'] ?? null,
+            'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
+            'approver_client_id'       => $validated['approver_client_id'] ?? null,
+            'marketing_name'           => $this->resolveMarketingName($validated),
+            'bank_id'                  => $validated['bank_id'] ?? null,
+            'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
+            'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
+            'fee_ppn_included'         => $request->boolean('fee_ppn_included'),
+            'fee_breakdown'            => $request->boolean('fee_breakdown'),
+            'transport_reimbursed'     => $request->boolean('transport_reimbursed'),
+            'transport_cost'           => $this->billableTransportInput($request, $validated),
             'report_style'             => $validated['report_style'],
+            'sla_draft_days'           => $validated['sla_draft_days'],
+            'sla_final_days'           => $validated['sla_final_days'],
             'proposal_purpose'         => $validated['proposal_purpose'],
+            'payment_scheme'           => $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP,
             'psak_classification'      => $validated['psak_classification'] ?? null,
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
             'is_public_company'        => $request->boolean('is_public_company'),
             'status'                   => Project::STATUS_DRAFT,
         ]);
 
-        // Simpan multi Pengguna Laporan (bisa lebih dari 1 instansi)
         $project->intendedUsers()->sync($validated['intended_user_ids']);
+        $this->syncValuationObjects($project, $validated['objects']);
 
+        \App\Helpers\AuditLogger::record(
+            'proposal.created',
+            "Membuat proposal {$project->proposal_number} ({$project->proposal_purpose}) untuk {$project->instructingClient->client_name}",
+            $project
+        );
+        
         return redirect()
             ->route('proposals.show', $project)
-            ->with('success', "Proposal {$project->proposal_number} berhasil dibuat.");
-    }
-
-    private function generateProposalNumber(): string
-    {
-        $year  = now()->year;
-        $count = Project::whereYear('created_at', $year)->count() + 1;
-
-        return sprintf('PRO/KJPP/%s/%03d', $year, $count);
+            ->with('success', "Proposal {$project->proposal_number} berhasil dibuat dengan " . count($validated['objects']) . " objek penilaian.");
     }
 
     /**
-     * Generate PDF Proposal Resmi: gabungan data proyek + TEXT BAKU KJPP.
+     * Form edit proposal. DIBATASI hanya untuk status 'Draft Proposal' —
+     * begitu proposal sudah diproses lebih lanjut (ada Invoice DP, dst),
+     * mengedit data dasar (fee, objek, klien) bisa bikin invoice/PDF yang
+     * sudah terlanjur dicetak jadi tidak sinkron dengan data terbaru.
+     * Kalau ada kesalahan setelah tahap itu, harus dibatalkan (hapus
+     * invoice-nya dulu lewat invoices.destroy) baru proyeknya bisa diedit.
      */
-    public function exportPdf(Project $project)
+    public function edit(Project $project)
     {
-        $project->load('instructingClient', 'intendedUsers');
+        if ($project->status === Project::STATUS_SELESAI || $project->isCancelled()) {
+            abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
+        }
 
-        $pdf = Pdf::loadView('pdf.proposal', [
-            'project'      => $project,
-            'sla_days'     => $project->sla_days,
-            'generated_at' => now()->format('d F Y'),
-        ])->setPaper('a4', 'portrait');
+        $project->load('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy', 'approverClient');
 
-        // Sanitasi nama file (proposal_number mengandung "/" -> ilegal di Windows)
-        $safeFilename = str_replace(['/', '\\'], '-', $project->proposal_number);
-        return $pdf->download("Proposal-{$safeFilename}.pdf");
+        // Daftar penandatangan = Penanggung Jawab aktif. Kalau proposal ini
+        // sudah punya penandatangan yang kini tidak lagi memenuhi syarat
+        // (mis. jabatannya berubah), tetap sertakan supaya nilainya tidak
+        // hilang diam-diam saat form disimpan ulang.
+        $signers = User::penanggungJawab()->orderBy('name')->get();
+        if ($project->signedBy && ! $signers->contains('id', $project->signedBy->id)) {
+            $signers->push($project->signedBy);
+        }
+
+        return view('proposals.edit', [
+            'project' => $project,
+            'signers' => $signers,
+            'banks'   => $this->bankOptions(),
+        ]);
+    }
+
+    public function update(Request $request, Project $project)
+    {
+        if ($project->status === Project::STATUS_SELESAI || $project->isCancelled()) {
+            abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
+        }
+
+        if ($request->has('psak_classification') && is_array($request->psak_classification)) {
+            $request->merge([
+                'psak_classification' => implode(', ', $request->psak_classification),
+            ]);
+        }
+
+        $validated = $this->validateProposal($request, $project);
+
+        $updateData = [
+            'proposal_number'          => $validated['proposal_number'],
+            'proposal_date'            => $validated['proposal_date'],
+            'request_basis'            => $validated['request_basis'] ?? null,
+            'instructing_client_id'    => $validated['instructing_client_id'],
+            'client_name'              => $validated['client_name'] ?? null,
+            'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
+            'approver_client_id'       => $validated['approver_client_id'] ?? null,
+            'marketing_name'           => $this->resolveMarketingName($validated),
+            'bank_id'                  => $validated['bank_id'] ?? null,
+            'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
+            'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
+            'service_fee'              => $validated['service_fee'],
+            'fee_ppn_included'         => $request->boolean('fee_ppn_included'),
+            'fee_breakdown'            => $request->boolean('fee_breakdown'),
+            'transport_reimbursed'     => $request->boolean('transport_reimbursed'),
+            'transport_cost'           => $this->billableTransportInput($request, $validated),
+            'report_style'             => $validated['report_style'],
+            'sla_draft_days'           => $validated['sla_draft_days'],
+            'sla_final_days'           => $validated['sla_final_days'],
+            'proposal_purpose'         => $validated['proposal_purpose'],
+            'psak_classification'      => $validated['psak_classification'] ?? null,
+            'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
+            'is_public_company'        => $request->boolean('is_public_company'),
+        ];
+
+        // Skema pembayaran hanya boleh diubah selagi Draft/Menunggu
+        // Persetujuan (field-nya juga cuma dirender editable di blade
+        // pada status itu) — di luar itu nilai lama dipertahankan supaya
+        // tidak ada perubahan diam-diam lewat request yang dimanipulasi.
+        if (in_array($project->status, [Project::STATUS_DRAFT, Project::STATUS_WAITING_APPROVAL], true)) {
+            $updateData['payment_scheme'] = $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP;
+        }
+
+        $project->update($updateData);
+
+        $project->intendedUsers()->sync($validated['intended_user_ids']);
+
+        // Cara paling aman untuk sinkronisasi objek saat edit: hapus semua
+        // baris lama, buat ulang dari input form. Karena ini masih status
+        // Draft (belum ada invoice/PDF resmi yang bergantung pada ID objek
+        // lama), tidak ada risiko data anak yang jadi yatim.
+        $project->valuationObjects()->delete();
+        $this->syncValuationObjects($project, $validated['objects']);
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.updated',
+            "Mengubah data proposal {$project->proposal_number}",
+            $project
+        );
+        
+        return redirect()
+            ->route('proposals.show', $project)
+            ->with('success', "Proposal {$project->proposal_number} berhasil diperbarui.");
     }
 
     /**
-     * Dipanggil saat klien SETUJU -> admin lanjut ke pemilihan skema termin.
+     * Hapus proposal. GUARD KETAT: hanya boleh selama status Draft DAN
+     * belum ada invoice sama sekali — supaya tidak ada jejak transaksi
+     * finansial yang hilang tanpa sengaja. Relasi valuationObjects &
+     * intendedUsers ikut terhapus otomatis lewat cascadeOnDelete di
+     * migration, tidak perlu dihapus manual di sini.
      */
+    public function destroy(Project $project)
+    {
+        if ($project->status !== Project::STATUS_DRAFT) {
+            abort(403, 'Hanya proposal berstatus Draft yang dapat dihapus.');
+        }
+
+        if ($project->invoices()->exists()) {
+            abort(403, 'Proposal ini sudah memiliki invoice dan tidak dapat dihapus. Batalkan invoice-nya terlebih dahulu jika diperlukan.');
+        }
+
+        $proposalNumber = $project->proposal_number;
+        \App\Helpers\AuditLogger::record('proposal.deleted', "Menghapus proposal {$proposalNumber}", $project);
+        $project->delete();
+
+        return redirect()
+            ->route('dashboard')
+            ->with('success', "Proposal {$proposalNumber} berhasil dihapus.");
+    }
+
+    /**
+     * Unduh proposal sebagai .docx (MASTER — bisa diedit staf untuk
+     * penyesuaian SPM). Teks baku mengikuti config/proposal_clauses.php.
+     */
+    public function exportWord(Project $project)
+    {
+        $builder = ProposalDocxBuilder::for($project);
+        $docx    = $builder->save();
+
+        return response()
+            ->download($docx, $builder->safeName() . '.docx')
+            ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * PDF proposal = hasil render LibreOffice atas .docx master (di atas),
+     * sehingga tata letak Word == PDF. ?view=1 -> tampil di browser.
+     */
+    public function exportPdf(Project $project, Request $request)
+    {
+        $builder = ProposalDocxBuilder::for($project);
+        $docx    = $builder->save();
+
+        try {
+            $pdf = DocxToPdf::convert($docx);
+        } finally {
+            @unlink($docx);
+        }
+
+        $name = $builder->safeName() . '.pdf';
+
+        $response = $request->boolean('view')
+            ? response()->file($pdf, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $name . '"',
+            ])
+            : response()->download($pdf, $name);
+
+        return $response->deleteFileAfterSend(true);
+    }
+
     public function markApproved(Project $project)
     {
         $project->update(['status' => Project::STATUS_WAITING_APPROVAL]);
 
         return back()->with('success', 'Proposal ditandai disetujui klien. Silakan buat Invoice DP.');
+    }
+
+    /**
+     * Tandai proyek BATAL (Batch 7). Non-destruktif: seluruh data proyek,
+     * objek, invoice, dan teks proposal tetap tersimpan — hanya status
+     * yang berubah. Status terakhir disimpan supaya bisa "diaktifkan
+     * kembali" ke tahap yang tepat. Edit proposal otomatis terkunci
+     * (edit() sudah membatasi ke status Draft).
+     */
+    public function cancel(Project $project)
+    {
+        if ($project->status === Project::STATUS_BATAL) {
+            return back()->with('info', 'Proyek ini sudah berstatus Batal.');
+        }
+
+        $previous = $project->status;
+
+        $project->update([
+            'status_before_cancel' => $previous,
+            'cancelled_at'         => now(),
+            'status'               => Project::STATUS_BATAL,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.cancelled',
+            "Membatalkan proyek {$project->proposal_number} (status sebelumnya: {$previous}). Data tidak dihapus.",
+            $project
+        );
+
+        return back()->with('success', "Proyek {$project->proposal_number} ditandai Batal. Data tetap tersimpan dan bisa diaktifkan kembali kapan saja.");
+    }
+
+    /**
+     * Aktifkan kembali proyek yang berstatus Batal — kembali ke status
+     * terakhir sebelum dibatalkan (fallback: Draft Proposal).
+     */
+    public function reactivate(Project $project)
+    {
+        if ($project->status !== Project::STATUS_BATAL) {
+            return back()->with('info', 'Proyek ini tidak sedang dibatalkan.');
+        }
+
+        $restored = $project->status_before_cancel ?: Project::STATUS_DRAFT;
+
+        $project->update([
+            'status'               => $restored,
+            'status_before_cancel' => null,
+            'cancelled_at'         => null,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.reactivated',
+            "Mengaktifkan kembali proyek {$project->proposal_number} ke status \"{$restored}\"",
+            $project
+        );
+
+        return back()->with('success', "Proyek {$project->proposal_number} diaktifkan kembali ke status \"{$restored}\".");
+    }
+
+    /**
+     * Nomor & Tanggal Faktur Pajak (Feature 6). Hanya Administrator + Admin
+     * Keuangan (izin tax_invoice.manage). Bisa diisi/dikoreksi di status apa
+     * pun — di UI dikunci setelah terisi & harus klik "Edit" untuk mengubah.
+     */
+    public function updateTaxInvoice(Request $request, Project $project)
+    {
+        $data = $request->validate([
+            'tax_invoice_number' => 'nullable|string|max:255',
+            'tax_invoice_date'   => 'nullable|date',
+        ]);
+
+        $project->update([
+            'tax_invoice_number' => $data['tax_invoice_number'] ?: null,
+            'tax_invoice_date'   => $data['tax_invoice_date'] ?: null,
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.tax_invoice_set',
+            "Menyetel Faktur Pajak proposal {$project->proposal_number}: No. "
+                . ($project->tax_invoice_number ?: '(kosong)')
+                . ", Tgl " . ($project->tax_invoice_date?->format('d-m-Y') ?: '(kosong)'),
+            $project
+        );
+
+        return back()->with('success', 'Nomor & Tanggal Faktur Pajak disimpan.');
+    }
+
+    /**
+     * =========================================================================
+     * EDITOR TEKS BAKU PROPOSAL PER-BAB (Batch 3)
+     *
+     * Menyimpan OVERRIDE per bab di proposal_section_texts. Bab tanpa baris
+     * override otomatis pakai teks baku config/proposal_clauses.php. Tabel &
+     * elemen struktural tiap bab tetap dibuat otomatis oleh ProposalDocxBuilder.
+     *
+     * Bisa diakses di STATUS APA PUN (tidak dikunci ke Draft) — revisi wording
+     * proposal kadang masih diperlukan setelah tahap invoice.
+     * =========================================================================
+     */
+    public function editTexts(Project $project)
+    {
+        $project->load('instructingClient', 'sectionTexts');
+
+        return view('proposals.texts', [
+            'project'  => $project,
+            'sections' => ProposalDocxBuilder::for($project)->sectionsForEditor(),
+        ]);
+    }
+
+    public function updateText(Request $request, Project $project, string $key)
+    {
+        $section = $this->editableSection($project, $key);
+
+        $data = $request->validate([
+            'body' => 'required|string|max:20000',
+        ]);
+
+        $project->sectionTexts()->updateOrCreate(
+            ['section_key' => $key],
+            ['body' => $data['body']],
+        );
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.text_edited',
+            "Mengubah teks bab \"{$section['title']}\" pada proposal {$project->proposal_number}",
+            $project
+        );
+
+        return redirect()
+            ->route('proposals.texts', $project)
+            ->with('success', "Teks bab \"{$section['title']}\" disimpan.")
+            ->withFragment('bab-' . $key);
+    }
+
+    public function resetText(Project $project, string $key)
+    {
+        $section = $this->editableSection($project, $key);
+
+        $deleted = $project->sectionTexts()->where('section_key', $key)->delete();
+
+        if ($deleted) {
+            \App\Helpers\AuditLogger::record(
+                'proposal.text_reset',
+                "Mengembalikan teks bab \"{$section['title']}\" ke baku pada proposal {$project->proposal_number}",
+                $project
+            );
+        }
+
+        return redirect()
+            ->route('proposals.texts', $project)
+            ->with('success', "Teks bab \"{$section['title']}\" dikembalikan ke teks baku.")
+            ->withFragment('bab-' . $key);
+    }
+
+    public function resetAllTexts(Project $project)
+    {
+        $count = $project->sectionTexts()->count();
+        $project->sectionTexts()->delete();
+
+        if ($count) {
+            \App\Helpers\AuditLogger::record(
+                'proposal.text_reset_all',
+                "Mengembalikan SEMUA teks bab ({$count}) ke baku pada proposal {$project->proposal_number}",
+                $project
+            );
+        }
+
+        return redirect()
+            ->route('proposals.texts', $project)
+            ->with('success', "Semua teks bab dikembalikan ke baku ({$count} bab).");
+    }
+
+    /**
+     * Pastikan $key adalah bab yang memang bisa di-override untuk proposal
+     * ini (mempertimbangkan bab kondisional per jenis proposal). Selain itu
+     * kembalikan metadata bab (judul, dll) untuk audit log & flash message.
+     */
+    private function editableSection(Project $project, string $key): array
+    {
+        $section = collect(ProposalDocxBuilder::for($project)->sectionsForEditor())
+            ->firstWhere('key', $key);
+
+        abort_unless($section && $section['editable'], 404);
+
+        return $section;
+    }
+
+    /**
+     * Validasi bersama untuk store() & update() — supaya aturan validasi
+     * tidak dobel-tulis dan berisiko berbeda antara create vs edit.
+     */
+    private function validateProposal(Request $request, ?Project $project = null): array
+    {
+        return $request->validate([
+            // Nomor proposal diinput MANUAL — sistem kantor pusat yang
+            // menerbitkan nomor resmi, jadi tidak di-generate di sini.
+            // Tetap wajib unik supaya tidak ada dua proyek bernomor sama.
+            'proposal_number'          => [
+                'required', 'string', 'max:255',
+                Rule::unique('projects', 'proposal_number')->ignore($project?->id),
+            ],
+            // Tanggal proposal (kop dokumen "Jakarta, <tanggal>"). Boleh mundur
+            // — proposal sering dibuat bertanggal beberapa hari lalu.
+            'proposal_date'            => 'required|date',
+            'request_basis'            => 'nullable|string|max:1000',
+            'instructing_client_id'    => 'required|exists:clients,id',
+            // Nama Klien (debitur/pemilik aset) — opsional, kosong = nama
+            // Pemberi Tugas. Dipakai di baris "Hal" proposal.
+            'client_name'              => 'nullable|string|max:255',
+            // Penandatangan proposal — opsional. Kosong = pakai penandatangan
+            // baku config('kjpp.signatory'). Pilihan di form sudah dibatasi ke
+            // user aktif berjabatan "Penanggung Jawab"; di sini cukup pastikan
+            // user-nya ada (tidak memblokir edit lama bila jabatannya berubah).
+            // WAJIB sejak 2026-09-15 (feedback user): pilihan "Penanggung Jawab
+            // baku kantor" dihapus dari dropdown — data bakunya sudah dipindah
+            // ke akun user-nya sendiri.
+            'signed_by_user_id'        => 'required|exists:users,id',
+            // Pihak yang menyetujui (blok tanda tangan kolom kanan) — dipilih
+            // dari Database Klien, bisa bank atau PT tergantung kasus. Kosong =
+            // pakai nama Pemberi Tugas.
+            'approver_client_id'       => 'nullable|exists:clients,id',
+            // Marketing pembawa proposal — opsional, dari daftar config.
+            'marketing_name'           => ['nullable', Rule::in(config('kjpp.marketing_names', []))],
+            // Pilihan "Lainnya" -> nama marketing diketik manual, dan itulah yang disimpan.
+            'marketing_name_other'     => 'nullable|required_if:marketing_name,Lainnya|string|max:255',
+            // Rekening bank untuk blok "Rekening Bank" & PDF Invoice. Kosong =
+            // pakai bank ber-is_default (dropdown sudah membatasi pilihan).
+            'bank_id'                  => 'nullable|exists:banks,id',
+            'intended_user_ids'        => 'required|array|min:1',
+            'intended_user_ids.*'      => 'exists:clients,id',
+            'service_fee'              => 'required|numeric|min:0',
+            // Biaya: nilai dasar (service_fee) + status PPN + mode tampil +
+            // komponen transport (mode rincian). Turunan (total, PPN, dll)
+            // dihitung di accessor Project.
+            'fee_ppn_included'         => 'nullable|boolean',
+            'fee_breakdown'            => 'nullable|boolean',
+            'transport_cost'          => 'nullable|numeric|min:0',
+            'transport_reimbursed'     => 'nullable|boolean',
+            'report_style'             => 'required|in:Long Report,Short Report',
+            // SLA diinput MANUAL dalam hari kerja — dua jangka waktu terpisah
+            // sesuai dokumen resmi (Draft/Resume, lalu Final setelah disetujui).
+            'sla_draft_days'           => 'required|integer|min:1|max:365',
+            'sla_final_days'           => 'required|integer|min:1|max:365',
+            'proposal_purpose'         => 'required|in:Jual Beli,Penjaminan Utang,Lelang,Pelaporan Keuangan',
+            // Skema pembayaran hanya relevan/bisa diubah selagi Draft/
+            // Menunggu Persetujuan (lihat blade create/edit) — kalau field
+            // tidak dikirim (mis. edit setelah lewat tahap itu), diabaikan
+            // di store()/update() dan nilai lama dipertahankan.
+            'payment_scheme'           => 'nullable|in:' . implode(',', Project::PAYMENT_SCHEMES),
+            'psak_classification'      => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|string|max:255',
+            'financial_reporting_date' => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|date',
+            'is_public_company'        => 'nullable|boolean',
+
+            'objects'                          => 'required|array|min:1',
+            // Daftar kategori disesuaikan 2026-09-15 (feedback user). Pakai
+            // Rule::in, bukan string "in:a,b" — nama kategori baru mengandung koma.
+            'objects.*.asset_category'         => ['required', Rule::in([
+                'Real Properti - Tanah',
+                'Real Properti - Tanah dan Bangunan',
+                'Real Properti - Tanah, Bangunan dan Sarana Pelengkap',
+                'Personal Properti - Mesin dan Peralatan',
+                'Personal Properti - Kendaraan',
+                'Personal Properti - Alat Berat',
+                'Lainnya',
+            ])],
+            // Wajib diisi HANYA kalau kategori objek tersebut = "Lainnya".
+            'objects.*.custom_category' => 'nullable|required_if:objects.*.asset_category,Lainnya|string|max:255',
+            'objects.*.land_area'       => 'nullable|numeric|min:0',
+            'objects.*.building_area'   => 'nullable|numeric|min:0',
+            'objects.*.unit_quantity'   => 'nullable|integer|min:0',
+            'objects.*.location'        => 'required|string',
+            'objects.*.ownership_form'  => 'required|string|max:255',
+            'objects.*.owner_name'      => 'required|string|max:255',
+            'objects.*.notes'           => 'nullable|string',
+        ]);
+    }
+
+    private function syncValuationObjects(Project $project, array $objects): void
+    {
+        foreach ($objects as $index => $objectData) {
+            ProjectValuationObject::create([
+                'project_id'      => $project->id,
+                'sort_order'      => $index + 1,
+                'asset_category'  => $objectData['asset_category'],
+                'custom_category' => $objectData['asset_category'] === 'Lainnya'
+                    ? ($objectData['custom_category'] ?? null)
+                    : null,
+                'land_area'       => $objectData['land_area'] ?? null,
+                'building_area'   => $objectData['building_area'] ?? null,
+                'unit_quantity'   => $objectData['unit_quantity'] ?? null,
+                'location'        => $objectData['location'],
+                'ownership_form'  => $objectData['ownership_form'],
+                'owner_name'      => $objectData['owner_name'],
+                'notes'           => $objectData['notes'] ?? null,
+            ]);
+        }
+    }
+
+    private function summarizeAssetTypes(array $objects): string
+    {
+        $labels = collect($objects)
+            ->pluck('asset_category')
+            ->map(fn ($cat) => str_replace(['Real Properti - ', 'Personal Properti - '], '', $cat))
+            ->unique()
+            ->implode(', ');
+
+        return $labels ?: 'Lainnya';
+    }
+
+    private function summarizeAssetAddress(array $objects): string
+    {
+        return $objects[0]['location'] ?? '-';
     }
 }
