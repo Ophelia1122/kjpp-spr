@@ -16,7 +16,8 @@ use Illuminate\Notifications\Notifiable;
     // mengisi blok tanda tangan & Penjelasan Status Penilai pada proposal
     // saat user ini jadi penandatangan.
     'jabatan', 'partner_status', 'mappi_no', 'rmk_no', 'izin_menkeu_no',
-    'sk_menkeu_no', 'sttd_ojk_no', 'ojk_kep_no', 'klasifikasi',
+    'sk_menkeu_no', 'sk_menkeu_date', 'sttd_ojk_no', 'sttd_ojk_date',
+    'klasifikasi',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -28,7 +29,7 @@ class User extends Authenticatable
      * Pilihan Jabatan (biodata). Hanya "Penanggung Jawab" yang boleh
      * dipilih sebagai penandatangan proposal (lihat scopePenanggungJawab).
      * "Reviewer" memakai set field biodata yang sama dengan Penanggung
-     * Jawab (nomor izin Menkeu, SK Menkeu, STTD/KEP OJK, klasifikasi).
+     * Jawab (nomor izin Menkeu, SK Menkeu, STTD OJK, klasifikasi).
      */
     public const JABATAN_PELAKSANA_INSPEKSI = 'Pelaksana Inspeksi';
     public const JABATAN_PENILAI            = 'Penilai';
@@ -115,5 +116,24 @@ class User extends Authenticatable
     public function canActAsReviewer(): bool
     {
         return $this->isReviewer() || $this->isAdministrator();
+    }
+
+    /**
+     * Nomor surat + tanggalnya dalam satu kalimat untuk dicetak di proposal,
+     * mis. "185/MK/SJ/2025 tanggal 23 April 2025". Nomor & tanggal disimpan
+     * terpisah (2026-09-15, feedback user); tanggal kosong = nomor saja.
+     */
+    public function licenseWithDate(string $numberField, string $dateField): ?string
+    {
+        $number = trim((string) $this->{$numberField});
+        if ($number === '') {
+            return null;
+        }
+
+        $date = $this->{$dateField};
+
+        return $date
+            ? $number . ' tanggal ' . \Illuminate\Support\Carbon::parse($date)->translatedFormat('d F Y')
+            : $number;
     }
 }

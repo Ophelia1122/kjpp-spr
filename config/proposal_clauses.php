@@ -545,10 +545,14 @@ return [
     // 25. Biaya Jasa Penilaian
     // ------------------------------------------------------------------
     'biaya_intro' => 'Untuk melaksanakan pekerjaan penilaian ini, Biaya Profesional Jasa Penilaian adalah sebesar:',
-    // Dipilih otomatis sesuai flag fee_ppn_included pada proposal.
-    'biaya_ppn'          => 'Biaya belum/sudah termasuk PPN yang berlaku, Transportasi, Akomodasi.',
+    // Kalimat di bawah Total Fee — total SELALU sudah termasuk PPN; dipilih
+    // sesuai apakah Transport & Akomodasi ikut ditagih (lihat
+    // ProposalDocxBuilder::biayaCaptionLines).
     'biaya_ppn_included' => 'Biaya sudah termasuk PPN yang berlaku, Transportasi, Akomodasi.',
-    'biaya_ppn_excluded' => 'Biaya belum termasuk PPN yang berlaku (:pct%), Transportasi, Akomodasi.',
+    // Varian bila Transport & Akomodasi ditanggung klien. Total biaya di
+    // proposal SELALU sudah termasuk PPN (2026-09-15, keputusan user) —
+    // pembedanya hanya TA ikut atau tidak, tanpa penjelasan tambahan.
+    'biaya_transport_excluded' => 'Biaya sudah termasuk PPN yang berlaku, belum termasuk Transportasi dan Akomodasi.',
     'biaya_rincian_label' => 'Rincian Biaya :',
     'termin_label' => 'Termin Pembayaran :',
     'termin_1' => '50% (lima puluh persen) sebesar :rp (:terbilang), dibayarkan sebelum dilakukan inspeksi lapangan.',

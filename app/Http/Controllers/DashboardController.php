@@ -27,7 +27,11 @@ class DashboardController extends Controller
     public function home()
     {
         $user           = auth()->user();
-        $canSeeInvoices = $user->hasPermission('invoices.view');
+        // Jabatan Reviewer tidak perlu kartu & daftar "Invoice belum lunas"
+        // (2026-09-15, feedback user) — pekerjaannya review, bukan penagihan,
+        // walaupun role akunnya (mis. Administrator) punya izin invoices.view.
+        $canSeeInvoices = $user->hasPermission('invoices.view')
+            && $user->jabatan !== User::JABATAN_REVIEWER;
         $mineId         = auth()->id();
 
         // Kartu "Proyek Selesai" — khusus jabatan Penilai/Pelaksana Inspeksi
@@ -195,6 +199,7 @@ class DashboardController extends Controller
             $keyword = $request->q;
             $query->where(function ($q) use ($keyword) {
                 $q->where('proposal_number', 'like', "%{$keyword}%")
+                  ->orWhere('client_name', 'like', "%{$keyword}%")
                   ->orWhereHas('instructingClient', function ($sub) use ($keyword) {
                       $sub->where('client_name', 'like', "%{$keyword}%");
                   })
@@ -245,10 +250,11 @@ class DashboardController extends Controller
             // service_fee mentah bikin urutan terlihat kacau — mis. proyek
             // Rp 5.500.000 belum-PPN tampil Rp 6.105.000, jadi harusnya di ATAS
             // proyek Rp 6.000.000 sudah-PPN. Jadi rumus total_fee diulang di SQL.
-            $rate = (float) config('kjpp.ppn_rate', 0.11);
+            // PPN atas Fee + TA yang ditagih (TA reimburse tidak dihitung).
+            $rate    = (float) config('kjpp.ppn_rate', 0.11);
+            $taxable = '(service_fee + CASE WHEN transport_reimbursed = 1 THEN 0 ELSE COALESCE(transport_cost, 0) END)';
             $query->orderByRaw(
-                '(CASE WHEN fee_ppn_included = 1 THEN service_fee ELSE service_fee * (1 + ?) END'
-                . ' + COALESCE(transport_cost, 0)) ' . $dir,
+                "(CASE WHEN fee_ppn_included = 1 THEN $taxable ELSE $taxable * (1 + ?) END) " . $dir,
                 [$rate]
             );
         } elseif ($sort === 'deadline') {
@@ -295,10 +301,23 @@ class DashboardController extends Controller
         $statusOptions    = Project::STATUSES;
         $purposeOptions   = Project::query()->select('proposal_purpose')->distinct()
             ->orderBy('proposal_purpose')->pluck('proposal_purpose')->filter()->values();
-        $appraiserOptions = \App\Models\User::whereIn(
-            'id',
-            Project::whereNotNull('assigned_appraiser_id')->distinct()->pluck('assigned_appraiser_id')
-        )->orderBy('name')->get(['id', 'name']);
+        // Pilihan filter Penilai Lapangan (2026-09-15, feedback user): akun
+        // aktif berJABATAN (biodata, bukan role) Penilai, Pelaksana Inspeksi,
+        // atau Reviewer — ditambah siapa pun yang sudah pernah ditugaskan
+        // (supaya penilai lama/nonaktif tetap bisa dicari riwayatnya).
+        $appraiserOptions = \App\Models\User::query()
+            ->where(function ($q) {
+                $q->whereIn('id', Project::whereNotNull('assigned_appraiser_id')->distinct()->pluck('assigned_appraiser_id'))
+                  ->orWhere(function ($active) {
+                      $active->where('is_active', true)->whereIn('jabatan', [
+                          \App\Models\User::JABATAN_PENILAI,
+                          \App\Models\User::JABATAN_PELAKSANA_INSPEKSI,
+                          \App\Models\User::JABATAN_REVIEWER,
+                      ]);
+                  });
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'jabatan']);
 
         // Live search (lihat initLiveSearch() di layouts/app.blade.php) minta
         // fragmen hasil saja lewat header X-Requested-With, bukan halaman
@@ -335,7 +354,7 @@ class DashboardController extends Controller
         $projects = Project::query()
             ->select([
                 'id', 'status', 'proposal_purpose', 'service_fee',
-                'transport_cost', 'fee_ppn_included', 'created_at',
+                'transport_cost', 'transport_reimbursed', 'fee_ppn_included', 'created_at',
             ])
             ->withCount(['invoices as paid_invoices_count' => function ($q) {
                 $q->where('status', 'Paid');

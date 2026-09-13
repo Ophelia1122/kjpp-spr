@@ -22,6 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // login (bukan cuma route tertentu), supaya user yang baru saja
         // dinonaktifkan langsung ter-logout di request berikutnya.
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureUserIsActive::class);
+
+        // User yang SUDAH login lalu membuka halaman tamu (mis. /login)
+        // diarahkan ke Beranda (2026-09-15, feedback user). Bawaan Laravel
+        // mencari route bernama 'dashboard' lebih dulu — di aplikasi ini itu
+        // List Project, jadi user mendarat di sana, bukan di Beranda.
+        $middleware->redirectUsersTo(fn () => route('home'));
     })
     
     ->withExceptions(function (Exceptions $exceptions): void {

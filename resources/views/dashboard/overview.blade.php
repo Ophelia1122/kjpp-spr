@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard')
+@section('title', 'Ringkasan Project')
 
 @php
     use App\Models\Project;
@@ -34,13 +34,11 @@
     {{-- ===================== HEADER ===================== --}}
     <div class="flex items-end justify-between flex-wrap gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Ringkasan Project</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">Ringkasan monitoring proyek &middot; {{ now()->translatedFormat('d F Y') }}</p>
         </div>
-        <a href="{{ route('dashboard') }}"
-           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
-            📊 Buka Dashboard Project
-        </a>
+        {{-- Tombol "Buka Dashboard Project" dihapus (2026-09-15, feedback
+             user) — List Project sudah selalu ada di sidebar. --}}
     </div>
 
     @if ($totalProposals === 0)

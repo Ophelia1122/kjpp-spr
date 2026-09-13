@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'List Project')
+
 @section('content')
 @php
     // Chip filter aktif — supaya jelas daftar sedang disaring apa, dan tiap
@@ -133,7 +135,10 @@
                 <select name="appraiser" class="w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
                     <option value="">Semua Penilai</option>
                     @foreach ($appraiserOptions as $appraiser)
-                        <option value="{{ $appraiser->id }}" @selected((int) request('appraiser') === $appraiser->id)>{{ $appraiser->name }}</option>
+                        {{-- Jabatan (biodata) di samping nama — bukan role akun. --}}
+                        <option value="{{ $appraiser->id }}" @selected((int) request('appraiser') === $appraiser->id)>
+                            {{ $appraiser->name }}{{ $appraiser->jabatan ? ' — ' . $appraiser->jabatan : '' }}
+                        </option>
                     @endforeach
                 </select>
             </div>

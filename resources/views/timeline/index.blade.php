@@ -36,10 +36,8 @@
                 </a>
             </div>
         </div>
-        <a href="{{ route('dashboard') }}"
-           class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
-            📊 Dashboard Project
-        </a>
+        {{-- Tombol "Dashboard Project" dihapus (2026-09-15, feedback user) —
+             List Project sudah selalu ada di sidebar. --}}
     </div>
 
     {{-- ===================== RINGKASAN + LEGENDA ===================== --}}

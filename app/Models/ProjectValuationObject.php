@@ -6,14 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProjectValuationObject extends Model
 {
-    public const CATEGORY_TANAH              = 'Real Properti - Tanah';
-    public const CATEGORY_BANGUNAN           = 'Real Properti - Bangunan';
-    public const CATEGORY_TANAH_BANGUNAN     = 'Real Properti - Tanah dan Bangunan';
-    public const CATEGORY_MESIN              = 'Personal Properti - Mesin dan Peralatan';
-    public const CATEGORY_KENDARAAN          = 'Personal Properti - Kendaraan';
-    public const CATEGORY_ALAT_BERAT         = 'Personal Properti - Alat Berat';
-    public const CATEGORY_BISNIS             = 'Bisnis / Perusahaan';
-    public const CATEGORY_LAINNYA            = 'Lainnya';
+    // Disesuaikan 2026-09-15 (feedback user): "Bangunan" -> "Tanah dan
+    // Bangunan", "Tanah dan Bangunan" -> "Tanah, Bangunan dan Sarana
+    // Pelengkap", "Bisnis / Perusahaan" dihapus. Data lama dimigrasikan di
+    // 2024_01_21_000003_update_valuation_object_asset_categories.
+    public const CATEGORY_TANAH                = 'Real Properti - Tanah';
+    public const CATEGORY_TANAH_BANGUNAN       = 'Real Properti - Tanah dan Bangunan';
+    public const CATEGORY_TANAH_BANGUNAN_SARANA = 'Real Properti - Tanah, Bangunan dan Sarana Pelengkap';
+    public const CATEGORY_MESIN                = 'Personal Properti - Mesin dan Peralatan';
+    public const CATEGORY_KENDARAAN            = 'Personal Properti - Kendaraan';
+    public const CATEGORY_ALAT_BERAT           = 'Personal Properti - Alat Berat';
+    public const CATEGORY_LAINNYA              = 'Lainnya';
 
     protected $fillable = [
         'project_id',
@@ -102,7 +105,7 @@ class ProjectValuationObject extends Model
             }
         } else {
             // "Lainnya" -> pakai jenis yang diketik manual admin (custom_category);
-            // "Bisnis / Perusahaan" -> custom_category null, jatuh ke asset_category.
+            // tanpa isian manual (data lama) jatuh ke asset_category.
             $lines[] = ($this->asset_category === self::CATEGORY_LAINNYA && $this->custom_category)
                 ? $this->custom_category
                 : $this->asset_category;

@@ -63,7 +63,7 @@ class Project extends Model
     /**
      * Konstanta jenis/tujuan proposal. Menentukan teks Dasar Nilai,
      * Maksud Penilaian, dan klausul kondisional mana yang dipakai
-     * di pdf/proposal.blade.php.
+     * di ProposalDocxBuilder.
      */
     public const PURPOSE_JUAL_BELI         = 'Jual Beli';
     public const PURPOSE_PENJAMINAN_UTANG  = 'Penjaminan Utang';
@@ -122,6 +122,8 @@ class Project extends Model
         'fee_ppn_included',
         'fee_breakdown',
         'transport_cost',
+        'transport_reimbursed',
+        'client_name',
         'report_style',
         'sla_draft_days',
         'sla_final_days',
@@ -134,6 +136,8 @@ class Project extends Model
         'assigned_appraiser_id',
         'signed_by_user_id',
         'approver_name',
+        'approver_client_id',
+        'marketing_name',
         'bank_id',
         'tax_invoice_number',
         'tax_invoice_date',
@@ -164,6 +168,7 @@ class Project extends Model
         'transport_cost'           => 'decimal:2',
         'fee_ppn_included'         => 'boolean',
         'fee_breakdown'            => 'boolean',
+        'transport_reimbursed'     => 'boolean',
         'sla_draft_days'           => 'integer',
         'sla_final_days'           => 'integer',
         'proposal_date'             => 'date',
@@ -286,16 +291,20 @@ class Project extends Model
      * BIAYA JASA PENILAIAN
      *
      * `service_fee` = FEE jasa profesional (nilai dasar yang diinput).
-     * PPN dikenakan HANYA atas Fee — Transport & Akomodasi adalah
-     * penggantian biaya (reimbursement), tidak dikenai PPN.
+     * PPN dikenakan atas Fee DAN Transport & Akomodasi (TA) — 2026-09-15,
+     * keputusan user, menyamakan dengan pembukuan kantor. Sebelumnya TA
+     * dianggap tanpa PPN. Invoice/Kwitansi sejak awal sudah memecah PPN dari
+     * seluruh nominal, jadi aturan ini membuat proposal konsisten dengannya.
      *
-     *  - fee_ppn_included = true  : `service_fee` sudah termasuk PPN. Fee net
-     *    = service_fee / (1+rate); PPN = selisihnya; total tidak digross-up.
-     *  - fee_ppn_included = false : PPN ditambahkan di atas `service_fee`.
+     *  - fee_ppn_included = true  : Fee & TA yang diinput SUDAH termasuk PPN.
+     *    Nilai net = input / (1+rate); PPN = total - total / (1+rate).
+     *  - fee_ppn_included = false : PPN ditambahkan di atas (Fee + TA).
+     *  - transport_reimbursed     : TA ditanggung klien — tidak ikut ditagih,
+     *    tidak masuk total, dan proposal diberi catatan.
      *
      * total_fee (gross, dipakai proposal .docx + invoice/kwitansi/dashboard):
-     *   included : service_fee + transport
-     *   excluded : service_fee + (service_fee × rate) + transport
+     *   included : fee + TA
+     *   excluded : (fee + TA) × (1 + rate)
      * =========================================================================
      */
     public function getFeePpnRateAttribute(): float
@@ -303,15 +312,21 @@ class Project extends Model
         return (float) config('kjpp.ppn_rate', 0.11);
     }
 
-    /** Nilai PPN (Rupiah) — hanya atas Fee jasa profesional. */
+    /** TA yang ikut DITAGIH (angka input). 0 bila ditanggung klien/reimburse. */
+    public function getBillableTransportAttribute(): float
+    {
+        return $this->transport_reimbursed ? 0.0 : round((float) ($this->transport_cost ?? 0), 2);
+    }
+
+    /** Nilai PPN (Rupiah) — atas Fee + TA yang ditagih. */
     public function getFeePpnAmountAttribute(): float
     {
-        $base = (float) $this->service_fee;
-        $rate = $this->fee_ppn_rate;
+        $taxable = (float) $this->service_fee + $this->billable_transport;
+        $rate    = $this->fee_ppn_rate;
 
         return $this->fee_ppn_included
-            ? round($base - $base / (1 + $rate), 2)   // PPN yang sudah di dalam Fee
-            : round($base * $rate, 2);                 // PPN ditambahkan di atas Fee
+            ? round($taxable - $taxable / (1 + $rate), 2)   // PPN yang sudah di dalam input
+            : round($taxable * $rate, 2);                    // PPN ditambahkan di atas
     }
 
     /** Komponen "Fee" (jasa profesional) NET pada tabel rincian. */
@@ -324,13 +339,17 @@ class Project extends Model
             : round($base, 2);
     }
 
-    /** Nilai Transport & Akomodasi (sesuai input, tanpa PPN). */
+    /** Komponen "Transport" NET pada tabel rincian (TA yang ditagih, tanpa PPN). */
     public function getFeeTransportDisplayAttribute(): float
     {
-        return round((float) ($this->transport_cost ?? 0), 2);
+        $transport = $this->billable_transport;
+
+        return $this->fee_ppn_included
+            ? round($transport / (1 + $this->fee_ppn_rate), 2)
+            : round($transport, 2);
     }
 
-    /** Subtotal net = Fee net + Transport (sebelum PPN ditambahkan). */
+    /** Subtotal net = Fee net + Transport net (sebelum PPN). */
     public function getFeeNetSubtotalAttribute(): float
     {
         return round($this->fee_professional + $this->fee_transport_display, 2);
@@ -339,17 +358,44 @@ class Project extends Model
     /** Total biaya final (gross) — angka besar di proposal & dasar penagihan. */
     public function getTotalFeeAttribute(): float
     {
-        $base      = (float) $this->service_fee;
-        $transport = (float) ($this->transport_cost ?? 0);
+        $taxable = (float) $this->service_fee + $this->billable_transport;
 
         return $this->fee_ppn_included
-            ? round($base + $transport, 2)
-            : round($base + $base * $this->fee_ppn_rate + $transport, 2);
+            ? round($taxable, 2)
+            : round($taxable * (1 + $this->fee_ppn_rate), 2);
+    }
+
+    /**
+     * "Nama Klien" untuk ditampilkan/dicetak (baris "Hal" proposal): isian
+     * manual kalau ada, kalau kosong jatuh ke nama Pemberi Tugas.
+     */
+    public function getEffectiveClientNameAttribute(): string
+    {
+        return trim((string) $this->client_name)
+            ?: (string) optional($this->instructingClient)->client_name;
     }
 
     public function instructingClient()
     {
         return $this->belongsTo(Client::class, 'instructing_client_id');
+    }
+
+    /** "Pihak yang Menyetujui" — dipilih dari Database Klien. */
+    public function approverClient()
+    {
+        return $this->belongsTo(Client::class, 'approver_client_id');
+    }
+
+    /**
+     * Nama di kolom "Menyetujui," blok tanda tangan: klien yang dipilih, lalu
+     * isian teks lama (data sebelum field ini jadi pilihan klien), terakhir
+     * jatuh ke nama Pemberi Tugas.
+     */
+    public function getEffectiveApproverNameAttribute(): string
+    {
+        return (string) (optional($this->approverClient)->client_name
+            ?: trim((string) $this->approver_name)
+            ?: optional($this->instructingClient)->client_name);
     }
 
     /**

@@ -26,14 +26,19 @@ return [
     // Tarif PPN yang berlaku (untuk perhitungan Biaya Jasa Penilaian).
     'ppn_rate'        => 0.11,
 
+    // Pilihan dropdown "Marketing" di form proposal (2026-09-15, feedback
+    // user) — disalin dari daftar validasi kolom "Nama Marketing" pada Excel
+    // produksi (sheet DB_PROJECT). Ubah di sini bila ada marketing baru.
+    'marketing_names' => ['Pepi', 'Tedy', 'Rahma', 'Chandra', 'Dini', 'Fuji', 'Ayu', 'Winda', 'Asep', 'Lainnya'],
+
     // Penilai Publik penanggung jawab / penandatangan proposal (baku).
     'signatory' => [
         'name'           => 'Arief Rachman Setiady, S.M., M.M.',
         'title'          => 'Partner',
         'izin_pp_no'     => 'P-1.25.00690',
         'sk_menkeu_no'   => '185/MK/SJ/2025 tanggal 23 April 2025',
-        'ojk_kep_no'     => 'KEP-324/KS.13/2026 tanggal 22 Mei 2026',
-        'sttd_ojk_no'    => 'KEP-324/KS.13/2026',
+        // STTD OJK = nomor KEP Dewan Komisioner OJK (satu nomor yang sama).
+        'sttd_ojk_no'    => 'KEP-324/KS.13/2026 tanggal 22 Mei 2026',
         'mappi_no'       => '13-S-04682',
         'rmk_no'         => 'RMK-2017.01230',
         'klasifikasi'    => 'Klasifikasi Bidang Jasa Properti',

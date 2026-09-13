@@ -79,7 +79,7 @@ class ProjectSeeder extends Seeder
         ProjectValuationObject::create([
             'project_id'      => $project2->id,
             'sort_order'      => 1,
-            'asset_category'  => ProjectValuationObject::CATEGORY_BANGUNAN,
+            'asset_category'  => ProjectValuationObject::CATEGORY_TANAH_BANGUNAN,
             'building_area'   => 180.50,
             'location'        => 'Ruko Sentra Bisnis Blok C No. 5, Tangerang Selatan, Banten',
             'ownership_form'  => 'Tunggal - SHM No. 4410',
@@ -160,7 +160,7 @@ class ProjectSeeder extends Seeder
         ProjectValuationObject::create([
             'project_id'      => $project4->id,
             'sort_order'      => 1,
-            'asset_category'  => ProjectValuationObject::CATEGORY_TANAH_BANGUNAN,
+            'asset_category'  => ProjectValuationObject::CATEGORY_TANAH_BANGUNAN_SARANA,
             'land_area'       => 3100.00,
             'building_area'   => 1450.00,
             'location'        => 'Jl. Raya Serpong KM 8, Kel. Serpong, Tangerang, Banten',

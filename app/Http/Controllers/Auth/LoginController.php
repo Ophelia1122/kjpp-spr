@@ -40,7 +40,10 @@ class LoginController extends Controller
         \App\Helpers\AuditLogger::record('auth.login', 'Login berhasil');
 
         // Beranda = dashboard operasional yang bisa dibuka semua role.
-        return redirect()->intended(route('home'));
+        // SELALU ke Beranda (2026-09-15, feedback user). Sebelumnya pakai
+        // intended(), yang mengembalikan user ke halaman terakhir yang sempat
+        // dibuka sebelum sesi habis — sering List Project, bukan Beranda.
+        return redirect()->route('home');
     }
 
     public function logout(Request $request)

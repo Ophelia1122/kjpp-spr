@@ -9,15 +9,19 @@ use Illuminate\Support\Facades\Validator;
 class ClientController extends Controller
 {
     /**
-     * Halaman daftar klien (menu "Daftar Klien" di sidebar).
+     * Halaman daftar klien (menu "Database Klien" di sidebar).
      */
     public function index(Request $request)
     {
-        $query = Client::withCount(['projectsAsInstructingClient', 'projectsAsIntendedUser'])
+        $query = Client::withCount(['projectsAsInstructingClient', 'projectsAsIntendedUser', 'projectsAsApprover'])
             ->orderBy('client_name');
 
+        // Cari juga di alamat — satu nama (mis. Bank Mandiri) bisa punya
+        // banyak cabang yang dibedakan dari alamatnya.
         if ($request->filled('q')) {
-            $query->where('client_name', 'like', '%' . $request->q . '%');
+            $keyword = '%' . $request->q . '%';
+            $query->where(fn ($q) => $q->where('client_name', 'like', $keyword)
+                                       ->orWhere('address', 'like', $keyword));
         }
 
         $clients = $query->paginate(20)->withQueryString();
@@ -63,8 +67,9 @@ class ClientController extends Controller
     {
         $isUsedAsInstructing = $client->projectsAsInstructingClient()->exists();
         $isUsedAsIntended    = $client->projectsAsIntendedUser()->exists();
+        $isUsedAsApprover    = $client->projectsAsApprover()->exists();
 
-        if ($isUsedAsInstructing || $isUsedAsIntended) {
+        if ($isUsedAsInstructing || $isUsedAsIntended || $isUsedAsApprover) {
             return back()->with('error',
                 "Klien \"{$client->client_name}\" tidak dapat dihapus karena masih terhubung dengan satu atau lebih proyek."
             );
@@ -117,7 +122,10 @@ class ClientController extends Controller
         $query = Client::query();
 
         if ($keyword !== '') {
-            $query->where('client_name', 'like', "%{$keyword}%");
+            // Nama ATAU alamat — supaya cabang tertentu (mis. "Mandiri Kuningan")
+            // bisa langsung dicari dari lokasinya.
+            $query->where(fn ($q) => $q->where('client_name', 'like', "%{$keyword}%")
+                                       ->orWhere('address', 'like', "%{$keyword}%"));
         } else {
             $query->latest();
         }

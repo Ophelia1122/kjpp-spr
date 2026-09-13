@@ -1,10 +1,12 @@
 @extends('layouts.app')
 
+@section('title', 'Kelola Role & Izin')
+
 @section('content')
 <div class="max-w-6xl mx-auto py-8 space-y-6">
 
     <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Kelola Hak Akses (Role Management)</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Kelola Role &amp; Izin</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400">Atur izin "Lihat" dan "Kelola" untuk tiap role, per modul.</p>
     </div>
 

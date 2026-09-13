@@ -1,4 +1,6 @@
 @extends('layouts.app')
+
+@section('title', 'Kelola Pengguna')
  
 @section('content')
 <div class="max-w-5xl mx-auto py-8 space-y-6">

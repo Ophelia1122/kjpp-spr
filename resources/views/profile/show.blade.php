@@ -15,12 +15,21 @@
         </div>
     </div>
 
+    {{-- Tombol simpan tiap kartu berupa ikon di pojok kanan judul — pola sama
+         dengan kartu-kartu di halaman detail proposal (2026-09-15, feedback user). --}}
+
     {{-- ===================== BIODATA ===================== --}}
     <form action="{{ route('profile.update') }}" method="POST" class="space-y-4 bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
         @csrf
         @method('PUT')
 
-        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Biodata</h2>
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Biodata</h2>
+            <button type="submit" title="Simpan Biodata"
+                    class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
+                @include('partials.icon-check')
+            </button>
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -48,12 +57,6 @@
         </div>
 
         @include('partials.biodata-fieldset', ['bioUser' => $user])
-
-        <div class="pt-2">
-            <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">
-                Simpan Biodata
-            </button>
-        </div>
     </form>
 
     {{-- ===================== KEAMANAN ===================== --}}
@@ -61,7 +64,13 @@
         @csrf
         @method('PUT')
 
-        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Keamanan — Ganti Password</h2>
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Keamanan — Ganti Password</h2>
+            <button type="submit" title="Simpan Password Baru"
+                    class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
+                @include('partials.icon-check')
+            </button>
+        </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password Saat Ini</label>
@@ -79,12 +88,6 @@
                 <input type="password" name="password_confirmation" required minlength="8" autocomplete="new-password"
                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
             </div>
-        </div>
-
-        <div class="pt-2">
-            <button type="submit" class="px-5 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 font-medium">
-                Simpan Password Baru
-            </button>
         </div>
     </form>
 </div>

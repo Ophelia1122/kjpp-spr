@@ -416,7 +416,8 @@ class ProposalDocxBuilder
         }
 
         $this->s->addTextBreak(1);
-        $this->s->addText('Hal : Proposal Biaya Jasa Penilaian an. ' . $pt->client_name, $this->fBold, ['spaceAfter' => 120]);
+        // "an." = Nama Klien (isian manual), jatuh ke Pemberi Tugas bila kosong.
+        $this->s->addText('Hal : Proposal Biaya Jasa Penilaian an. ' . $this->project->effective_client_name, $this->fBold, ['spaceAfter' => 120]);
         $this->s->addText('Dengan hormat,', $this->fBody, ['spaceAfter' => 120]);
 
         $this->bodyOr('pembuka', fn () => $this->para($this->pembukaBaku()));
@@ -448,6 +449,11 @@ class ProposalDocxBuilder
         }
 
         $cfg = $this->cfg['signatory'];
+        // STTD OJK dipakai di dua tempat dengan format berbeda (2026-09-15,
+        // feedback user): blok tanda tangan = NOMOR saja ('sttd_ojk_no'),
+        // kalimat Penjelasan Status Penilai = nomor + tanggal ('sttd_ojk_full').
+        $cfg['sttd_ojk_full'] = $cfg['sttd_ojk_no'];
+        $cfg['sttd_ojk_no']   = trim((string) preg_replace('/\s+tanggal\s+.*$/i', '', (string) $cfg['sttd_ojk_no']));
         $u   = $this->project->signedBy;
 
         if (! $u) {
@@ -461,9 +467,11 @@ class ProposalDocxBuilder
             // Jabatan internal ("Penanggung Jawab") TIDAK pernah dicetak.
             'title'        => $u->partner_status ?: $cfg['title'],
             'izin_pp_no'   => $u->izin_menkeu_no ?: $cfg['izin_pp_no'],
-            'sk_menkeu_no' => $u->sk_menkeu_no ?: $cfg['sk_menkeu_no'],
-            'ojk_kep_no'   => $u->ojk_kep_no ?: $cfg['ojk_kep_no'],
-            'sttd_ojk_no'  => $u->sttd_ojk_no ?: $cfg['sttd_ojk_no'],
+            // Nomor + tanggal surat disimpan terpisah di biodata, digabung
+            // saat cetak: "185/MK/SJ/2025 tanggal 23 April 2025".
+            'sk_menkeu_no' => $u->licenseWithDate('sk_menkeu_no', 'sk_menkeu_date') ?: $cfg['sk_menkeu_no'],
+            'sttd_ojk_no'   => trim((string) $u->sttd_ojk_no) ?: $cfg['sttd_ojk_no'],
+            'sttd_ojk_full' => $u->licenseWithDate('sttd_ojk_no', 'sttd_ojk_date') ?: $cfg['sttd_ojk_full'],
             'mappi_no'     => $u->mappi_no ?: $cfg['mappi_no'],
             'rmk_no'       => $u->rmk_no ?: $cfg['rmk_no'],
             'klasifikasi'  => $u->klasifikasi ?: $cfg['klasifikasi'],
@@ -479,7 +487,9 @@ class ProposalDocxBuilder
             ':nama'        => $sig['name'],
             ':izin'        => $sig['izin_pp_no'],
             ':sk_menkeu'   => $sig['sk_menkeu_no'],
-            ':ojk_kep'     => $sig['ojk_kep_no'],
+            // Nomor KEP Dewan Komisioner OJK = nomor Surat Tanda Terdaftar OJK
+            // penilai (satu nomor yang sama, 2026-09-15 feedback user).
+            ':ojk_kep'     => $sig['sttd_ojk_full'],
             ':izin_usaha'  => $this->cfg['izin_usaha_no'],
             ':kepmenkeu'   => $this->cfg['kepmenkeu_no'],
             ':sttd_ojk'    => $this->cfg['sttd_ojk_no'],
@@ -1069,9 +1079,9 @@ class ProposalDocxBuilder
         // Kalimat status PPN — bagian dari override 'biaya' (ikut ter-render
         // di kotak teks), jadi hanya dicetak di sini kalau TIDAK di-override.
         if (! $ovBiaya) {
-            $this->para($p->fee_ppn_included
-                ? $this->cl['biaya_ppn_included']
-                : strtr($this->cl['biaya_ppn_excluded'], [':pct' => $pct]));
+            foreach ($this->biayaCaptionLines() as $line) {
+                $this->para($line);
+            }
         }
 
         $ind = $this->bodyIndentStyle();
@@ -1080,12 +1090,14 @@ class ProposalDocxBuilder
         // Satu baris tabel (cantSplit) berisi 3 cell agar tak terbelah halaman.
         if ($p->fee_breakdown) {
             $this->s->addText($this->cl['biaya_rincian_label'], $this->fBold, ['spaceBefore' => 80, 'spaceAfter' => 40, 'keepNext' => true] + $ind);
-            $rows = [
-                ['Fee', $rp($p->fee_professional), false],
-                ['Transport', $rp($p->fee_transport_display), false],
-                ['PPN ' . $pct . '%', $rp($p->fee_ppn_amount), false],
-                ['Total', $rp($total), true],
-            ];
+            $rows = [['Fee', $rp($p->fee_professional), false]];
+            // Baris Transport hanya kalau TA ikut ditagih — bila ditanggung
+            // klien (reimburse) nilainya memang tidak masuk total.
+            if (! $p->transport_reimbursed) {
+                $rows[] = ['Transport', $rp($p->fee_transport_display), false];
+            }
+            $rows[] = ['PPN ' . $pct . '%', $rp($p->fee_ppn_amount), false];
+            $rows[] = ['Total', $rp($total), true];
             $colW = $this->indentedColWidths([2.6, 0.3, 5.0]);
             $rin  = $this->s->addTable($this->indentedTableStyle(array_sum($colW)));
             $rin->addRow(null, ['cantSplit' => true]);
@@ -1164,8 +1176,7 @@ class ProposalDocxBuilder
         $this->s->addText('', $this->fBody, ['spaceBefore' => 480, 'spaceAfter' => 0, 'keepNext' => true]);
 
         $sig      = $this->signatory();
-        $approver = trim((string) $this->project->approver_name)
-            ?: $this->project->instructingClient->client_name;
+        $approver = $this->project->effective_approver_name;
 
         // cantSplit: blok tanda tangan tidak boleh terbelah dua halaman.
         // Digeser sejajar bodyIndent (sama seperti paragraf Bab 25 di
@@ -1445,11 +1456,24 @@ class ProposalDocxBuilder
 
     private function biayaPlain(): string
     {
-        $caption = $this->project->fee_ppn_included
-            ? $this->cl['biaya_ppn_included']
-            : strtr($this->cl['biaya_ppn_excluded'], [':pct' => $this->ppnPct()]);
+        return $this->cl['biaya_intro'] . "\n\n" . implode("\n\n", $this->biayaCaptionLines());
+    }
 
-        return $this->cl['biaya_intro'] . "\n\n" . $caption;
+    /**
+     * Kalimat di bawah nominal biaya (2026-09-15, keputusan user). Nominal yang
+     * dicetak adalah total_fee (gross), jadi SELALU sudah termasuk PPN — status
+     * "belum termasuk PPN" pada form hanya menentukan cara input dihitung dan
+     * rincian untuk invoice, tidak mengubah kalimat ini. Pembedanya hanya
+     * Transport & Akomodasi: ikut ditagih, atau ditanggung klien.
+     * Dipakai render .docx maupun teks default editor per-bab.
+     */
+    private function biayaCaptionLines(): array
+    {
+        return [
+            $this->project->transport_reimbursed
+                ? $this->cl['biaya_transport_excluded']
+                : $this->cl['biaya_ppn_included'],
+        ];
     }
 
     // ---------- helpers ----------

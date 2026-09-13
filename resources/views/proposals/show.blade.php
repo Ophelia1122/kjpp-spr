@@ -201,6 +201,15 @@
 
         <dl id="infoProjectBody" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
             <div class="sm:col-span-2">
+                <dt class="text-gray-500 dark:text-gray-400">Nama Klien</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100">
+                    {{ $project->effective_client_name }}
+                    @unless (trim((string) $project->client_name))
+                        <span class="text-gray-400 font-normal dark:text-gray-500" title="Nama Klien belum diisi — memakai nama Pemberi Tugas.">(= Pemberi Tugas)</span>
+                    @endunless
+                </dd>
+            </div>
+            <div class="sm:col-span-2">
                 <dt class="text-gray-500 dark:text-gray-400">Pemberi Tugas</dt>
                 <dd class="font-medium text-gray-900 dark:text-gray-100">
                     {{ $project->instructingClient->client_name }}
@@ -263,7 +272,8 @@
                     @if (($project->transport_cost ?? 0) > 0)
                         + Transport Rp {{ number_format($project->fee_transport_display, 0, ',', '.') }}
                     @endif
-                    · {{ $project->fee_ppn_included ? 'Fee sudah termasuk PPN' : 'PPN ditambahkan atas Fee' }}
+                    · {{ $project->fee_ppn_included ? 'sudah termasuk PPN' : 'PPN ditambahkan atas Fee & transport' }}
+                    @if ($project->transport_reimbursed) · transport &amp; akomodasi ditanggung klien (reimburse) @endif
                     @if ($project->fee_breakdown) · ditampilkan sebagai rincian @endif
                 </dd>
             </div>
@@ -273,7 +283,7 @@
                      user) — cuma catatan asal data, tidak perlu selalu
                      tampil. Jabatan/gelar penandatangan tetap ditampilkan
                      karena itu info substantif, bukan catatan provenance. --}}
-                <dt class="text-gray-500 dark:text-gray-400">Penandatangan Proposal</dt>
+                <dt class="text-gray-500 dark:text-gray-400">Penanggung Jawab</dt>
                 @if ($project->signedBy)
                     <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->signedBy->name }}</dd>
                     <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">
@@ -285,7 +295,11 @@
             </div>
             <div>
                 <dt class="text-gray-500 dark:text-gray-400">Pihak yang Menyetujui</dt>
-                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->approver_name ?: $project->instructingClient->client_name }}</dd>
+                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->effective_approver_name }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500 dark:text-gray-400">Marketing</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->marketing_name ?: '—' }}</dd>
             </div>
             <div>
                 <dt class="text-gray-500 dark:text-gray-400">Rekening Pembayaran</dt>
@@ -581,7 +595,7 @@
                              class="mt-1 h-16 w-16 border border-gray-200 rounded object-contain dark:border-gray-600">
                     </div>
                 @endif
-                <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Hanya Administrator &amp; Admin Keuangan yang dapat mengisi.</p>
+                <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Hanya Administrator &amp; General Admin yang dapat mengisi.</p>
             @endcan
 
             <div id="assignmentStaffContainer" class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -831,7 +845,7 @@
                         <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->tax_invoice_date?->translatedFormat('d F Y') ?: '(belum diisi)' }}</dd>
                     </div>
                 </dl>
-                <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Hanya Administrator &amp; Admin Keuangan yang dapat mengisi.</p>
+                <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Hanya Administrator &amp; General Admin yang dapat mengisi.</p>
             @endcan
         </div>
     @endcanany

@@ -65,7 +65,7 @@
                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
             </div>
 
-            {{-- Penilai --}}
+            {{-- Penilai, Penanggung Jawab & Reviewer (2026-09-15, feedback user) --}}
             <div data-bio="rmk" class="hidden">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor RMK</label>
                 <input type="text" name="rmk_no" value="{{ old('rmk_no') }}"
@@ -89,10 +89,17 @@
                                placeholder="Contoh: P-1.25.00690"
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
                     </div>
+                    {{-- Nomor & tanggal surat saling mengikat — diisi berpasangan
+                         (2026-09-15, feedback user). --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor SK Menkeu</label>
                         <input type="text" name="sk_menkeu_no" value="{{ old('sk_menkeu_no') }}"
-                               placeholder="Contoh: 185/MK/SJ/2025 tanggal 23 April 2025"
+                               placeholder="Contoh: 185/MK/SJ/2025"
+                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal SK Menkeu</label>
+                        <input type="date" name="sk_menkeu_date" value="{{ old('sk_menkeu_date') }}" lang="id"
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
                     </div>
                     <div>
@@ -102,11 +109,12 @@
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor KEP OJK</label>
-                        <input type="text" name="ojk_kep_no" value="{{ old('ojk_kep_no') }}"
-                               placeholder="Contoh: KEP-324/KS.13/2026 tanggal 22 Mei 2026"
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Surat Tanda Terdaftar OJK</label>
+                        <input type="date" name="sttd_ojk_date" value="{{ old('sttd_ojk_date') }}" lang="id"
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
                     </div>
+                    {{-- Isian "KEP OJK" dihapus — nomornya sama dengan STTD OJK
+                         di atas (2026-09-15, feedback user). --}}
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Klasifikasi</label>
@@ -137,7 +145,7 @@
     function toggleBiodataFields() {
         var j = document.getElementById('jabatan_select').value;
         var groups = {
-            rmk:   (j === 'Penilai'),
+            rmk:   (j === 'Penilai' || j === 'Penanggung Jawab' || j === 'Reviewer'),
             pj:    (j === 'Penanggung Jawab' || j === 'Reviewer'),
         };
         Object.keys(groups).forEach(function (key) {

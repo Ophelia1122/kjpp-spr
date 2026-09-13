@@ -118,8 +118,10 @@
             <td style="width: 45%; vertical-align: top; text-align: center;">
                 Jakarta, {{ $invoice->displayDate->translatedFormat('d F Y') }}
                 <br><br><br><br><br>
-                <strong>{{ config('kjpp.signatory.name') }}, MAPPI (Cert.)</strong><br>
-                {{ config('kjpp.signatory.title') }}
+                {{-- Penandatangan = Penanggung Jawab proyek (akun user), data
+                     baku config hanya cadangan (2026-09-15, feedback user). --}}
+                <strong>{{ optional($project->signedBy)->name ?: config('kjpp.signatory.name') }}, MAPPI (Cert.)</strong><br>
+                {{ optional($project->signedBy)->partner_status ?: config('kjpp.signatory.title') }}
             </td>
         </tr>
     </table>

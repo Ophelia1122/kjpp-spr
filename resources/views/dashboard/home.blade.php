@@ -20,7 +20,7 @@
         <p class="text-sm text-gray-500 dark:text-gray-400">Ringkasan pekerjaan &middot; {{ now()->locale('id')->translatedFormat('l, d F Y') }}</p>
         <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
             👤 Hanya proyek yang ditugaskan kepada Anda sebagai penilai lapangan.
-            Semua proyek ada di <a href="{{ route('dashboard') }}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Dashboard Project</a>
+            Semua proyek ada di <a href="{{ route('dashboard') }}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">List Project</a>
             &amp; <a href="{{ route('timeline') }}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Timeline Project</a>.
         </p>
     </div>

@@ -17,9 +17,9 @@
         </p>
     @endauth
 
-    <a href="{{ route('dashboard') }}"
+    <a href="{{ route('home') }}"
        class="inline-flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">
-        &larr; Kembali ke Dashboard
+        &larr; Kembali ke Beranda
     </a>
 </div>
 @endsection

@@ -26,6 +26,12 @@ class Client extends Model
         return $this->hasMany(Project::class, 'instructing_client_id');
     }
 
+    /** Proyek yang memakai klien ini sebagai "Pihak yang Menyetujui". */
+    public function projectsAsApprover()
+    {
+        return $this->hasMany(Project::class, 'approver_client_id');
+    }
+
     /**
      * Proyek-proyek di mana klien ini berperan sebagai Pengguna Laporan
      * (many-to-many lewat pivot project_intended_users).

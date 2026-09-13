@@ -21,14 +21,19 @@
     } else {
         $bootInstructingModel = $project->instructingClient;
     }
-    $bootInstructing = $bootInstructingModel
-        ? ['id' => $bootInstructingModel->id, 'client_name' => $bootInstructingModel->client_name]
-        : null;
+    $clientBoot = fn ($c) => $c ? ['id' => $c->id, 'client_name' => $c->client_name, 'address' => (string) $c->address] : null;
+
+    $bootInstructing = $clientBoot($bootInstructingModel);
 
     $bootIntended = old('intended_user_ids') !== null
-        ? \App\Models\Client::whereIn('id', (array) old('intended_user_ids'))->get()
-            ->map(fn ($c) => ['id' => $c->id, 'client_name' => $c->client_name])->values()
-        : $project->intendedUsers->map(fn ($u) => ['id' => $u->id, 'client_name' => $u->client_name])->values();
+        ? \App\Models\Client::whereIn('id', (array) old('intended_user_ids'))->get()->map($clientBoot)->values()
+        : $project->intendedUsers->map($clientBoot)->values();
+
+    // Pihak yang Menyetujui: nilai lama (validasi gagal) menang, termasuk
+    // kalau user sengaja mengosongkannya.
+    $bootApprover = old('approver_client_id') !== null
+        ? $clientBoot(old('approver_client_id') ? \App\Models\Client::find(old('approver_client_id')) : null)
+        : $clientBoot($project->approverClient);
 
     $bootObjects = old('objects') !== null
         ? array_values((array) old('objects'))
@@ -154,9 +159,22 @@
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Pihak Terkait</h2>
 
             <div class="space-y-4">
+                {{-- Nama Klien (debitur/pemilik aset) — terpisah dari Pemberi Tugas
+                     (2026-09-15, feedback user). --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Nama Klien
+                        @include('partials.icon-info', ['tip' => 'Pihak yang asetnya dinilai / debitur (mis. PT pemilik aset), bisa berbeda dari Pemberi Tugas — contoh: Pemberi Tugas bank untuk penjaminan utang atau lelang. Dipakai di baris "Hal" proposal. Kosongkan = otomatis pakai nama Pemberi Tugas.'])
+                    </label>
+                    <input type="text" name="client_name" value="{{ old('client_name', $project->client_name) }}"
+                           placeholder="Kosongkan = otomatis pakai nama Pemberi Tugas"
+                           class="mt-1 w-full rounded-md shadow-sm {{ $errCls('client_name') }}">
+                    @error('client_name')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+
                 {{-- Pemberi Tugas (AJAX combobox) --}}
                 <div class="relative">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Klien (Pemberi Tugas)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Pemberi Tugas</label>
                     <div class="flex gap-2 mt-1">
                         <div class="relative flex-1">
                             <input type="text" id="instructing_client_search" autocomplete="off"
@@ -176,8 +194,8 @@
                     {{-- display diatur lewat style inline, bukan class "hidden":
                          di build Tailwind CDN yang dipakai, .inline-flex menang
                          atas .hidden sehingga chip kosong sempat ikut terlihat. --}}
-                    <div id="instructing_client_chip" style="display:none" class="mt-2 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 text-sm px-3 py-1.5 rounded-full dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
-                        <span id="instructing_client_chip_text"></span>
+                    <div id="instructing_client_chip" style="display:none" class="mt-2 items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
+                        <div class="min-w-0"><div id="instructing_client_chip_text" class="font-medium"></div><div id="instructing_client_chip_address" class="text-xs opacity-80 whitespace-pre-line"></div></div>
                         <button type="button" onclick="clearInstructingClient()" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">&times;</button>
                     </div>
                     <input type="hidden" name="instructing_client_id" id="instructing_client_id" required>
@@ -203,19 +221,21 @@
                             Klien Baru
                         </button>
                     </div>
-                    <div id="intended_user_chips" class="flex flex-wrap gap-2 mt-2"></div>
+                    <div id="intended_user_chips" class="space-y-2 mt-2"></div>
                     <div id="intended_user_hidden_inputs"></div>
                     @error('intended_user_ids')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- Penandatangan Proposal --}}
+                {{-- Penanggung Jawab (penandatangan proposal) — label diganti
+                     dari "Penandatangan Proposal" (2026-09-15, feedback user). --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Penandatangan Proposal
-                        @include('partials.icon-info', ['tip' => 'Daftar diambil dari pengguna aktif berjabatan "Penanggung Jawab". Nama & nomor izin (MAPPI, RMK, Izin Menkeu, STTD OJK, Klasifikasi) pada blok tanda tangan mengikuti biodata pengguna yang dipilih. Kosongkan untuk memakai penandatangan baku.'])
+                        Penanggung Jawab
+                        @include('partials.icon-info', ['tip' => 'Daftar diambil dari pengguna aktif berjabatan "Penanggung Jawab". Nama & nomor izin (MAPPI, RMK, Izin Menkeu, STTD OJK, Klasifikasi) pada blok tanda tangan mengikuti biodata pengguna yang dipilih.'])
                     </label>
                     <select name="signed_by_user_id" class="mt-1 w-full rounded-md shadow-sm {{ $errCls('signed_by_user_id') }}">
-                        <option value="">-- Penandatangan baku kantor ({{ config('kjpp.signatory.name') }}) --</option>
+                        {{-- Pilihan "Penanggung Jawab baku kantor" dihapus (2026-09-15, feedback
+                             user) — data bakunya kini ada di akun user Penanggung Jawab. --}}
                         @foreach ($signers as $signer)
                             <option value="{{ $signer->id }}" @selected(old('signed_by_user_id', $project->signed_by_user_id) == $signer->id)>{{ $signer->name }}</option>
                         @endforeach
@@ -234,11 +254,68 @@
                         Pihak yang Menyetujui
                         @include('partials.icon-info', ['tip' => 'Nama pihak pada kolom "Menyetujui," di blok tanda tangan. Isi bila yang menyetujui berbeda dari Pemberi Tugas (mis. bank, sementara Pemberi Tugas-nya PT — atau sebaliknya).'])
                     </label>
-                    <input type="text" name="approver_name" value="{{ old('approver_name', $project->approver_name) }}"
-                           placeholder="Kosongkan = otomatis pakai nama Pemberi Tugas"
-                           class="mt-1 w-full rounded-md shadow-sm {{ $errCls('approver_name') }}">
-                    @error('approver_name')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    {{-- Dipilih dari Database Klien, sama seperti Pemberi Tugas
+                         (2026-09-15, feedback user). --}}
+                    <div class="flex gap-2 mt-1">
+                        <div class="relative flex-1">
+                            <input type="text" id="approver_client_search" autocomplete="off"
+                                   placeholder="Kosongkan = otomatis Pemberi Tugas. Ketik untuk mencari..."
+                                   class="w-full rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 {{ $errCls('approver_client_id') }}">
+                            <div id="approver_client_results"
+                                 class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"></div>
+                        </div>
+                        <button type="button" onclick="openClientModal('approver')" title="Tambah klien baru"
+                                class="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
+                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                            </svg>
+                            Klien Baru
+                        </button>
+                    </div>
+                    <div id="approver_client_chip" style="display:none" class="mt-2 items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
+                        <div class="min-w-0"><div id="approver_client_chip_text" class="font-medium"></div><div id="approver_client_chip_address" class="text-xs opacity-80 whitespace-pre-line"></div></div>
+                        <button type="button" onclick="clearApproverClient()" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">&times;</button>
+                    </div>
+                    <input type="hidden" name="approver_client_id" id="approver_client_id" value="">
+                    @error('approver_client_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
+
+                {{-- Marketing — field proposal, tidak terikat ke data klien. Pilih
+                     "Lainnya" untuk mengetik nama manual; nama ketikan itulah yang
+                     disimpan (2026-09-15, feedback user). Nama tersimpan yang
+                     tidak ada di daftar dibuka sebagai "Lainnya" + isian manual. --}}
+                @php
+                    $mkList     = config('kjpp.marketing_names', []);
+                    $mkStored   = $project->marketing_name;
+                    $mkIsListed = $mkStored && $mkStored !== 'Lainnya' && in_array($mkStored, $mkList, true);
+                    $mkChoice   = old('marketing_name', $mkStored ? ($mkIsListed ? $mkStored : 'Lainnya') : null);
+                    $mkOther    = old('marketing_name_other', ($mkStored && ! $mkIsListed) ? $mkStored : null);
+                @endphp
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Marketing</label>
+                    <select name="marketing_name" id="marketing_name" onchange="toggleMarketingOther(this)"
+                            class="mt-1 w-full rounded-md shadow-sm {{ $errCls('marketing_name') }}">
+                        <option value="">-- Pilih Marketing --</option>
+                        @foreach ($mkList as $marketing)
+                            <option value="{{ $marketing }}" @selected($mkChoice === $marketing)>{{ $marketing }}</option>
+                        @endforeach
+                    </select>
+                    <input type="text" name="marketing_name_other" id="marketing_name_other" value="{{ $mkOther }}"
+                           placeholder="Ketik nama marketing"
+                           @if ($mkChoice === 'Lainnya') required @else style="display:none" @endif
+                           class="mt-2 w-full rounded-md shadow-sm {{ $errCls('marketing_name_other') }}">
+                    @error('marketing_name')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    @error('marketing_name_other')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+                <script>
+                    function toggleMarketingOther(select) {
+                        const other = document.getElementById('marketing_name_other');
+                        const isOther = select.value === 'Lainnya';
+                        other.style.display = isOther ? '' : 'none';
+                        other.required = isOther;
+                        if (isOther) other.focus();
+                    }
+                </script>
             </div>
         </div>
 
@@ -254,7 +331,7 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Proposal</label>
                         <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
                                 class="mt-1 w-full rounded-md shadow-sm {{ $errCls('proposal_purpose') }}">
-                            @foreach (['Jual Beli', 'Penjaminan Utang', 'Lelang', 'Pelaporan Keuangan'] as $purpose)
+                            @foreach (['Penjaminan Utang', 'Jual Beli', 'Lelang', 'Pelaporan Keuangan'] as $purpose)
                                 <option value="{{ $purpose }}" @selected(old('proposal_purpose', $project->proposal_purpose) === $purpose)>
                                     {{ $purpose === 'Pelaporan Keuangan' ? 'Pelaporan Keuangan (LK Properti)' : $purpose }}
                                 </option>
@@ -333,7 +410,7 @@
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Biaya &amp; Pembayaran</h2>
 
             <div class="space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status PPN</label>
                         <select name="fee_ppn_included" id="fee_ppn_included" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
@@ -346,6 +423,16 @@
                         <select name="fee_breakdown" id="fee_breakdown" onchange="toggleFeeBreakdown()" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
                             <option value="0" @selected(old('fee_breakdown', $project->fee_breakdown ? '1' : '0') == '0')>All-in (langsung)</option>
                             <option value="1" @selected(old('fee_breakdown', $project->fee_breakdown ? '1' : '0') === '1')>Rincian (breakdown)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Transport &amp; Akomodasi
+                            @include('partials.icon-info', ['tip' => 'Termasuk = biaya transport & akomodasi ikut ditagih dan dikenai PPN. Ditanggung klien = tidak masuk total biaya; proposal mencantumkan bahwa biaya belum termasuk transport & akomodasi.'])
+                        </label>
+                        <select name="transport_reimbursed" id="transport_reimbursed" onchange="toggleFeeBreakdown()" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                            <option value="0" @selected(old('transport_reimbursed', $project->transport_reimbursed ? '1' : '0') == '0')>Termasuk dalam biaya</option>
+                            <option value="1" @selected(old('transport_reimbursed', $project->transport_reimbursed ? '1' : '0') === '1')>Ditanggung klien (reimburse)</option>
                         </select>
                     </div>
                 </div>
@@ -394,12 +481,15 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Rekening Bank Pembayaran
-                            @include('partials.icon-info', ['tip' => 'Dipakai di blok "Rekening Bank" proposal & PDF Invoice. Kosongkan untuk memakai rekening default. Daftar dikelola di menu Kelola Rekening Bank.'])
+                            @include('partials.icon-info', ['tip' => 'Dipakai di blok "Rekening Bank" proposal & PDF Invoice. Daftar dikelola di menu Kelola Rekening Bank.'])
                         </label>
                         <select name="bank_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-                            <option value="">-- Rekening baku kantor (default) --</option>
+                            {{-- Pilihan "Rekening baku kantor" dihapus (2026-09-15, feedback
+                                 user); proyek yang belum memilih rekening langsung
+                                 menampilkan rekening ber-is_default. --}}
+                            @php $defaultBankId = optional($banks->firstWhere('is_default', true))->id; @endphp
                             @foreach ($banks as $bank)
-                                <option value="{{ $bank->id }}" @selected(old('bank_id', $project->bank_id) == $bank->id)>
+                                <option value="{{ $bank->id }}" @selected((string) old('bank_id', $project->bank_id ?? $defaultBankId) === (string) $bank->id)>
                                     {{ $bank->bank_name }}{{ $bank->branch ? ' (' . $bank->branch . ')' : '' }} — {{ $bank->account_number }}{{ $bank->is_default ? ' · default' : '' }}
                                 </option>
                             @endforeach
@@ -465,12 +555,11 @@
                 <select class="object-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600" required>
                     <option value="">-- Pilih Kategori --</option>
                     <option value="Real Properti - Tanah">Real Properti - Tanah</option>
-                    <option value="Real Properti - Bangunan">Real Properti - Bangunan</option>
                     <option value="Real Properti - Tanah dan Bangunan">Real Properti - Tanah dan Bangunan</option>
+                    <option value="Real Properti - Tanah, Bangunan dan Sarana Pelengkap">Real Properti - Tanah, Bangunan dan Sarana Pelengkap</option>
                     <option value="Personal Properti - Mesin dan Peralatan">Personal Properti - Mesin dan Peralatan</option>
                     <option value="Personal Properti - Kendaraan">Personal Properti - Kendaraan</option>
                     <option value="Personal Properti - Alat Berat">Personal Properti - Alat Berat</option>
-                    <option value="Bisnis / Perusahaan">Bisnis / Perusahaan</option>
                     <option value="Lainnya">Lainnya</option>
                 </select>
             </div>
@@ -554,6 +643,7 @@
         objects: @json($bootObjects),
         instructing: @json($bootInstructing),
         intended: @json($bootIntended),
+        approver: @json($bootApprover),
     };
 </script>
 
@@ -691,25 +781,40 @@
         return res.json();
     }
 
+    // Teks dari database di-escape sebelum disisipkan ke innerHTML.
+    function escapeHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
     function renderResults(container, clients, onPick) {
         if (clients.length === 0) {
             container.innerHTML = `<div class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">Tidak ditemukan. Coba "+ Klien Baru".</div>`;
         } else {
-            container.innerHTML = clients.map(c => `
-                <button type="button" data-id="${c.id}" data-name="${c.client_name.replace(/"/g, '&quot;')}"
+            // Yang ditampilkan alamat, bukan jenis klien (2026-09-15, feedback
+            // user) — satu nama seperti Bank Mandiri bisa punya banyak cabang.
+            container.innerHTML = clients.map((c, i) => `
+                <button type="button" data-index="${i}"
                         class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-0 dark:hover:bg-blue-900/30 dark:border-gray-800">
-                    <div class="font-medium text-gray-800 dark:text-gray-200">${c.client_name}</div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">${c.client_type}</div>
+                    <div class="font-medium text-gray-800 dark:text-gray-200">${escapeHtml(c.client_name)}</div>
+                    <div class="text-xs text-gray-400 whitespace-pre-line dark:text-gray-500">${escapeHtml(c.address) || '<span class="italic">Alamat belum diisi</span>'}</div>
                 </button>
             `).join('');
-            container.querySelectorAll('button[data-id]').forEach(btn => {
+            container.querySelectorAll('button[data-index]').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    onPick({ id: btn.dataset.id, client_name: btn.dataset.name });
+                    const c = clients[+btn.dataset.index];
+                    onPick({ id: c.id, client_name: c.client_name, address: c.address || '' });
                     container.classList.add('hidden');
                 });
             });
         }
         container.classList.remove('hidden');
+    }
+
+    // Chip klien terpilih: nama + alamat.
+    function showClientChip(prefix, client) {
+        document.getElementById(prefix + '_chip_text').textContent = client.client_name;
+        document.getElementById(prefix + '_chip_address').textContent = client.address || 'Alamat belum diisi';
+        document.getElementById(prefix + '_chip').style.display = 'flex';
     }
 
     const instructingInput = document.getElementById('instructing_client_search');
@@ -724,8 +829,7 @@
     function setInstructingClient(client) {
         instructingClient = client;
         document.getElementById('instructing_client_id').value = client.id;
-        document.getElementById('instructing_client_chip_text').textContent = client.client_name;
-        document.getElementById('instructing_client_chip').style.display = 'inline-flex';
+        showClientChip('instructing_client', client);
         instructingInput.value = '';
         instructingInput.classList.add('hidden');
     }
@@ -761,15 +865,45 @@
 
     function renderIntendedChips() {
         document.getElementById('intended_user_chips').innerHTML = intendedUsers.map(u => `
-            <span class="inline-flex items-center gap-2 bg-gray-100 border border-gray-200 text-gray-700 text-sm px-3 py-1.5 rounded-full dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
-                ${u.client_name}
+            <div class="flex items-start justify-between gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+                <div class="min-w-0">
+                    <div class="font-medium">${escapeHtml(u.client_name)}</div>
+                    <div class="text-xs text-gray-500 whitespace-pre-line dark:text-gray-400">${escapeHtml(u.address) || 'Alamat belum diisi'}</div>
+                </div>
                 <button type="button" onclick="removeIntendedUser(${u.id})" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
-            </span>
+            </div>
         `).join('');
         document.getElementById('intended_user_hidden_inputs').innerHTML = intendedUsers.map(u =>
             `<input type="hidden" name="intended_user_ids[]" value="${u.id}">`
         ).join('');
     }
+
+    // ---------- Pihak yang Menyetujui (opsional, satu klien) ----------
+    const approverInput = document.getElementById('approver_client_search');
+    const approverResults = document.getElementById('approver_client_results');
+
+    approverInput.addEventListener('input', debounce(async (e) => {
+        const keyword = e.target.value.trim();
+        if (keyword.length < 2) { approverResults.classList.add('hidden'); return; }
+        renderResults(approverResults, await searchClients(keyword), setApproverClient);
+    }));
+
+    function setApproverClient(client) {
+        document.getElementById('approver_client_id').value = client.id;
+        showClientChip('approver_client', client);
+        approverInput.value = '';
+        approverInput.classList.add('hidden');
+    }
+
+    function clearApproverClient() {
+        document.getElementById('approver_client_id').value = '';
+        document.getElementById('approver_client_chip').style.display = 'none';
+        approverInput.classList.remove('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!approverInput.contains(e.target) && !approverResults.contains(e.target)) approverResults.classList.add('hidden');
+    });
 
     document.addEventListener('click', (e) => {
         if (!instructingInput.contains(e.target) && !instructingResults.contains(e.target)) instructingResults.classList.add('hidden');
@@ -806,8 +940,10 @@
                 errBox.classList.remove('hidden');
                 return;
             }
-            const client = { id: data.client.id, client_name: data.client.client_name };
-            activeModalTarget === 'instructing' ? setInstructingClient(client) : addIntendedUser(client);
+            const client = { id: data.client.id, client_name: data.client.client_name, address: data.client.address || '' };
+            if (activeModalTarget === 'instructing') setInstructingClient(client);
+            else if (activeModalTarget === 'approver') setApproverClient(client);
+            else addIntendedUser(client);
             closeClientModal();
         } catch (err) {
             alert('Gagal menyimpan klien. Silakan coba lagi.');
@@ -836,41 +972,48 @@
 
     function toggleFeeBreakdown() {
         const isBreakdown = document.getElementById('fee_breakdown').value === '1';
-        document.getElementById('transport_cost_wrap').classList.toggle('hidden', !isBreakdown);
+        const reimbursed = document.getElementById('transport_reimbursed').value === '1';
+        // Isian nominal TA hanya relevan di format Rincian & bila TA ikut ditagih.
+        document.getElementById('transport_cost_wrap').classList.toggle('hidden', !(isBreakdown && !reimbursed));
         document.getElementById('service_fee_label').textContent =
             isBreakdown ? 'Fee Jasa Profesional (Rp)' : 'Nilai Biaya Jasa (Rp)';
         recalcFeeTotal();
     }
 
     function recalcFeeTotal() {
-        // PPN hanya atas Fee; Transport & Akomodasi = penggantian biaya (tanpa PPN).
+        // PPN atas Fee + Transport & Akomodasi yang ditagih — rumus sama dengan
+        // accessor total_fee di model Project. TA reimburse tidak dihitung.
         const PPN_PCT = +(PPN_RATE * 100).toFixed(2);
         const base = parseInt(digits(document.getElementById('service_fee_raw').value) || '0', 10);  // Fee
         const transportRaw = parseInt(digits(document.getElementById('transport_cost_raw').value) || '0', 10);
         const ppnIncluded = document.getElementById('fee_ppn_included').value === '1';
         const isBreakdown = document.getElementById('fee_breakdown').value === '1';
-        const transport = isBreakdown ? transportRaw : 0;
+        const reimbursed = document.getElementById('transport_reimbursed').value === '1';
+        const transport = (isBreakdown && !reimbursed) ? transportRaw : 0;
 
-        let feeNet, ppn, total;
+        let feeNet, transportNet, ppn, total;
         if (ppnIncluded) {
+            total = base + transport;             // input sudah gross → tidak digross-up lagi
             feeNet = base / (1 + PPN_RATE);
-            ppn = base - feeNet;
-            total = base + transport;
+            transportNet = transport / (1 + PPN_RATE);
+            ppn = total - total / (1 + PPN_RATE);
         } else {
             feeNet = base;
-            ppn = base * PPN_RATE;
-            total = base + ppn + transport;
+            transportNet = transport;
+            ppn = (base + transport) * PPN_RATE;
+            total = base + transport + ppn;
         }
 
-        document.getElementById('service_fee_hint').textContent = ppnIncluded
-            ? 'Fee sudah termasuk PPN — di rincian Fee tampil net (dikurangi PPN). Transport tanpa PPN.'
-            : 'PPN ' + PPN_PCT + '% ditambahkan di atas Fee. Transport tanpa PPN.';
+        document.getElementById('service_fee_hint').textContent = (ppnIncluded
+            ? 'Fee & transport sudah termasuk PPN — di rincian tampil net (dikurangi PPN).'
+            : 'PPN ' + PPN_PCT + '% ditambahkan di atas Fee & transport.')
+            + (reimbursed ? ' Transport & akomodasi ditanggung klien — tidak masuk total.' : '');
 
         const preview = document.getElementById('fee_total_preview');
         if (!base && !transport) { preview.textContent = ''; return; }
         preview.textContent = isBreakdown
             ? 'Perkiraan: Fee Rp ' + rupiahFmt(feeNet)
-              + (transport ? ' + Transport Rp ' + rupiahFmt(transport) : '')
+              + (transport ? ' + Transport Rp ' + rupiahFmt(transportNet) : '')
               + ' + PPN ' + PPN_PCT + '% Rp ' + rupiahFmt(ppn)
               + ' = Total Rp ' + rupiahFmt(total)
             : 'Perkiraan total (ditagihkan): Rp ' + rupiahFmt(total) + '  ·  PPN Rp ' + rupiahFmt(ppn);
@@ -937,6 +1080,7 @@
 
         if (boot.instructing) setInstructingClient(boot.instructing);
         (boot.intended || []).forEach(addIntendedUser);
+        if (boot.approver) setApproverClient(boot.approver);
 
         toggleLkFields();
         toggleFeeBreakdown();

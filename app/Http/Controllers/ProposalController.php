@@ -27,6 +27,35 @@ class ProposalController extends Controller
         return Bank::orderByDesc('is_default')->orderBy('bank_name')->get();
     }
 
+    /**
+     * Nilai TA yang disimpan: hanya dicatat kalau format Rincian DAN TA tidak
+     * ditanggung klien. All-in = TA dianggap sudah di dalam Fee; reimburse =
+     * TA tidak ditagih sama sekali.
+     */
+    /**
+     * Nama marketing yang disimpan: pilihan dropdown, KECUALI "Lainnya" — maka
+     * yang disimpan adalah nama yang diketik manual (2026-09-15, feedback user).
+     */
+    private function resolveMarketingName(array $validated): ?string
+    {
+        $choice = $validated['marketing_name'] ?? null;
+
+        if ($choice === 'Lainnya') {
+            return trim((string) ($validated['marketing_name_other'] ?? '')) ?: null;
+        }
+
+        return $choice ?: null;
+    }
+
+    private function billableTransportInput(Request $request, array $validated): ?float
+    {
+        if (! $request->boolean('fee_breakdown') || $request->boolean('transport_reimbursed')) {
+            return null;
+        }
+
+        return (float) ($validated['transport_cost'] ?? 0);
+    }
+
     public function store(Request $request)
     {
         if ($request->has('psak_classification') && is_array($request->psak_classification)) {
@@ -42,15 +71,18 @@ class ProposalController extends Controller
             'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
+            'client_name'              => $validated['client_name'] ?? null,
             'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
-            'approver_name'            => $validated['approver_name'] ?? null,
+            'approver_client_id'       => $validated['approver_client_id'] ?? null,
+            'marketing_name'           => $this->resolveMarketingName($validated),
             'bank_id'                  => $validated['bank_id'] ?? null,
             'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
             'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
             'fee_ppn_included'         => $request->boolean('fee_ppn_included'),
             'fee_breakdown'            => $request->boolean('fee_breakdown'),
-            'transport_cost'          => $request->boolean('fee_breakdown') ? ($validated['transport_cost'] ?? 0) : null,
+            'transport_reimbursed'     => $request->boolean('transport_reimbursed'),
+            'transport_cost'           => $this->billableTransportInput($request, $validated),
             'report_style'             => $validated['report_style'],
             'sla_draft_days'           => $validated['sla_draft_days'],
             'sla_final_days'           => $validated['sla_final_days'],
@@ -90,7 +122,7 @@ class ProposalController extends Controller
             abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
         }
 
-        $project->load('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy');
+        $project->load('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy', 'approverClient');
 
         // Daftar penandatangan = Penanggung Jawab aktif. Kalau proposal ini
         // sudah punya penandatangan yang kini tidak lagi memenuhi syarat
@@ -127,15 +159,18 @@ class ProposalController extends Controller
             'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
+            'client_name'              => $validated['client_name'] ?? null,
             'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
-            'approver_name'            => $validated['approver_name'] ?? null,
+            'approver_client_id'       => $validated['approver_client_id'] ?? null,
+            'marketing_name'           => $this->resolveMarketingName($validated),
             'bank_id'                  => $validated['bank_id'] ?? null,
             'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
             'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
             'fee_ppn_included'         => $request->boolean('fee_ppn_included'),
             'fee_breakdown'            => $request->boolean('fee_breakdown'),
-            'transport_cost'          => $request->boolean('fee_breakdown') ? ($validated['transport_cost'] ?? 0) : null,
+            'transport_reimbursed'     => $request->boolean('transport_reimbursed'),
+            'transport_cost'           => $this->billableTransportInput($request, $validated),
             'report_style'             => $validated['report_style'],
             'sla_draft_days'           => $validated['sla_draft_days'],
             'sla_final_days'           => $validated['sla_final_days'],
@@ -453,15 +488,25 @@ class ProposalController extends Controller
             'proposal_date'            => 'required|date',
             'request_basis'            => 'nullable|string|max:1000',
             'instructing_client_id'    => 'required|exists:clients,id',
+            // Nama Klien (debitur/pemilik aset) — opsional, kosong = nama
+            // Pemberi Tugas. Dipakai di baris "Hal" proposal.
+            'client_name'              => 'nullable|string|max:255',
             // Penandatangan proposal — opsional. Kosong = pakai penandatangan
             // baku config('kjpp.signatory'). Pilihan di form sudah dibatasi ke
             // user aktif berjabatan "Penanggung Jawab"; di sini cukup pastikan
             // user-nya ada (tidak memblokir edit lama bila jabatannya berubah).
-            'signed_by_user_id'        => 'nullable|exists:users,id',
-            // Pihak yang menyetujui (blok tanda tangan kolom kanan) — bisa
-            // bank atau klien (PT), tergantung kasus. Kosong = pakai nama
-            // Pemberi Tugas.
-            'approver_name'            => 'nullable|string|max:255',
+            // WAJIB sejak 2026-09-15 (feedback user): pilihan "Penanggung Jawab
+            // baku kantor" dihapus dari dropdown — data bakunya sudah dipindah
+            // ke akun user-nya sendiri.
+            'signed_by_user_id'        => 'required|exists:users,id',
+            // Pihak yang menyetujui (blok tanda tangan kolom kanan) — dipilih
+            // dari Database Klien, bisa bank atau PT tergantung kasus. Kosong =
+            // pakai nama Pemberi Tugas.
+            'approver_client_id'       => 'nullable|exists:clients,id',
+            // Marketing pembawa proposal — opsional, dari daftar config.
+            'marketing_name'           => ['nullable', Rule::in(config('kjpp.marketing_names', []))],
+            // Pilihan "Lainnya" -> nama marketing diketik manual, dan itulah yang disimpan.
+            'marketing_name_other'     => 'nullable|required_if:marketing_name,Lainnya|string|max:255',
             // Rekening bank untuk blok "Rekening Bank" & PDF Invoice. Kosong =
             // pakai bank ber-is_default (dropdown sudah membatasi pilihan).
             'bank_id'                  => 'nullable|exists:banks,id',
@@ -474,6 +519,7 @@ class ProposalController extends Controller
             'fee_ppn_included'         => 'nullable|boolean',
             'fee_breakdown'            => 'nullable|boolean',
             'transport_cost'          => 'nullable|numeric|min:0',
+            'transport_reimbursed'     => 'nullable|boolean',
             'report_style'             => 'required|in:Long Report,Short Report',
             // SLA diinput MANUAL dalam hari kerja — dua jangka waktu terpisah
             // sesuai dokumen resmi (Draft/Resume, lalu Final setelah disetujui).
@@ -490,15 +536,17 @@ class ProposalController extends Controller
             'is_public_company'        => 'nullable|boolean',
 
             'objects'                          => 'required|array|min:1',
-            'objects.*.asset_category'         => 'required|in:'
-                . 'Real Properti - Tanah,'
-                . 'Real Properti - Bangunan,'
-                . 'Real Properti - Tanah dan Bangunan,'
-                . 'Personal Properti - Mesin dan Peralatan,'
-                . 'Personal Properti - Kendaraan,'
-                . 'Personal Properti - Alat Berat,'
-                . 'Bisnis / Perusahaan,'
-                . 'Lainnya',
+            // Daftar kategori disesuaikan 2026-09-15 (feedback user). Pakai
+            // Rule::in, bukan string "in:a,b" — nama kategori baru mengandung koma.
+            'objects.*.asset_category'         => ['required', Rule::in([
+                'Real Properti - Tanah',
+                'Real Properti - Tanah dan Bangunan',
+                'Real Properti - Tanah, Bangunan dan Sarana Pelengkap',
+                'Personal Properti - Mesin dan Peralatan',
+                'Personal Properti - Kendaraan',
+                'Personal Properti - Alat Berat',
+                'Lainnya',
+            ])],
             // Wajib diisi HANYA kalau kategori objek tersebut = "Lainnya".
             'objects.*.custom_category' => 'nullable|required_if:objects.*.asset_category,Lainnya|string|max:255',
             'objects.*.land_area'       => 'nullable|numeric|min:0',

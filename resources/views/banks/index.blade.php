@@ -1,11 +1,13 @@
 @extends('layouts.app')
 
+@section('title', 'Kelola Rekening Bank')
+
 @section('content')
 <div class="max-w-4xl mx-auto py-8 space-y-6">
 
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Master Rekening Bank</h1>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Kelola Rekening Bank</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ $banks->count() }} rekening terdaftar — dipilih per proposal, dipakai di Invoice &amp; blok "Rekening Bank" proposal.</p>
         </div>
         <a href="{{ route('banks.create') }}"

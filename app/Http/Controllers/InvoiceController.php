@@ -256,7 +256,7 @@ class InvoiceController extends Controller
 
     public function exportInvoice(Invoice $invoice)
     {
-        $invoice->load('project.instructingClient', 'project.valuationObjects', 'project.bank');
+        $invoice->load('project.instructingClient', 'project.valuationObjects', 'project.bank', 'project.signedBy');
 
         // Rekening = pilihan proposal -> bank default -> fallback config lama.
         $bank = $invoice->project->effectiveBank();
@@ -282,7 +282,7 @@ class InvoiceController extends Controller
             $invoice->update(['kwitansi_number' => $this->nextKwitansiNumber()]);
         }
 
-        $invoice->load('project.instructingClient', 'project.valuationObjects', 'project.bank');
+        $invoice->load('project.instructingClient', 'project.valuationObjects', 'project.bank', 'project.signedBy');
 
         $bank = $invoice->project->effectiveBank();
 

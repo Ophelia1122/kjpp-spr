@@ -42,7 +42,7 @@ class UserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'keuangan@kjpp-spr.co.id'],
             [
-                'name'     => 'Dewi (Admin Keuangan)',
+                'name'     => 'Dewi (General Admin)',
                 'password' => 'password123',
                 'role_id'  => $roles[Role::ADMIN_KEUANGAN]->id,
                 'is_active' => true,

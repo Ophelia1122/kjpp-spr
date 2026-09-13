@@ -73,31 +73,25 @@
             <div class="px-6 py-5 border-b border-gray-800 flex items-center justify-between">
                 <div>
                     <div class="text-lg font-bold text-white">KJPP SPR</div>
-                    <div class="text-xs text-gray-400">Internal Web-App</div>
+                    <div class="text-xs text-gray-400">Workshop Kebagusan</div>
                 </div>
                 <button onclick="closeSidebar()" class="lg:hidden text-gray-400 hover:text-white text-xl leading-none">&times;</button>
             </div>
 
             <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                 @auth
+                    {{-- Sidebar dibagi 3 bagian (2026-09-15, feedback user):
+                         1) pekerjaan proyek, 2) ringkasan/pembayaran/klien,
+                         3) Pengaturan Sistem. "Buat Proposal Baru" sengaja TIDAK
+                         di sidebar — aksinya lewat tombol di List Project. --}}
+
+                    {{-- ===== BAGIAN 1: Beranda, List Project, Timeline Project ===== --}}
                     @can('dashboard.view')
                         <a href="{{ route('home') }}"
                         class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
                                 {{ request()->routeIs('home') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
                             <span>🏠</span> Beranda
                         </a>
-                    @endcan
-
-                    {{-- Ringkasan manajemen — Surveyor tidak punya izin ini. --}}
-                    @can('dashboard.overview')
-                        <a href="{{ route('dashboard.overview') }}"
-                        class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                {{ request()->routeIs('dashboard.overview') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                            <span>📈</span> Dashboard
-                        </a>
-                    @endcan
-
-                    @can('dashboard.view')
                         <a href="{{ route('dashboard') }}"
                         class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
                                 {{ request()->routeIs('dashboard') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
@@ -110,25 +104,38 @@
                         </a>
                     @endcan
 
-                    {{-- Rekap Invoice/DP & Kwitansi lintas proyek — izin sama dg Invoice (Surveyor tidak punya). --}}
-                    @can('invoices.view')
-                        <a href="{{ route('dashboard.pembayaran') }}"
-                        class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                {{ request()->routeIs('dashboard.pembayaran') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                            <span>💳</span> Dashboard Pembayaran
-                        </a>
-                    @endcan
+                    {{-- ===== BAGIAN 2: Ringkasan Project, Dashboard Pembayaran, Database Klien ===== --}}
+                    @canany(['dashboard.overview', 'invoices.view', 'clients.view'])
+                        <div class="pt-4 mt-4 border-t border-gray-800 space-y-1">
+                            {{-- Ringkasan manajemen — Surveyor tidak punya izin ini. --}}
+                            @can('dashboard.overview')
+                                <a href="{{ route('dashboard.overview') }}"
+                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
+                                        {{ request()->routeIs('dashboard.overview') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                    <span>📈</span> Ringkasan Project
+                                </a>
+                            @endcan
 
-                    {{-- "Buat Proposal Baru" sengaja TIDAK di sidebar — aksinya
-                         lewat tombol "+ Buat Proposal Baru" di List Project. --}}
+                            {{-- Rekap Invoice/DP & Kwitansi lintas proyek — izin sama dg Invoice (Surveyor tidak punya). --}}
+                            @can('invoices.view')
+                                <a href="{{ route('dashboard.pembayaran') }}"
+                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
+                                        {{ request()->routeIs('dashboard.pembayaran') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                    <span>💳</span> Dashboard Pembayaran
+                                </a>
+                            @endcan
 
-                    @can('clients.view')
-                        <a href="{{ route('clients.index') }}"
-                           class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                  {{ request()->routeIs('clients.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                            <span>👥</span> Daftar Klien
-                        </a>
-                    @endcan
+                            @can('clients.view')
+                                <a href="{{ route('clients.index') }}"
+                                   class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
+                                          {{ request()->routeIs('clients.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                    <span>👥</span> Database Klien
+                                </a>
+                            @endcan
+                        </div>
+                    @endcanany
+
+                    {{-- ===== BAGIAN 3: Pengaturan Sistem ===== --}}
 
                     @canany(['roles.manage', 'users.manage', 'banks.manage', 'audit.view'])
                         <div class="pt-4 mt-4 border-t border-gray-800">
@@ -290,7 +297,7 @@
 
         // ===================== LIVE SEARCH (debounce 1 detik, tanpa reload) =====================
         // Dipakai bareng di semua halaman berkotak cari (Dashboard Project,
-        // Daftar Klien, Kelola Pengguna, Kelola Rekening Bank, Dashboard
+        // Database Klien, Kelola Pengguna, Kelola Rekening Bank, Dashboard
         // Pembayaran). Server mengenali fetch() ini via header
         // X-Requested-With lalu balas HANYA fragmen HTML hasil (bukan
         // halaman penuh) — jadi Tailwind browser-CDN TIDAK perlu kompilasi

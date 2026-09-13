@@ -25,7 +25,7 @@
                class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
     </div>
 
-    {{-- Penilai --}}
+    {{-- Penilai, Penanggung Jawab & Reviewer (2026-09-15, feedback user) --}}
     <div data-bio="rmk" class="hidden">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor RMK</label>
         <input type="text" name="rmk_no" value="{{ old('rmk_no', $bioUser->rmk_no) }}"
@@ -42,32 +42,41 @@
                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
             <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Status di perusahaan — tercetak sebagai jabatan pada blok tanda tangan proposal.</p>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor Izin Penilai Publik (Menkeu)</label>
-                <input type="text" name="izin_menkeu_no" value="{{ old('izin_menkeu_no', $bioUser->izin_menkeu_no) }}"
-                       placeholder="Contoh: P-1.25.00690"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor SK Menkeu</label>
-                <input type="text" name="sk_menkeu_no" value="{{ old('sk_menkeu_no', $bioUser->sk_menkeu_no) }}"
-                       placeholder="Contoh: 185/MK/SJ/2025 tanggal 23 April 2025"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor Surat Tanda Terdaftar OJK</label>
-                <input type="text" name="sttd_ojk_no" value="{{ old('sttd_ojk_no', $bioUser->sttd_ojk_no) }}"
-                       placeholder="Contoh: KEP-324/KS.13/2026"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor KEP OJK</label>
-                <input type="text" name="ojk_kep_no" value="{{ old('ojk_kep_no', $bioUser->ojk_kep_no) }}"
-                       placeholder="Contoh: KEP-324/KS.13/2026 tanggal 22 Mei 2026"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-            </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor Izin Penilai Publik (Menkeu)</label>
+            <input type="text" name="izin_menkeu_no" value="{{ old('izin_menkeu_no', $bioUser->izin_menkeu_no) }}"
+                   placeholder="Contoh: P-1.25.00690"
+                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
         </div>
+
+        {{-- Nomor & tanggal surat saling mengikat — diisi berpasangan
+             (2026-09-15, feedback user). Di proposal dicetak sebagai
+             "<nomor> tanggal <tanggal>". --}}
+        @php
+            $licensePairs = [
+                ['no' => 'sk_menkeu_no', 'date' => 'sk_menkeu_date', 'label' => 'SK Menkeu', 'placeholder' => 'Contoh: 185/MK/SJ/2025'],
+                // STTD OJK = nomor KEP Dewan Komisioner OJK yang sama; isian
+                // "KEP OJK" terpisah dihapus karena duplikat (2026-09-15).
+                ['no' => 'sttd_ojk_no',  'date' => 'sttd_ojk_date',  'label' => 'Surat Tanda Terdaftar OJK', 'placeholder' => 'Contoh: KEP-324/KS.13/2026'],
+            ];
+        @endphp
+        @foreach ($licensePairs as $pair)
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor {{ $pair['label'] }}</label>
+                    <input type="text" name="{{ $pair['no'] }}" value="{{ old($pair['no'], $bioUser->{$pair['no']}) }}"
+                           placeholder="{{ $pair['placeholder'] }}"
+                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal {{ $pair['label'] }}</label>
+                    <input type="date" name="{{ $pair['date'] }}" lang="id"
+                           value="{{ old($pair['date'], $bioUser->{$pair['date']} ? \Illuminate\Support\Carbon::parse($bioUser->{$pair['date']})->format('Y-m-d') : '') }}"
+                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                </div>
+            </div>
+        @endforeach
+
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Klasifikasi</label>
             <input type="text" name="klasifikasi" value="{{ old('klasifikasi', $bioUser->klasifikasi) }}"
@@ -79,14 +88,14 @@
 
 <script>
     // Nomor MAPPI selalu tampil (semua jabatan). Field lain menyesuaikan Jabatan:
-    //   Penilai                     -> Nomor RMK
-    //   Penanggung Jawab / Reviewer -> Status Partner + nomor izin Penilai Publik dll.
+    //   Penilai / Penanggung Jawab / Reviewer -> Nomor RMK
+    //   Penanggung Jawab / Reviewer           -> Status Partner + nomor & tanggal izin dll.
     // Input tersembunyi tetap ikut ter-submit sehingga nilainya tidak hilang
     // saat Jabatan diganti.
     function toggleBiodataFields() {
         var j = document.getElementById('jabatan_select').value;
         var groups = {
-            rmk:   (j === 'Penilai'),
+            rmk:   (j === 'Penilai' || j === 'Penanggung Jawab' || j === 'Reviewer'),
             pj:    (j === 'Penanggung Jawab' || j === 'Reviewer'),
         };
         Object.keys(groups).forEach(function (key) {

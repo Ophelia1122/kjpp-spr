@@ -36,7 +36,8 @@ class ProfileController extends Controller
             'izin_menkeu_no' => 'nullable|string|max:255',
             'sk_menkeu_no'   => 'nullable|string|max:255',
             'sttd_ojk_no'    => 'nullable|string|max:255',
-            'ojk_kep_no'     => 'nullable|string|max:255',
+            'sk_menkeu_date' => 'nullable|date',
+            'sttd_ojk_date'  => 'nullable|date',
             'klasifikasi'    => 'nullable|string|max:255',
         ]);
 
@@ -50,7 +51,8 @@ class ProfileController extends Controller
             'izin_menkeu_no' => $validated['izin_menkeu_no'] ?? null,
             'sk_menkeu_no'   => $validated['sk_menkeu_no'] ?? null,
             'sttd_ojk_no'    => $validated['sttd_ojk_no'] ?? null,
-            'ojk_kep_no'     => $validated['ojk_kep_no'] ?? null,
+            'sk_menkeu_date' => $validated['sk_menkeu_date'] ?? null,
+            'sttd_ojk_date'  => $validated['sttd_ojk_date'] ?? null,
             'klasifikasi'    => $validated['klasifikasi'] ?? null,
         ])->save();
 

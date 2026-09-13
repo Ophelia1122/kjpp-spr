@@ -464,7 +464,9 @@ class ProjectController extends Controller
     private function assignmentStaffPartial(Project $project)
     {
         $project->load('assignmentStaff.user');
-        $activeUsers = User::where('is_active', true)->orderBy('name')->get();
+        // role di-eager-load: daftar petugas difilter per role (lihat blade),
+        // tanpa ini jadi 1 query role per user (N+1).
+        $activeUsers = User::with('role')->where('is_active', true)->orderBy('name')->get();
 
         return view('proposals._assignment_staff', compact('project', 'activeUsers'));
     }
@@ -514,7 +516,10 @@ class ProjectController extends Controller
             'reviewSubmittedBy', 'reviewedBy', 'reviewApprovedBy', 'reviewRejectedBy'
         )->loadCount('sectionTexts');
 
-        $activeUsers = User::where('is_active', true)
+        // role di-eager-load: daftar petugas difilter per role (lihat blade),
+        // tanpa ini jadi 1 query role per user (N+1, terukur 8 query ekstra).
+        $activeUsers = User::with('role')
+            ->where('is_active', true)
             ->orderBy('name')
             ->get();
 

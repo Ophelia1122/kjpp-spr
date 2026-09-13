@@ -82,7 +82,7 @@ class RolePermissionSeeder extends Seeder
     {
         Role::updateOrCreate(['slug' => Role::ADMINISTRATOR], ['name' => 'Administrator', 'is_system' => true]);
         Role::updateOrCreate(['slug' => Role::ADMIN_PRODUKSI], ['name' => 'Admin Produksi', 'is_system' => true]);
-        Role::updateOrCreate(['slug' => Role::ADMIN_KEUANGAN], ['name' => 'Admin Keuangan', 'is_system' => true]);
+        Role::updateOrCreate(['slug' => Role::ADMIN_KEUANGAN], ['name' => 'General Admin', 'is_system' => true]);
         Role::updateOrCreate(['slug' => Role::SURVEYOR], ['name' => 'Surveyor', 'is_system' => true]);
 
         foreach (self::PERMISSIONS as $permission) {
