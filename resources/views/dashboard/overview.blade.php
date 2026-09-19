@@ -34,6 +34,12 @@
     <x-page-header title="Ringkasan Project"
         subtitle="Ringkasan monitoring proyek &middot; {{ now()->translatedFormat('d F Y') }}" />
 
+    @if ($totalProposals === 0)
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-10 text-center text-gray-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
+            Belum ada proposal. Widget monitoring akan muncul setelah proposal pertama dibuat.
+        </div>
+    @else
+
     {{-- ===================== KARTU ANGKA ===================== --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {{-- Total Proposal --}}

@@ -5,7 +5,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
-    <x-page-header title="Kelola Role &amp; Izin" subtitle='Atur izin "Lihat" dan "Kelola" untuk tiap role, per modul.' />
+    <x-page-header title="Kelola Role & Izin" subtitle='Atur izin "Lihat" dan "Kelola" untuk tiap role, per modul.' />
 
     <div class="rounded-md bg-blue-50 border border-blue-200 text-blue-800 text-sm px-4 py-3 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
         ℹ️ Role <strong>Administrator</strong> tidak ditampilkan di sini karena selalu memiliki akses penuh ke seluruh
