@@ -9,9 +9,12 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Kelola Pengguna</h1>
         </div>
-        <a href="{{ route('users.create') }}"
-           class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
-            + Tambah Pengguna
+        <a href="{{ route('users.create') }}" title="Tambah pengguna"
+           class="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+            </svg>
+            Tambah Pengguna
         </a>
     </div>
 

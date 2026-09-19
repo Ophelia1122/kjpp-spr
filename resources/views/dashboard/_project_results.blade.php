@@ -33,21 +33,6 @@
     };
 @endphp
 
-{{-- ===================== BARIS RINGKASAN + JUMLAH PER HALAMAN ===================== --}}
-<div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="text-sm text-gray-500 dark:text-gray-400" id="resultsCount">{{ $projects->total() }} proyek ditemukan</p>
-    <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <span>Tampilkan</span>
-        {{-- Cukup 15 & 25 per halaman (2026-09-14, feedback user) — 50/100 berat dimuat. --}}
-        @foreach ([15, 25] as $size)
-            <a href="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => null]) }}"
-               class="px-2 py-1 rounded-md font-medium {{ $projects->perPage() === $size ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700' }}">
-                {{ $size }}
-            </a>
-        @endforeach
-    </div>
-</div>
-
 {{-- ===================== TABEL PROYEK (DESKTOP) ===================== --}}
 <div class="hidden lg:block bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto lift dark:bg-gray-800 dark:border-gray-700">
     {{-- Urutan kolom mengikuti alur baca: siapa → kondisinya → uangnya →
@@ -61,6 +46,18 @@
     {{-- min-w diturunkan 1180 -> 1040px (2026-09-13): nomor proposal kini
          diringkas, sehingga tabel muat di layar laptop tanpa geser samping. --}}
     {{-- Font dinaikkan 11 -> 12px (2026-09-13, feedback user, uji coba). --}}
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+            <p class="text-xs text-gray-500 dark:text-gray-400" id="resultsCount">{{ $projects->total() }} proyek ditemukan</p>
+            <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <span>Tampilkan</span>
+                @foreach ([15, 25] as $size)
+                    <a href="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => null]) }}"
+                       class="rounded-md px-2 py-0.5 font-medium {{ $projects->perPage() === $size ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        {{ $size }}
+                    </a>
+                @endforeach
+            </div>
+        </div>
     <table class="min-w-[1040px] w-full text-[12px]">
         <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
             <tr class="text-center text-[12px] font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
@@ -68,13 +65,11 @@
                     $cols = [
                         ['key' => 'proposal_number', 'label' => 'No. Proposal',  'class' => 'px-3 py-3'],
                         ['key' => null,              'label' => 'Nama Klien',    'class' => 'px-3 py-3 min-w-[190px]'],
-                        ['key' => 'status',          'label' => 'Status',        'class' => 'px-3 py-3 w-[126px]'],
-                        ['key' => 'deadline',        'label' => 'SLA',           'class' => 'px-3 py-3 w-[104px]', 'tip' => 'Urutkan berdasarkan tenggat SLA — yang paling mepet di atas'],
-                        // Fee Jasa & Sisa Tagihan dihapus (2026-09-13, feedback user) —
-                        // sudah ada di Dashboard Pembayaran. Diganti kolom Alamat objek.
                         ['key' => 'purpose',         'label' => 'Jenis',         'class' => 'px-3 py-3 w-[112px]'],
                         ['key' => null,              'label' => 'Objek',         'class' => 'px-3 py-3 min-w-[140px]'],
                         ['key' => null,              'label' => 'Alamat',        'class' => 'px-3 py-3 min-w-[220px]'],
+                        ['key' => 'status',          'label' => 'Status',        'class' => 'px-3 py-3 w-[126px]'],
+                        ['key' => 'deadline',        'label' => 'SLA',           'class' => 'px-3 py-3 w-[104px]', 'tip' => 'Urutkan berdasarkan tenggat SLA — yang paling mepet di atas'],
                         ['key' => null,              'label' => 'Aksi',          'class' => 'px-3 py-3 w-[100px]'],
                     ];
                 @endphp
@@ -122,7 +117,16 @@
                         {{ $project->proposal_number_short }}
                     </td>
                     {{-- Nama Klien, bukan Pemberi Tugas (2026-09-14, feedback user). --}}
-                    <td class="px-3 py-3 text-gray-700 dark:text-gray-300">{{ $project->effective_client_name ?: '-' }}</td>
+                    <td class="px-3 py-3 font-semibold text-gray-900 dark:text-gray-100">{{ $project->effective_client_name ?: '-' }}</td>
+                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400">{{ $project->proposal_purpose }}</td>
+                    {{-- Objek diringkas "kategori pertama +N" (2026-09-13); daftar lengkap di tooltip. --}}
+                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400" title="{{ $obj['full'] }}">{{ $obj['short'] }}</td>
+                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400" title="{{ $locations->implode(' | ') ?: $firstAddr }}">
+                        <span class="line-clamp-2">{{ $firstAddr ?: '—' }}</span>
+                        @if ($locations->count() > 1)
+                            <span class="text-[11px] text-blue-600 dark:text-blue-400">+{{ $locations->count() - 1 }} objek lain</span>
+                        @endif
+                    </td>
                     <td class="px-3 py-3 text-center">
                         <span class="inline-block px-2.5 py-1 rounded-full font-semibold whitespace-nowrap {{ $project->status_badge_classes }}"
                               title="{{ $project->status }}">
@@ -138,15 +142,6 @@
                             </span>
                         @else
                             <span class="text-gray-300 dark:text-gray-600">—</span>
-                        @endif
-                    </td>
-                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400">{{ $project->proposal_purpose }}</td>
-                    {{-- Objek diringkas "kategori pertama +N" (2026-09-13); daftar lengkap di tooltip. --}}
-                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400" title="{{ $obj['full'] }}">{{ $obj['short'] }}</td>
-                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400" title="{{ $locations->implode(' | ') ?: $firstAddr }}">
-                        <span class="line-clamp-2">{{ $firstAddr ?: '—' }}</span>
-                        @if ($locations->count() > 1)
-                            <span class="text-[11px] text-blue-600 dark:text-blue-400">+{{ $locations->count() - 1 }} objek lain</span>
                         @endif
                     </td>
                     <td class="px-3 py-3">
@@ -200,6 +195,16 @@
      Tabelnya butuh lebar ~980px; di layar sempit lebih enak dibaca sebagai
      kartu daripada digeser ke samping terus (2026-09-14, feedback user). --}}
 <div class="lg:hidden space-y-3">
+    <div class="flex items-center justify-between gap-2 px-1 text-xs text-gray-500 dark:text-gray-400">
+        <span>{{ $projects->total() }} proyek ditemukan</span>
+        <span class="flex items-center gap-1.5">
+            Tampilkan
+            @foreach ([15, 25] as $size)
+                <a href="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => null]) }}"
+                   class="rounded-md px-2 py-0.5 font-medium {{ $projects->perPage() === $size ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700' }}">{{ $size }}</a>
+            @endforeach
+        </span>
+    </div>
     @forelse ($projects as $project)
         @php
                     $sla       = $activeSlaFor($project);

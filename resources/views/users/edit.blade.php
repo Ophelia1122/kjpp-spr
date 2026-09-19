@@ -6,7 +6,6 @@
 <div class="max-w-lg mx-auto py-8">
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Edit Pengguna</h1>
-        <a href="{{ route('users.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">&larr; Kembali</a>
     </div>
 
     <form action="{{ route('users.update', $user) }}" method="POST" enctype="multipart/form-data" class="space-y-4 bg-white rounded-lg border border-gray-200 shadow-sm p-6 dark:bg-gray-800 dark:border-gray-700">

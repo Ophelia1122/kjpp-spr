@@ -28,6 +28,12 @@ class PaymentDashboardController extends Controller
         $from = $request->filled('from') ? $request->date('from')->toDateString() : null;
         $to   = $request->filled('to') ? $request->date('to')->toDateString() : null;
 
+        // Kartu ringkasan memakai performa 12 BULAN TERAKHIR bila staf tidak
+        // memilih periode sendiri (2026-09-19, feedback user) — sebelumnya
+        // menjumlah sepanjang waktu, sehingga angka lama ikut terus.
+        $summaryFrom = $from ?? now()->subYear()->toDateString();
+        $summaryTo   = $to;
+
         // ---------- Daftar invoice ----------
         // Urutan default (2026-09-13): yang belum dibayar paling atas, dimulai
         // dari yang PALING LAMA tertunggak; lalu yang sudah dibayar, terbaru dulu.
@@ -102,11 +108,11 @@ class PaymentDashboardController extends Controller
         // Sudah Ditagih mengikuti tanggal terbit; Sudah Diterima mengikuti
         // tanggal bayar — keduanya ikut filter periode.
         $billedQuery = $validInvoices();
-        $this->applyPeriod($billedQuery, self::INVOICE_DATE_SQL, $from, $to);
+        $this->applyPeriod($billedQuery, self::INVOICE_DATE_SQL, $summaryFrom, $summaryTo);
         $totalBilled = (float) $billedQuery->sum('amount');
 
         $paidQuery = $validInvoices()->where('status', Invoice::STATUS_PAID);
-        $this->applyPeriod($paidQuery, 'payment_date', $from, $to);
+        $this->applyPeriod($paidQuery, 'payment_date', $summaryFrom, $summaryTo);
         $totalPaid = (float) $paidQuery->sum('amount');
 
         // Posisi saat ini (tidak ikut periode): yang masih menunggu dibayar.
@@ -121,6 +127,8 @@ class PaymentDashboardController extends Controller
         $projects = Project::query()
             ->with('instructingClient', 'namedClient', 'invoices')
             ->whereNotIn('status', [Project::STATUS_DRAFT, Project::STATUS_BATAL])
+            ->whereDate('created_at', '>=', $summaryFrom)
+            ->when($summaryTo, fn ($q) => $q->whereDate('created_at', '<=', $summaryTo))
             ->get();
 
         $totalContract  = (float) $projects->sum(fn ($p) => $p->total_fee);
@@ -146,6 +154,8 @@ class PaymentDashboardController extends Controller
             'outstandingProjects' => $outstandingProjects,
             'statusOptions'       => [Invoice::STATUS_UNPAID, Invoice::STATUS_PAID],
             'periodActive'        => $from || $to,
+            'summaryFrom'         => $summaryFrom,
+            'summaryTo'           => $summaryTo,
             'numbering'           => app(DocumentNumbering::class)->summary(),
         ]);
     }

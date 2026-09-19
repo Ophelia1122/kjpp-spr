@@ -65,28 +65,6 @@
             </div>
             @endunless
         </div>
-        {{-- Tombol ringkas (2026-09-19, feedback user): ikon + label pendek,
-             ukuran kecil supaya header tidak penuh. Export jadi outline
-             (aksi sekunder), Proposal Baru tetap solid (aksi utama). --}}
-        <div class="flex items-center gap-2">
-            @can('reports.export')
-                <button type="button" onclick="openExportModal()" title="Export ke Excel"
-                   class="inline-flex items-center gap-1.5 rounded-md border border-emerald-600 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-300 dark:hover:bg-emerald-900/30">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                    </svg>
-                    Excel
-                </button>
-            @endcan
-            @can('proposals.manage')
-                <a href="{{ route('proposals.create') }}" title="Buat Proposal Baru"
-                   class="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-                    </svg>
-                    Proposal Baru
-                </a>
-            @endcan
         </div>
     </div>
 
@@ -122,6 +100,29 @@
                 </svg>
                 Filter Lanjutan
             </button>
+
+            {{-- Export & Proposal Baru pindah ke dalam kartu filter (2026-09-19,
+                 feedback user) — satu border dengan Cari, header jadi lega. --}}
+            <div class="ml-auto flex items-center gap-2">
+                @can('reports.export')
+                    <button type="button" onclick="openExportModal()" title="Export ke Excel"
+                       class="inline-flex items-center gap-1.5 rounded-md border border-emerald-600 px-2.5 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-300 dark:hover:bg-emerald-900/30">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                        </svg>
+                        Excel
+                    </button>
+                @endcan
+                @can('proposals.manage')
+                    <a href="{{ route('proposals.create') }}" title="Buat Proposal Baru"
+                       class="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-2.5 py-2 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                        Proposal Baru
+                    </a>
+                @endcan
+            </div>
         </div>
 
         {{-- Filter lanjutan: disembunyikan secara default supaya baris filter

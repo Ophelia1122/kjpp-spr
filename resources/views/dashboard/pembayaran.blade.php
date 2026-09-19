@@ -7,7 +7,7 @@
     $periodLabel = $periodActive
         ? trim((request('from') ? \Carbon\Carbon::parse(request('from'))->translatedFormat('d M Y') : '…')
             . ' – ' . (request('to') ? \Carbon\Carbon::parse(request('to'))->translatedFormat('d M Y') : '…'))
-        : 'Semua waktu';
+        : '12 bulan terakhir';
 @endphp
 
 @section('content')
@@ -73,7 +73,7 @@
             <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Sudah Ditagih</span>
             <div class="mt-1 text-2xl font-bold text-blue-700 tabular-nums break-words dark:text-blue-400">{{ $rp($totalBilled) }}</div>
             <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                {{ $periodActive ? 'Invoice terbit dalam periode.' : 'Seluruh invoice terbit.' }}
+                {{ $periodActive ? 'Invoice terbit dalam periode.' : 'Invoice terbit 12 bulan terakhir.' }}
                 Menunggu dibayar: <span class="font-medium text-rose-600 dark:text-rose-400">{{ $rp($totalUnpaid) }}</span>
             </p>
             @if ($overdueCount > 0)
@@ -86,7 +86,7 @@
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
             <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Sudah Diterima</span>
             <div class="mt-1 text-2xl font-bold text-emerald-700 tabular-nums break-words dark:text-emerald-400">{{ $rp($totalPaid) }}</div>
-            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ $periodActive ? 'Dibayar dalam periode (tgl. bayar)' : 'Seluruh invoice dibayar' }} — kwitansi terbit.</p>
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ $periodActive ? 'Dibayar dalam periode (tgl. bayar)' : 'Dibayar 12 bulan terakhir' }} — kwitansi terbit.</p>
         </div>
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
             <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Belum Ditagih</span>

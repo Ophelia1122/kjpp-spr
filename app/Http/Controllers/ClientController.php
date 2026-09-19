@@ -149,6 +149,33 @@ class ClientController extends Controller
     /**
      * Menyimpan klien baru dari POP-UP MODAL di form proposal (AJAX).
      */
+    /**
+     * Halaman "Klien Baru" (2026-09-19, feedback user) — sebelumnya klien hanya
+     * bisa dibuat lewat modal di form proposal (storeAjax), sehingga Database
+     * Klien tak punya jalan menambah data.
+     */
+    public function create()
+    {
+        return view('clients.create');
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'client_name'    => 'required|string|max:255',
+            'client_type'    => 'required|in:Perbankan,Korporat,Perorangan',
+            'address'        => 'nullable|string',
+            'contact_person' => 'nullable|string|max:255',
+            'phone'          => 'nullable|string|max:50',
+            'email'          => 'nullable|email|max:255',
+        ]);
+
+        $client = Client::create($validated);
+        \App\Helpers\AuditLogger::record('client.created', "Menambahkan klien \"{$client->client_name}\"", $client);
+
+        return redirect()->route('clients.show', $client)->with('success', 'Klien baru berhasil ditambahkan.');
+    }
+
     public function storeAjax(Request $request)
     {
         $validator = Validator::make($request->all(), [

@@ -15,7 +15,6 @@
 @endphp
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
-    <a href="{{ route('clients.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">&larr; Database Klien</a>
 
     {{-- ===================== IDENTITAS KLIEN ===================== --}}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 dark:bg-gray-800 dark:border-gray-700">

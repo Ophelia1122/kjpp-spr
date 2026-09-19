@@ -43,6 +43,7 @@ class DashboardController extends Controller
         $mode = isset($modes[$requested]) ? $requested : array_key_first($modes);
 
         $data = ['modes' => $modes, 'mode' => $mode, 'canFinance' => false, 'notes' => collect()];
+        $data['profile'] = $this->miniProfile($user, $mode);
         $with = ['instructingClient', 'namedClient'];
 
         if ($mode === 'penilai') {
@@ -204,6 +205,64 @@ class DashboardController extends Controller
         return "CASE WHEN ($daysExpr) <= 0 THEN $dateExpr"
             . " WHEN WEEKDAY($dateExpr) >= 5 THEN $weekendArm"
             . " ELSE $weekdayArm END";
+    }
+
+    /**
+     * Kartu mini profile di Beranda (2026-09-19, feedback user): avatar,
+     * sapaan, skor SLA draft, dan statistik bulan berjalan.
+     *
+     * Angka mengikuti tab aktif: mode "kantor" memakai data seluruh kantor,
+     * mode lain memakai proyek milik user sendiri (sebagai penilai lapangan).
+     * Mode reviewer menambah antrean review & jumlah yang sudah dia review
+     * bulan ini, karena reviewer juga bisa turun survei.
+     */
+    private function miniProfile(User $user, string $mode): array
+    {
+        $officeWide = $mode === 'kantor';
+        $base = fn () => $officeWide ? Project::query() : Project::forAppraiser($user->id);
+
+        // Skor SLA Draft: rata-rata hari survei -> submit nilai, 1 tahun terakhir.
+        $done = $base()
+            ->whereNotNull('survey_date')
+            ->whereNotNull('review_submitted_at')
+            ->where('review_submitted_at', '>=', now()->subYear())
+            ->get();
+
+        $avgDays = $done->isEmpty() ? null : round($done->avg(
+            fn ($p) => $p->survey_date->diffInDays($p->review_submitted_at)
+        ), 1);
+
+        $withTarget = $done->filter(fn ($p) => $p->estimated_completion_date !== null);
+        $onTimePct  = $withTarget->isEmpty() ? null : (int) round(
+            $withTarget->filter(fn ($p) => $p->review_submitted_at->lte($p->estimated_completion_date))->count()
+                / $withTarget->count() * 100
+        );
+
+        $monthStart = now()->startOfMonth();
+        $monthEnd   = now()->endOfMonth();
+
+        $profile = [
+            'office_wide'  => $officeWide,
+            'avg_days'     => $avgDays,
+            'on_time_pct'  => $onTimePct,
+            'sample'       => $done->count(),
+            'month_survey' => $base()->where('status', '!=', Project::STATUS_BATAL)
+                ->whereBetween('survey_date', [$monthStart->toDateString(), $monthEnd->toDateString()])->count(),
+            'month_done'   => $base()->whereBetween('printed_at', [$monthStart, $monthEnd])->count(),
+            'review_queue' => null,
+            'review_done'  => null,
+        ];
+
+        if ($mode === 'reviewer') {
+            $profile['review_queue'] = Project::where('status', Project::STATUS_IN_PROGRESS)
+                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::STAGE_DRAFT_CONFIRMED])
+                ->count();
+            $profile['review_done'] = Project::where('review_approved_by_user_id', $user->id)
+                ->whereBetween('review_approved_at', [$monthStart, $monthEnd])
+                ->count();
+        }
+
+        return $profile;
     }
 
     public function index(Request $request)

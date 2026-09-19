@@ -22,18 +22,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Halo, {{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->first() }}! 👋</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Pekerjaan utama hari ini &middot; {{ now()->locale('id')->translatedFormat('l, d F Y') }}</p>
-        </div>
-        @can('proposals.manage')
-            <a href="{{ route('proposals.create') }}"
-               class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white shadow-sm hover:bg-blue-700">
-                + Buat Proposal Baru
-            </a>
-        @endcan
-    </div>
+    @include('dashboard.home._profile')
 
     {{-- Tab mode: Reviewer bisa juga bertugas sebagai penilai; Administrator bisa me-review. --}}
     @if (count($modes) > 1)
