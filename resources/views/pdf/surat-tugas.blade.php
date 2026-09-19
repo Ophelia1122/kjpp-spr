@@ -3,95 +3,196 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 100px 60px 90px 60px; }
-        body { font-family: 'Helvetica', sans-serif; font-size: 11px; color: #1a1a1a; line-height: 1.6; }
+        @font-face { font-family: 'Arial Narrow'; font-weight: normal; font-style: normal; src: url("{{ public_path('fonts/arialn.ttf') }}") format("truetype"); }
+        @font-face { font-family: 'Arial Narrow'; font-weight: bold;   font-style: normal; src: url("{{ public_path('fonts/arialnb.ttf') }}") format("truetype"); }
+        @font-face { font-family: 'Arial Narrow'; font-weight: normal; font-style: italic; src: url("{{ public_path('fonts/arialni.ttf') }}") format("truetype"); }
+        @font-face { font-family: 'Arial Narrow'; font-weight: bold;   font-style: italic; src: url("{{ public_path('fonts/arialnbi.ttf') }}") format("truetype"); }
+
+        /* A4, margin Top 2,75cm / Kanan-Bawah-Kiri 2,54cm (96dpi: 1cm ≈ 37.8px). */
+        @page { margin: 24px 72px 72px 72px; }
+        /* Font 11pt & spasi lebih padat (2026-09-14, feedback user). Paragraf
+           diberi margin kecil eksplisit — bawaan dompdf ±1 baris atas-bawah. */
+        /* line-height 1.1: dompdf memperlebar baris sesuai metrik font TTF, jadi
+           nilai kecil di sini sudah setara spasi 1,15 di Word. */
+        body { font-family: 'Arial Narrow', 'Helvetica', Arial, sans-serif; font-size: 11pt; color: #1a1a1a; line-height: 1.1; }
+        p { margin: 0 0 5px 0; }
         table { width: 100%; border-collapse: collapse; }
-        h1 { font-size: 14px; text-align: center; text-decoration: underline; margin-bottom: 4px; }
-        .text-center { text-align: center; }
-        .small { font-size: 9.5px; color: #333; }
-        .label-col { width: 190px; vertical-align: top; padding: 4px 0; }
-        .val-col { vertical-align: top; padding: 4px 0; }
+        .center { text-align: center; }
+        .justify { text-align: justify; }
+        .bold { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .kop-line { border-top: 2px solid #1a1a1a; margin: 10px 0 8px 0; }
+        .label-col { width: 70px; vertical-align: top; }
+        .colon-col { width: 10px; vertical-align: top; }
+        .staff-table td { padding: 0 4px 0 0; vertical-align: top; }
+        .staff-no { width: 16px; vertical-align: top; }
+        .staff-label { width: 70px; }
+        .staff-colon { width: 10px; }
+
+        /* Footer alamat kantor — berulang di setiap halaman (biasanya 1 halaman). */
+        .pagefoot {
+            position: fixed; bottom: -60px; left: 0; right: 0;
+            font-size: 9.3px; color: #222; text-align: center; line-height: 1.15;
+            padding-top: 4px; /* garis atas footer dihapus (2026-09-14, feedback user) */
+        }
     </style>
 </head>
 <body>
 
-    {{-- Kop Surat --}}
-    <table style="margin-bottom: 15px;">
+    {{-- ===================== KOP: LOGO SPR-LONG, RATA TENGAH ===================== --}}
+    <div class="center">
+        {{-- Logo kop 125% (380 -> 475px, 2026-09-14, feedback user). --}}
+        <img src="{{ public_path('images/logo-spr-long.png') }}" style="width: 475px;">
+    </div>
+    <div class="kop-line"></div>
+
+    {{-- ===================== NOMOR / PERIHAL (kiri) — JAKARTA, TANGGAL (kanan) ===================== --}}
+    <table style="margin-bottom: 8px;">
         <tr>
-            <td style="width: 90px;">
-                <img src="{{ config('kjpp.company_logo') }}" style="width: 80px;" alt="Logo">
+            <td style="width: 58%; vertical-align: top;">
+                <table>
+                    <tr>
+                        <td class="label-col">No.</td>
+                        <td class="colon-col">:</td>
+                        <td>{{ $project->assignment_letter_number ?: '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Perihal</td>
+                        <td class="colon-col">:</td>
+                        <td class="underline">Surat Tugas</td>
+                    </tr>
+                </table>
             </td>
-            <td class="text-center">
-                <div style="font-size: 15px; font-weight: bold;">{{ config('kjpp.company_name') }}</div>
-                <div class="small">{{ config('kjpp.company_address') }}</div>
-                <div class="small">Telp: {{ config('kjpp.company_phone') }} | Email: {{ config('kjpp.company_email') }}</div>
+            <td style="width: 42%; vertical-align: top; text-align: right;">
+                Jakarta, {{ $project->assignment_letter_date ? $project->assignment_letter_date->translatedFormat('d F Y') : '-' }}
             </td>
-            <td style="width: 90px;"></td>
         </tr>
     </table>
-    <hr style="border-top: 2px solid #1a1a1a;">
 
-    <h1 class="mt-20" style="margin-top: 25px;">SURAT TUGAS PENILAIAN</h1>
-    <p class="text-center small">No. {{ $project->proposal_number }}/ST</p>
-
-    <p style="margin-top: 20px;">
-        Bersama ini kami menugaskan staff kami sebagai perwakilan KJPP Sugianto Prasodjo dan Rekan untuk melakukan Penilaian Aset atas nama
-        {{$project->instructingClient->client_name}} dengan berdasarkan Surat Penawaran {{$project->proposal_number}}
-        Yang bertanda tangan di bawah ini, manajemen {{ config('kjpp.company_name') }}, dengan ini menugaskan
-        Penilai Lapangan tersebut di bawah untuk melaksanakan survei/inspeksi lapangan atas objek penilaian
-        sebagai berikut:
+    {{-- "Kepada Yth" dipilih di kartu Surat Tugas; alamat dipecah setelah koma
+         tiap ±8 cm, seperti alamat Pemberi Tugas di proposal (2026-09-14). --}}
+    @php
+        $recipient      = $project->assignment_letter_recipient;
+        $recipientLines = \App\Helpers\AddressFormatter::lines(optional($recipient)->address);
+    @endphp
+    <p style="margin-bottom: 6px;">
+        Kepada Yth,<br>
+        <span class="bold">{{ mb_strtoupper((string) optional($recipient)->client_name) }}</span><br>
+        @forelse ($recipientLines as $line)
+            {{ $line }}@unless ($loop->last)<br>@endunless
+        @empty
+            (alamat belum diisi pada data klien)
+        @endforelse
     </p>
 
-    <table style="margin-top: 15px;">
-        <tr>
-            <td class="label-col">Nomor Proyek</td>
-            <td class="val-col">: {{ $project->proposal_number }}</td>
-        </tr>
-        <tr>
-            <td class="label-col">Nama Penilai Lapangan</td>
-            <td class="val-col">: <strong>{{ $project->assigned_appraiser }}</strong></td>
-        </tr>
-        <tr>
-            <td class="label-col">Tanggal Pelaksanaan Survei</td>
-            <td class="val-col">: <strong>{{ \Carbon\Carbon::parse($project->survey_date)->translatedFormat('d F Y') }}</strong></td>
-        </tr>
-        <tr>
-            <td class="label-col">Jenis Objek Penilaian</td>
-            <td class="val-col">: {{ $project->asset_type }}</td>
-        </tr>
-        <tr>
-            <td class="label-col">Lokasi Objek</td>
-            <td class="val-col">: {{ $project->asset_address }}</td>
-        </tr>
-        <tr>
-            <td class="label-col">Pemberi Tugas</td>
-            <td class="val-col">: {{ $project->instructingClient->client_name }}</td>
-        </tr>
-        <tr>
-            <td class="label-col">Estimasi Selesai Laporan</td>
-            <td class="val-col">: {{ $project->estimated_completion_date_formatted ?? '-' }}</td>
-        </tr>
-    </table>
+    <p>Dengan Hormat,</p>
 
-    <p style="margin-top: 20px;">
-        Penilai Lapangan bertugas melakukan pengukuran, dokumentasi, dan pengumpulan data fisik maupun legal
-        objek penilaian sesuai dengan Standar Penilaian Indonesia (SPI) dan Kode Etik Penilai Indonesia (KEPI)
-        yang berlaku, untuk selanjutnya digunakan sebagai dasar penyusunan laporan penilaian.
+    <p class="justify">
+        Bersama ini kami menugaskan staff kami sebagai perwakilan {{ config('kjpp.company_name') }} untuk
+        {{-- "atas nama" dipilih di kartu Surat Tugas; Dasar Permintaan dicetak tepat
+             setelah nama klien (2026-09-14, feedback user). --}}
+        melakukan Penilaian Aset atas nama <span class="bold">{{ $project->assignment_letter_on_behalf_name }}</span>.
+        @if ($project->assignment_letter_request_basis_text !== '')
+            {{ $project->assignment_letter_request_basis_text }}
+        @endif
+        Berdasarkan Surat Penawaran <span class="bold">No. {{ $project->proposal_number }} tanggal {{ $project->proposal_date?->translatedFormat('d F Y') }}</span>
+        yang berupa:
     </p>
 
-    <table style="margin-top: 50px;">
-        <tr>
-            <td style="width: 50%;"></td>
-            <td style="width: 50%;">
-                <div class="small">Jakarta, {{ now()->translatedFormat('d F Y') }}</div>
-                <div class="small">{{ config('kjpp.company_name') }}</div>
-                <div style="height: 60px;"></div>
-                <div style="border-top: 1px solid #333; width: 200px;"></div>
-                <div class="small"><strong>Arief Rachman Setiady, S.M., M.M., MAPPI (Cert.)</strong></div>
-                <div class="small">Penilai Publik — Izin No. P-1.25.00690</div>
-            </td>
-        </tr>
+    {{-- Rincian objek menjorok 1/3 tab (±0,42 cm = 16px) dari margin kiri
+         (2026-09-14, feedback user — 1 tab penuh terlalu jauh). --}}
+    <table style="margin: 0 0 5px 16px; width: 97%;">
+        @foreach ($project->valuationObjects as $object)
+            @php
+                $descLines = $object->assignment_letter_description_lines;
+                $descHead  = $descLines[0] ?? 'Aset';
+                $descRest  = array_slice($descLines, 1);
+            @endphp
+            <tr>
+                <td style="width: 18px; vertical-align: top;">{{ $loop->iteration }}.</td>
+                <td class="justify">
+                    <span class="bold italic">{{ $descHead }},</span>
+                    @if (count($descRest))
+                        {{ implode(', ', $descRest) }}
+                    @endif
+                    yang berlokasi di {{ $object->location }}
+                </td>
+            </tr>
+        @endforeach
     </table>
+
+    <p style="margin-bottom: 2px;">
+        dilaksanakan pada tanggal, {{ $project->survey_date ? \Carbon\Carbon::parse($project->survey_date)->translatedFormat('d F Y') : '' }}
+    </p>
+    <p style="margin-bottom: 3px;">Adapun petugas kami adalah :</p>
+
+    {{-- Indentasi 1 ruler (≈1cm) dari margin kiri, memisahkan daftar petugas dari teks di atasnya.
+         Jumlah & jabatan petugas bebas per proyek (mis. 2 Penilai + 1 Reviewer, atau 1 Reviewer +
+         1 Penilai + 1 Pelaksana Inspeksi) — dikelola lewat kartu Surat Tugas, urutan sesuai
+         ditambahkan. --}}
+    <table class="staff-table" style="margin: 0 0 6px 38px; width: 88%;">
+        @foreach ($project->assignmentStaff as $staff)
+            <tr>
+                <td class="staff-no">{{ $loop->iteration }}</td>
+                <td class="staff-label">Nama</td>
+                <td class="staff-colon">:</td>
+                <td>{{ $staff->user->name ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td class="staff-no"></td>
+                <td class="staff-label">Jabatan</td>
+                <td class="staff-colon">:</td>
+                <td>{{ $staff->user->jabatan ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td class="staff-no"></td>
+                <td class="staff-label">No. MAPPI</td>
+                <td class="staff-colon">:</td>
+                <td>{{ $staff->user->mappi_no ?? '-' }}</td>
+            </tr>
+        @endforeach
+    </table>
+
+    <p class="justify">
+        Surat Tugas ini sekaligus merupakan Berita Acara Pemeriksaan lapangan, mohon membubuhkan tanda tangan
+        setelah staff / petugas kami selesai melakukan tugasnya, Demikian atas perhatian dan kerjasamanya kami
+        sampaikan banyak terima kasih.
+    </p>
+
+    <p style="margin-bottom: 0;">Hormat kami,</p>
+    <p class="bold" style="margin-bottom: 0;">{{ config('kjpp.company_name') }}</p>
+
+    {{-- Barcode sedikit lebih besar (85 -> 100px) & menempel langsung ke nama
+         penandatangan: display:block menghilangkan celah baris di bawah gambar
+         (2026-09-14, feedback user). --}}
+    @if ($project->assignment_letter_barcode)
+        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->path($project->assignment_letter_barcode) }}"
+             style="display: block; width: 100px; height: 100px; margin: 3px 0 0 0;">
+    @else
+        <div style="height: 45px;"></div>
+    @endif
+
+    @php
+        $signerName  = $project->signedBy->name ?? config('kjpp.signatory.name');
+        $signerTitle = $project->signedBy->partner_status ?? config('kjpp.signatory.title');
+    @endphp
+    {{-- margin-top negatif: gambar barcode punya bingkai putih (quiet zone) sendiri,
+         jadi nama ditarik ke atas supaya benar-benar menempel. --}}
+    <p class="bold underline" style="margin: {{ $project->assignment_letter_barcode ? '-3px' : '0' }} 0 0 0;">{{ $signerName }}, MAPPI (Cert.)</p>
+    <p class="italic" style="margin: 0;">{{ $signerTitle }}</p>
+
+    {{-- Tulisan "Perhatian" 10pt (2026-09-14, feedback user). --}}
+    <p class="italic" style="margin-top: 8px; font-size: 10pt;">
+        <u> Perhatian </u> : Dilarang meminta atau menerima imbalan jasa dalam bentuk apapun diluar kontrak yang telah di setujui.
+        Apabila petugas lapangan kami meminta sesuatu kepada pihak klien/nasabah maka mohon dilaporkan kepada kami.
+    </p>
+
+    <div class="pagefoot">
+        @foreach (config('kjpp.footer.lines') as $line)
+            {{ $line }}<br>
+        @endforeach
+    </div>
 
 </body>
 </html>

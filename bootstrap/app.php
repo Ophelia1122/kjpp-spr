@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,10 +13,53 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'permission' => \App\Http\Middleware\EnsurePermission::class,
+            'active'     => \App\Http\Middleware\EnsureUserIsActive::class,
+        ]);
+
+        // Terapkan pengecekan akun aktif ke SEMUA request yang sudah
+        // login (bukan cuma route tertentu), supaya user yang baru saja
+        // dinonaktifkan langsung ter-logout di request berikutnya.
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureUserIsActive::class);
+
+        // User yang SUDAH login lalu membuka halaman tamu (mis. /login)
+        // diarahkan ke Beranda (2026-09-15, feedback user). Bawaan Laravel
+        // mencari route bernama 'dashboard' lebih dulu — di aplikasi ini itu
+        // List Project, jadi user mendarat di sana, bukan di Beranda.
+        $middleware->redirectUsersTo(fn () => route('home'));
+
+        // Akses lewat HTTPS Tailscale Serve (2026-09-15): TLS diterima tailscaled
+        // lalu diteruskan ke container sebagai HTTP. Percayai header
+        // X-Forwarded-* supaya URL asset/redirect ikut https:// dan host
+        // *.ts.net — tanpa ini CSS/JS diblokir browser (mixed content).
+        // Akses langsung http://IP-NAS:8080 tetap normal (tanpa header itu).
+        $middleware->trustProxies(at: '*');
     })
+    
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // CSRF token kedaluwarsa (mis. halaman login dibiarkan terbuka
+        // lama lalu di-submit, atau sesi habis di tengah kerja). Jangan
+        // tampilkan halaman "419 Page Expired" yang buntu — kembalikan ke
+        // halaman sebelumnya (form yang sama) dengan token segar + pesan
+        // jelas, input non-sensitif dipertahankan. Catatan: di Laravel 13
+        // TokenMismatchException sudah dikonversi ke HttpException(419)
+        // sebelum render callback, jadi cocokkan lewat status code.
+        $exceptions->render(function (HttpException $e, Request $request) {
+            if ($e->getStatusCode() !== 419) {
+                return null; // bukan kasus CSRF — biarkan handler default
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Sesi kedaluwarsa. Muat ulang halaman lalu coba lagi.'], 419);
+            }
+
+            return redirect()->to($request->headers->get('referer') ?: route('login'))
+                ->withInput($request->except('_token', 'password', 'password_confirmation'))
+                ->with('error', 'Sesi Anda kedaluwarsa. Silakan coba lagi.');
+        });
     })->create();

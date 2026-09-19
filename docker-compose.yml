@@ -1,55 +1,121 @@
-version: "3.8"
+# Deploy KJPP ke UGREEN NAS — lihat docs/tutorial-install-ugreen-nas.md
+# Semua nilai ${...} dibaca dari file .env di folder yang sama.
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    image: kjpp-app:latest
     container_name: kjpp-app
     restart: unless-stopped
     ports:
-      # Ubah "8080" sesuai port kosong di NAS Anda (cek di Container Manager)
+      # Ganti 8080 kalau port itu sudah dipakai aplikasi lain di NAS.
       - "8080:80"
-    environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_KEY: ${APP_KEY}
-      APP_URL: ${APP_URL:-http://localhost:8080}
-      DB_CONNECTION: mysql
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-kjpp_db}
-      DB_USERNAME: ${DB_USERNAME:-kjpp_user}
-      DB_PASSWORD: ${DB_PASSWORD}
     volumes:
-      # Storage & PDF hasil generate disimpan permanen di disk NAS,
-      # tidak hilang saat container di-restart/update image.
+      # .env dipakai Laravel & compose; storage permanen di disk NAS.
+      - ./.env:/var/www/html/.env:ro
       - ./storage-data:/var/www/html/storage
     depends_on:
       db:
         condition: service_healthy
+    mem_limit: 2g
     networks:
       - kjpp-network
 
   db:
-    image: mysql:8.0
+    image: mysql:8.4
     container_name: kjpp-db
     restart: unless-stopped
+    command: ["--innodb-buffer-pool-size=512M"]
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-kjpp_db}
-      MYSQL_USER: ${DB_USERNAME:-kjpp_user}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
-      # Data MySQL disimpan permanen di folder NAS -> aman dari restart/upgrade
       - ./mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+    mem_limit: 1g
     networks:
       - kjpp-network
+
+  # --- Bot notifikasi WhatsApp (Evolution API) — lihat docs/bot-whatsapp.md ---
+  # Aplikasi memanggilnya lewat http://kjpp-wa:8080 (jaringan internal).
+  # Port 8081 dibuka untuk dashboard scan QR: http://IP-NAS:8081/manager
+  wa:
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: kjpp-wa
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      SERVER_URL: http://kjpp-wa:8080
+      AUTHENTICATION_API_KEY: ${WA_BOT_API_KEY}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${WA_DB_PASSWORD}@wa-db:5432/evolution
+      DATABASE_CONNECTION_CLIENT_NAME: kjpp_wa
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
+      CONFIG_SESSION_PHONE_CLIENT: KJPP SPR
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      LOG_LEVEL: ERROR,WARN
+    volumes:
+      - ./wa-instances:/evolution/instances
+    depends_on:
+      wa-db:
+        condition: service_healthy
+    mem_limit: 512m
+    networks:
+      - kjpp-network
+
+  wa-db:
+    image: postgres:16-alpine
+    container_name: kjpp-wa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${WA_DB_PASSWORD}
+    volumes:
+      - ./wa-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 256m
+    networks:
+      - kjpp-network
+
+  # --- Tailscale (OPSIONAL) — lihat docs/tutorial-deploy-nas-tailscale.md ---
+  # Hanya dipakai kalau UGOS App Center tidak menyediakan aplikasi Tailscale.
+  # Tidak ikut "docker compose up -d" biasa; nyalakan dengan:
+  #   sudo docker compose --profile tailscale up -d tailscale
+  # network_mode host: NAS tampil sebagai satu perangkat di tailnet, sehingga
+  # port 8080 (aplikasi) & 8081 (dashboard bot) bisa dijangkau lewat IP 100.x.
+  tailscale:
+    image: tailscale/tailscale:stable
+    container_name: kjpp-tailscale
+    profiles: ["tailscale"]
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      TS_HOSTNAME: ${TS_HOSTNAME:-kjpp-nas}
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+    volumes:
+      - ./tailscale-state:/var/lib/tailscale
+    mem_limit: 128m
 
 networks:
   kjpp-network:

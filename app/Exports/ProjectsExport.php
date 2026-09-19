@@ -13,8 +13,9 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class ProjectsExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
     /**
-     * @param array $filters Filter yang sama dengan yang dipakai di DashboardController@index
-     *                       (status, q) supaya hasil export = apa yang sedang dilihat user.
+     * @param array $filters Dari modal Export Excel di List Project (2026-09-14):
+     *                       date_field + from/to (rentang waktu), status, purpose,
+     *                       appraiser, q, mine.
      */
     public function __construct(private array $filters = [])
     {
@@ -22,45 +23,71 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
 
     public function collection()
     {
-        $query = Project::with(['instructingClient', 'intendedUsers', 'invoices'])->latest();
+        $f     = $this->filters;
+        $query = Project::with(['instructingClient', 'namedClient', 'intendedUsers', 'invoices']);
 
-        if (!empty($this->filters['status'])) {
-            $query->where('status', $this->filters['status']);
+        $dateField = in_array($f['date_field'] ?? null, ['proposal_date', 'created_at', 'survey_date'], true)
+            ? $f['date_field']
+            : 'proposal_date';
+        if (! empty($f['from'])) {
+            $query->whereDate($dateField, '>=', $f['from']);
+        }
+        if (! empty($f['to'])) {
+            $query->whereDate($dateField, '<=', $f['to']);
         }
 
-        if (!empty($this->filters['q'])) {
-            $keyword = $this->filters['q'];
+        if (! empty($f['status'])) {
+            $query->where('status', $f['status']);
+        }
+        if (! empty($f['purpose'])) {
+            $query->where('proposal_purpose', $f['purpose']);
+        }
+        if (! empty($f['appraiser'])) {
+            $query->forAppraiser($f['appraiser']);
+        }
+        if (! empty($f['mine'])) {
+            $query->forAppraiser(auth()->id());
+        }
+
+        if (! empty($f['q'])) {
+            $keyword = $f['q'];
             $query->where(function ($q) use ($keyword) {
                 $q->where('proposal_number', 'like', "%{$keyword}%")
-                  ->orWhere('property_owner_name', 'like', "%{$keyword}%");
+                  ->orWhere('client_name', 'like', "%{$keyword}%")
+                  ->orWhereHas('instructingClient', fn ($sub) => $sub->where('client_name', 'like', "%{$keyword}%"))
+                  ->orWhereHas('namedClient', fn ($sub) => $sub->where('client_name', 'like', "%{$keyword}%"))
+                  ->orWhereHas('intendedUsers', fn ($sub) => $sub->where('client_name', 'like', "%{$keyword}%"));
             });
         }
 
-        return $query->get();
+        return $query->orderBy($dateField)->orderBy('id')->get();
     }
 
     public function headings(): array
     {
         return [
             'No. Proposal',
+            'Tanggal Proposal',
             'Status',
             'Jenis Proposal',
             'Pemberi Tugas',
+            'Nama Klien',
             'Pengguna Laporan',
-            'Pemilik Aset',
             'Jenis Objek',
             'Alamat Objek',
             'Jenis Laporan',
-            'SLA (Hari Kerja)',
+            'SLA Draft (Hari Kerja)',
+            'SLA Final (Hari Kerja)',
             'Fee Jasa (Rp)',
             'Penilai Lapangan',
             'Tanggal Survei',
             'Estimasi Selesai',
-            'Total Invoice DP',
-            'Status Invoice DP',
-            'Total Invoice Pelunasan',
-            'Status Invoice Pelunasan',
-            'Nomor Laporan Resmi',
+            'Jumlah Invoice Diterbitkan',
+            'Total Ditagihkan (Rp)',
+            'Total Dibayar (Rp)',
+            'Sisa Tagihan (Rp)',
+            'Status Pembayaran',
+            'Nomor Laporan Final',
             'Tanggal Dibuat',
         ];
     }
@@ -70,28 +97,33 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
      */
     public function map($project): array
     {
-        $dpInvoice    = $project->invoices->firstWhere('invoice_type', 'DP');
-        $finalInvoice = $project->invoices->firstWhere('invoice_type', 'Pelunasan');
+        $totalBilled = (float) $project->invoices->sum('amount');
+        $statusPembayaran = $project->invoices->isEmpty()
+            ? 'Belum Ada Invoice'
+            : ($project->is_fully_paid ? 'Lunas' : 'Belum Lunas');
 
         return [
             $project->proposal_number,
+            ($project->proposal_date ?? $project->created_at)->format('d-m-Y'),
             $project->status,
             $project->proposal_purpose,
             $project->instructingClient->client_name ?? '-',
+            $project->effective_client_name ?: '-',
             $project->intendedUsers->pluck('client_name')->implode(', '),
-            $project->property_owner_name,
             $project->asset_type,
             $project->asset_address,
             $project->report_style,
-            $project->sla_days,
-            (float) $project->service_fee,
+            $project->sla_draft_days ?? '-',
+            $project->sla_final_days ?? '-',
+            (float) $project->total_fee,
             $project->assigned_appraiser ?? '-',
             $project->survey_date?->format('d-m-Y') ?? '-',
             $project->estimated_completion_date_formatted ?? '-',
-            $dpInvoice ? (float) $dpInvoice->amount : 0,
-            $dpInvoice->status ?? '-',
-            $finalInvoice ? (float) $finalInvoice->amount : 0,
-            $finalInvoice->status ?? '-',
+            $project->invoices->count(),
+            $totalBilled,
+            (float) $project->total_paid,
+            (float) $project->remaining_balance,
+            $statusPembayaran,
             $project->final_report_number ?? '-',
             $project->created_at->format('d-m-Y'),
         ];

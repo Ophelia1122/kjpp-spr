@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+
 class Project extends Model
 {
     use HasFactory;
@@ -17,13 +18,106 @@ class Project extends Model
     public const STATUS_WAITING_APPROVAL  = 'Menunggu Persetujuan Klien';
     public const STATUS_DP_INVOICING      = 'DP Invoicing';
     public const STATUS_IN_PROGRESS       = 'In-Progress / Scheduled';
-    public const STATUS_PELUNASAN         = 'Pelunasan';
     public const STATUS_SELESAI           = 'Selesai';
+    public const STATUS_BATAL             = 'Batal';
+
+    /**
+     * Label PENDEK status untuk badge di tabel daftar proyek (2026-09-14,
+     * feedback user — "In-Progress / Scheduled" dan "Menunggu Persetujuan
+     * Klien" membuat kolom status jadi terlalu lebar).
+     *
+     * Sengaja hanya label tampilan: nilai yang TERSIMPAN di database tetap
+     * versi panjang, jadi tidak perlu migrasi data dan filter status, export
+     * Excel, serta seluruh pengecekan status di controller tetap jalan.
+     */
+    public const STATUS_SHORT_LABELS = [
+        self::STATUS_DRAFT            => 'Draft',
+        self::STATUS_WAITING_APPROVAL => 'Menunggu Klien',
+        self::STATUS_DP_INVOICING     => 'Invoice DP',
+        self::STATUS_IN_PROGRESS      => 'In-Progress',
+        self::STATUS_SELESAI          => 'Selesai',
+        self::STATUS_BATAL            => 'Batal',
+    ];
+
+    public function getStatusShortAttribute(): string
+    {
+        return self::STATUS_SHORT_LABELS[$this->status] ?? $this->status;
+    }
+
+    /**
+     * Nomor proposal versi ringkas untuk tabel: 5 karakter awal + "…" +
+     * 2 segmen terakhir (bulan/tahun), mis.
+     * "0023/2.0031-06/KJPPSPR-PRO/APR/06/2026" -> "0023/…/06/2026".
+     * Nomor pendek (mis. "PRO/KJPP/2026/001") ditampilkan utuh.
+     */
+    /**
+     * Ringkasan objek penilaian untuk List Project (2026-09-13, feedback
+     * user): kategori pertama + jumlah kategori lain, mis. "Tanah +2".
+     * 'full' berisi daftar lengkap untuk tooltip.
+     */
+    public function getObjectSummaryAttribute(): array
+    {
+        $labels = $this->valuationObjects->map(fn ($o) => $o->short_label)->filter()->unique()->values();
+
+        if ($labels->isEmpty()) {
+            return ['short' => $this->asset_type ?: '—', 'full' => (string) $this->asset_type];
+        }
+
+        return [
+            'short' => $labels->first() . ($labels->count() > 1 ? ' +' . ($labels->count() - 1) : ''),
+            'full'  => $labels->implode(', '),
+        ];
+    }
+
+    public function getProposalNumberShortAttribute(): string
+    {
+        $number   = (string) $this->proposal_number;
+        $segments = explode('/', $number);
+
+        if (mb_strlen($number) <= 20 || count($segments) < 4) {
+            return $number;
+        }
+
+        return mb_substr($number, 0, 5) . '…/' . implode('/', array_slice($segments, -2));
+    }
+
+    /**
+     * Rincian lokasi di invoice untuk proyek dengan objek LEBIH DARI 5
+     * (2026-09-14, feedback user; sebelumnya 8) — daftar lokasi diganti satu
+     * kalimat rujukan ke proposal. Null = cukup sedikit, tulis daftarnya.
+     * Dipakai PDF (pdf/invoice) dan Word (InvoiceDocxBuilder).
+     */
+    public function getInvoiceLocationSummaryAttribute(): ?string
+    {
+        $count = $this->valuationObjects->count();
+
+        if ($count <= 5) {
+            return null;
+        }
+
+        return 'Berdasarkan rincian lokasi pada Nomor Proposal ' . $this->proposal_number
+            . ' tanggal ' . $this->effective_proposal_date->translatedFormat('d F Y')
+            . ' sebanyak ' . $count . ' lokasi';
+    }
+
+    /**
+     * Urutan kanonik status untuk dropdown filter & widget dashboard.
+     * "Batal" ditaruh paling akhir karena bukan bagian dari alur normal.
+     */
+    public const STATUSES = [
+        self::STATUS_DRAFT,
+        self::STATUS_WAITING_APPROVAL,
+        self::STATUS_DP_INVOICING,
+        self::STATUS_IN_PROGRESS,
+        // Pelunasan dihapus dari alur (2026-09-15) — Selesai = buku dicetak.
+        self::STATUS_SELESAI,
+        self::STATUS_BATAL,
+    ];
 
     /**
      * Konstanta jenis/tujuan proposal. Menentukan teks Dasar Nilai,
      * Maksud Penilaian, dan klausul kondisional mana yang dipakai
-     * di pdf/proposal.blade.php.
+     * di ProposalDocxBuilder.
      */
     public const PURPOSE_JUAL_BELI         = 'Jual Beli';
     public const PURPOSE_PENJAMINAN_UTANG  = 'Penjaminan Utang';
@@ -31,42 +125,556 @@ class Project extends Model
     public const PURPOSE_LK_PROPERTI       = 'Pelaporan Keuangan';
 
     /**
-     * SLA (hari kerja) berdasarkan report_style.
-     * Sesuai spesifikasi: Terinci = 7 hari kerja, Ringkas = 3 hari kerja.
+     * Jenis laporan penilaian.
+     * Long Report  = Laporan Terinci (Comprehensive Style Report)
+     * Short Report = Laporan Ringkas (Short Form Report)
+     * SLA tidak lagi hardcode — diinput manual per proyek lewat
+     * sla_draft_days & sla_final_days (lihat migration 2024_01_08_000002).
      */
-    public const SLA_MAP = [
-        'Terinci' => 7,
-        'Ringkas' => 3,
+    public const REPORT_LONG  = 'Long Report';
+    public const REPORT_SHORT = 'Short Report';
+
+    /**
+     * Tahap alur produksi laporan, disimpan di kolom review_status
+     * (2026-09-15, feedback user). null = Surveyor masih survei & menilai.
+     */
+    public const REVIEW_SUBMITTED      = 'submitted';        // menunggu review nilai
+    public const REVIEW_APPROVED       = 'approved';         // nilai disetujui (SLA Final mulai), Surveyor menyusun draft
+    public const STAGE_DRAFT_SUBMITTED = 'draft_submitted';  // menunggu konfirmasi Admin Produksi
+    public const STAGE_DRAFT_CONFIRMED = 'draft_confirmed';  // menunggu Reviewer me-review draft laporan
+    public const STAGE_DRAFT_REVIEWED  = 'draft_reviewed';   // proses cetak buku (Admin Produksi)
+    public const STAGE_PRINTED         = 'printed';          // buku dicetak, proyek Selesai
+
+    /**
+     * Tombol alur produksi. actor: surveyor (izin survey.manage), reviewer
+     * (jabatan Reviewer/Administrator), admin (izin proposals.manage),
+     * reviewer_or_admin (keduanya). note: optional = catatan boleh kosong,
+     * required = alasan pengembalian wajib. Dipakai ProjectController::
+     * advanceWorkflow() & floating action bar.
+     */
+    public const WORKFLOW_STEPS = [
+        'submit_value' => [
+            'from' => null, 'to' => self::REVIEW_SUBMITTED, 'actor' => 'surveyor', 'note' => 'optional',
+            'title' => 'Submit Review Nilai', 'button' => 'Submit Review', 'tip' => 'Ajukan nilai hasil penilaian ke Reviewer',
+            'action' => 'review.submitted', 'desc' => 'Mengajukan nilai hasil penilaian untuk direview',
+            'flash' => 'Nilai diajukan untuk direview.',
+        ],
+        'approve_value' => [
+            'from' => self::REVIEW_SUBMITTED, 'to' => self::REVIEW_APPROVED, 'actor' => 'reviewer_or_admin', 'note' => 'optional',
+            'title' => 'Nilai Disetujui', 'button' => 'Nilai Disetujui', 'tip' => 'Setujui nilai — SLA Laporan Final mulai dihitung',
+            'hint' => 'SLA Laporan Final mulai dihitung sejak nilai disetujui.',
+            'action' => 'review.value_approved', 'desc' => 'Menyetujui nilai hasil penilaian. SLA Laporan Final mulai dihitung',
+            'flash' => 'Nilai disetujui. SLA Laporan Final mulai dihitung.',
+        ],
+        'return_value' => [
+            'from' => self::REVIEW_SUBMITTED, 'to' => null, 'actor' => 'reviewer_or_admin', 'note' => 'required',
+            'title' => 'Kembalikan Nilai ke Surveyor', 'button' => 'Ke Surveyor', 'tip' => 'Kembalikan nilai ke Surveyor untuk revisi',
+            'action' => 'review.rejected_to_surveyor', 'desc' => 'Mengembalikan nilai ke Surveyor untuk revisi',
+            'flash' => 'Nilai dikembalikan ke Surveyor untuk revisi.',
+        ],
+        'submit_draft' => [
+            'from' => self::REVIEW_APPROVED, 'to' => self::STAGE_DRAFT_SUBMITTED, 'actor' => 'surveyor', 'note' => 'optional',
+            'title' => 'Draft Laporan Sudah Dibuat', 'button' => 'Draft Dibuat', 'tip' => 'Tandai draft laporan sudah dibuat — lanjut ke Admin Produksi',
+            'action' => 'draft.submitted', 'desc' => 'Menandai draft laporan sudah dibuat',
+            'flash' => 'Draft laporan dikirim ke Admin Produksi.',
+        ],
+        'confirm_draft' => [
+            'from' => self::STAGE_DRAFT_SUBMITTED, 'to' => self::STAGE_DRAFT_CONFIRMED, 'actor' => 'admin', 'note' => 'optional',
+            'title' => 'Konfirmasi Draft Laporan', 'button' => 'Konfirmasi Draft', 'tip' => 'Konfirmasi draft laporan — kirim ke Reviewer',
+            'action' => 'draft.confirmed', 'desc' => 'Mengonfirmasi draft laporan dan mengirimnya ke Reviewer',
+            'flash' => 'Draft laporan dikonfirmasi dan dikirim ke Reviewer.',
+        ],
+        'return_draft_admin' => [
+            'from' => self::STAGE_DRAFT_SUBMITTED, 'to' => self::REVIEW_APPROVED, 'actor' => 'admin', 'note' => 'required',
+            'title' => 'Kembalikan Draft ke Surveyor', 'button' => 'Ke Surveyor', 'tip' => 'Kembalikan draft laporan ke Surveyor',
+            'action' => 'draft.returned_by_admin', 'desc' => 'Mengembalikan draft laporan ke Surveyor',
+            'flash' => 'Draft laporan dikembalikan ke Surveyor.',
+        ],
+        'review_draft' => [
+            'from' => self::STAGE_DRAFT_CONFIRMED, 'to' => self::STAGE_DRAFT_REVIEWED, 'actor' => 'reviewer', 'note' => 'optional',
+            'title' => 'Draft Laporan Telah Direview', 'button' => 'Telah Direview', 'tip' => 'Tandai draft laporan telah direview — lanjut proses cetak',
+            'action' => 'draft.reviewed', 'desc' => 'Menandai draft laporan telah direview, lanjut proses cetak buku',
+            'flash' => 'Draft laporan telah direview. Lanjut proses cetak buku.',
+        ],
+        'return_draft_reviewer' => [
+            'from' => self::STAGE_DRAFT_CONFIRMED, 'to' => self::REVIEW_APPROVED, 'actor' => 'reviewer', 'note' => 'required',
+            'title' => 'Kembalikan Draft ke Surveyor', 'button' => 'Ke Surveyor', 'tip' => 'Kembalikan draft laporan ke Surveyor untuk revisi',
+            'action' => 'draft.returned_by_reviewer', 'desc' => 'Mengembalikan draft laporan ke Surveyor untuk revisi',
+            'flash' => 'Draft laporan dikembalikan ke Surveyor.',
+        ],
+        'mark_printed' => [
+            'from' => self::STAGE_DRAFT_REVIEWED, 'to' => self::STAGE_PRINTED, 'actor' => 'admin', 'note' => 'optional',
+            'title' => 'Buku Selesai Dicetak', 'button' => 'Buku Dicetak', 'tip' => 'Konfirmasi buku laporan selesai dicetak — proyek Selesai',
+            'hint' => 'SLA Laporan Final dinyatakan selesai dan status proyek berubah menjadi Selesai.',
+            'action' => 'project.book_printed', 'desc' => 'Mengonfirmasi buku laporan selesai dicetak. SLA Laporan Final selesai, proyek Selesai',
+            'flash' => 'Buku laporan selesai dicetak. Proyek berstatus Selesai.',
+        ],
+    ];
+
+    /**
+     * Skema pembayaran (2026-09-14, feedback user): sebagian klien baru
+     * bayar di tengah/akhir pengerjaan, tanpa DP di muka. Dipilih SEKALI
+     * saat proposal masih Draft/Menunggu Persetujuan (lihat
+     * ProposalController) — PAYMENT_SCHEME_LATER membuka tombol "Mulai
+     * Pekerjaan (Tanpa DP)" di kartu Aksi Tersedia (lihat
+     * ProjectController::startWorkWithoutDp()). Invoicing sesudahnya
+     * tetap fleksibel seperti biasa, tidak ada perubahan di situ.
+     */
+    public const PAYMENT_SCHEME_DP    = 'DP di Awal';
+    public const PAYMENT_SCHEME_LATER = 'Bayar Nanti';
+
+    public const PAYMENT_SCHEMES = [
+        self::PAYMENT_SCHEME_DP,
+        self::PAYMENT_SCHEME_LATER,
     ];
 
     protected $fillable = [
         'proposal_number',
+        'proposal_date',
+        'request_basis',
         'instructing_client_id',
-        'property_owner_name',
         'asset_type',
         'asset_address',
         'service_fee',
+        'fee_ppn_included',
+        'fee_breakdown',
+        'transport_cost',
+        'transport_reimbursed',
+        'client_name',
+        'client_id',
         'report_style',
+        'sla_draft_days',
+        'sla_final_days',
         'proposal_purpose',
+        'payment_scheme',
         'psak_classification',
         'financial_reporting_date',
         'is_public_company',
         'assigned_appraiser',
+        'assigned_appraiser_id',
+        'signed_by_user_id',
+        'approver_name',
+        'approver_client_id',
+        'marketing_name',
+        'bank_id',
+        'tax_invoice_number',
+        'tax_invoice_date',
+        'assignment_letter_number',
+        'assignment_letter_date',
+        'assignment_letter_on_behalf_client_id',
+        'assignment_letter_request_basis',
+        'assignment_letter_recipient_client_id',
+        'assignment_letter_barcode',
         'survey_date',
         'final_report_number',
+        'final_report_date',
+        'final_report_notes',
         'status',
+        'status_before_cancel',
+        'cancelled_at',
+        'review_status',
+        'review_submitted_at',
+        'review_submitted_by_user_id',
+        'reviewed_at',
+        'reviewed_by_user_id',
+        'review_approved_at',
+        'review_approved_by_user_id',
+        'review_rejected_at',
+        'review_rejected_by_user_id',
+        'review_rejection_note',
+        'draft_submitted_at',
+        'draft_confirmed_at',
+        'draft_reviewed_at',
+        'printed_at',
     ];
 
     protected $casts = [
         'service_fee'              => 'decimal:2',
+        'transport_cost'           => 'decimal:2',
+        'fee_ppn_included'         => 'boolean',
+        'fee_breakdown'            => 'boolean',
+        'transport_reimbursed'     => 'boolean',
+        'sla_draft_days'           => 'integer',
+        'sla_final_days'           => 'integer',
+        'proposal_date'             => 'date',
         'survey_date'               => 'date',
         'financial_reporting_date'  => 'date',
+        'tax_invoice_date'          => 'date',
+        'final_report_date'         => 'date',
+        'assignment_letter_date'    => 'date',
+        'cancelled_at'              => 'datetime',
         'is_public_company'         => 'boolean',
+        'review_submitted_at'       => 'datetime',
+        'reviewed_at'               => 'datetime',
+        'review_approved_at'        => 'datetime',
+        'review_rejected_at'        => 'datetime',
+        'draft_submitted_at'        => 'datetime',
+        'draft_confirmed_at'        => 'datetime',
+        'draft_reviewed_at'         => 'datetime',
+        'printed_at'                => 'datetime',
     ];
+
+    /** Proyek sedang dalam status Batal (data tetap ada, hanya dinonaktifkan). */
+    public function isCancelled(): bool
+    {
+        return $this->status === self::STATUS_BATAL;
+    }
+
+    /**
+     * Skema "Bayar Nanti" — boleh mulai kerja lapangan tanpa invoice/DP
+     * lebih dulu lewat ProjectController::startWorkWithoutDp().
+     */
+    public function isPaymentDeferred(): bool
+    {
+        return $this->payment_scheme === self::PAYMENT_SCHEME_LATER;
+    }
+
+    /**
+     * Proyek "aktif" = masih berjalan: belum Selesai dan tidak Batal.
+     * Dipakai Beranda & Timeline supaya definisinya satu pintu.
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNotIn('status', [self::STATUS_SELESAI, self::STATUS_BATAL]);
+    }
+
+    /**
+     * Sisa hari kalender menuju $deadline. Positif = masih ada sisa, 0 =
+     * jatuh tempo hari ini, negatif = lewat deadline. Null kalau $deadline
+     * kosong. Helper bersama untuk SLA Draft & SLA Final (rumus sama,
+     * tanggal acuan beda) supaya tidak dobel-tulis.
+     */
+    private function daysRemainingUntil(?\Carbon\Carbon $deadline): ?int
+    {
+        if (! $deadline) {
+            return null;
+        }
+
+        return (int) now()->startOfDay()->diffInDays($deadline->copy()->startOfDay(), false);
+    }
+
+    /**
+     * Ringkasan kondisi SLA untuk pewarnaan badge/bar:
+     *   none     = belum terjadwal
+     *   done     = $done true (biasanya proyek sudah Selesai)
+     *   overdue  = lewat deadline
+     *   due-soon = tersisa 0-2 hari
+     *   on-track = masih longgar
+     */
+    private function slaStateFor(?int $daysLeft, bool $done): string
+    {
+        if ($done) {
+            return 'done';
+        }
+
+        return match (true) {
+            $daysLeft === null => 'none',
+            $daysLeft < 0      => 'overdue',
+            $daysLeft <= 2     => 'due-soon',
+            default            => 'on-track',
+        };
+    }
+
+    /** Keterangan singkat sisa SLA, mis. "sisa 3 hari" / "lewat 2 hari". */
+    private function slaLabelFor(?int $daysLeft, bool $done): string
+    {
+        return match (true) {
+            $done              => 'Selesai',
+            $daysLeft === null => 'Belum terjadwal',
+            $daysLeft < 0      => 'lewat ' . abs($daysLeft) . ' hari',
+            $daysLeft === 0    => 'deadline hari ini',
+            default            => 'sisa ' . $daysLeft . ' hari',
+        };
+    }
+
+    /**
+     * Sisa hari menuju deadline Draf Laporan (estimated_completion_date).
+     * Null kalau survey_date / sla_draft_days belum diisi (belum terjadwal).
+     */
+    public function getSlaDaysRemainingAttribute(): ?int
+    {
+        return $this->daysRemainingUntil($this->estimated_completion_date);
+    }
+
+    public function getSlaStateAttribute(): string
+    {
+        return $this->slaStateFor($this->sla_days_remaining, $this->status === self::STATUS_SELESAI);
+    }
+
+    public function getSlaLabelAttribute(): string
+    {
+        return $this->slaLabelFor($this->sla_days_remaining, $this->status === self::STATUS_SELESAI);
+    }
+
+    /**
+     * Tanggal proposal untuk kop dokumen ("Jakarta, <tanggal>").
+     * Fallback ke tanggal pembuatan record bila belum diisi (data lama).
+     */
+    public function getEffectiveProposalDateAttribute(): \Carbon\Carbon
+    {
+        return $this->proposal_date ?? $this->created_at;
+    }
+
+    /**
+     * =========================================================================
+     * BIAYA JASA PENILAIAN
+     *
+     * `service_fee` = FEE jasa profesional (nilai dasar yang diinput).
+     * PPN dikenakan atas Fee DAN Transport & Akomodasi (TA) — 2026-09-15,
+     * keputusan user, menyamakan dengan pembukuan kantor. Sebelumnya TA
+     * dianggap tanpa PPN. Invoice/Kwitansi sejak awal sudah memecah PPN dari
+     * seluruh nominal, jadi aturan ini membuat proposal konsisten dengannya.
+     *
+     *  - fee_ppn_included = true  : Fee & TA yang diinput SUDAH termasuk PPN.
+     *    Nilai net = input / (1+rate); PPN = total - total / (1+rate).
+     *  - fee_ppn_included = false : PPN ditambahkan di atas (Fee + TA).
+     *  - transport_reimbursed     : TA ditanggung klien — tidak ikut ditagih,
+     *    tidak masuk total, dan proposal diberi catatan.
+     *
+     * total_fee (gross, dipakai proposal .docx + invoice/kwitansi/dashboard):
+     *   included : fee + TA
+     *   excluded : (fee + TA) × (1 + rate)
+     * =========================================================================
+     */
+    public function getFeePpnRateAttribute(): float
+    {
+        return (float) config('kjpp.ppn_rate', 0.11);
+    }
+
+    /** TA yang ikut DITAGIH (angka input). 0 bila ditanggung klien/reimburse. */
+    public function getBillableTransportAttribute(): float
+    {
+        return $this->transport_reimbursed ? 0.0 : round((float) ($this->transport_cost ?? 0), 2);
+    }
+
+    /** Nilai PPN (Rupiah) — atas Fee + TA yang ditagih. */
+    public function getFeePpnAmountAttribute(): float
+    {
+        $taxable = (float) $this->service_fee + $this->billable_transport;
+        $rate    = $this->fee_ppn_rate;
+
+        return $this->fee_ppn_included
+            ? round($taxable - $taxable / (1 + $rate), 2)   // PPN yang sudah di dalam input
+            : round($taxable * $rate, 2);                    // PPN ditambahkan di atas
+    }
+
+    /** Komponen "Fee" (jasa profesional) NET pada tabel rincian. */
+    public function getFeeProfessionalAttribute(): float
+    {
+        $base = (float) $this->service_fee;
+
+        return $this->fee_ppn_included
+            ? round($base / (1 + $this->fee_ppn_rate), 2)
+            : round($base, 2);
+    }
+
+    /** Komponen "Transport" NET pada tabel rincian (TA yang ditagih, tanpa PPN). */
+    public function getFeeTransportDisplayAttribute(): float
+    {
+        $transport = $this->billable_transport;
+
+        return $this->fee_ppn_included
+            ? round($transport / (1 + $this->fee_ppn_rate), 2)
+            : round($transport, 2);
+    }
+
+    /** Total biaya final (gross) — angka besar di proposal & dasar penagihan. */
+    public function getTotalFeeAttribute(): float
+    {
+        $taxable = (float) $this->service_fee + $this->billable_transport;
+
+        return $this->fee_ppn_included
+            ? round($taxable, 2)
+            : round($taxable * (1 + $this->fee_ppn_rate), 2);
+    }
+
+    /**
+     * "Nama Klien" untuk ditampilkan/dicetak (baris "Hal" proposal): isian
+     * manual kalau ada, kalau kosong jatuh ke nama Pemberi Tugas.
+     */
+    public function getEffectiveClientNameAttribute(): string
+    {
+        // Klien terpilih dari Database Klien (2026-09-14) -> teks lama -> Pemberi Tugas.
+        return (string) (optional($this->namedClient)->client_name
+            ?: trim((string) $this->client_name)
+            ?: optional($this->instructingClient)->client_name);
+    }
+
+    /** Surat Tugas: "Kepada Yth" (2026-09-14, feedback user). */
+    public function assignmentLetterRecipientClient()
+    {
+        return $this->belongsTo(Client::class, 'assignment_letter_recipient_client_id');
+    }
+
+    /** Penerima "Kepada Yth" di Surat Tugas — belum dipilih = Pemberi Tugas (data lama). */
+    public function getAssignmentLetterRecipientAttribute(): ?Client
+    {
+        return $this->assignmentLetterRecipientClient ?? $this->instructingClient;
+    }
+
+    /** Surat Tugas: "Penilaian Aset atas nama …" (2026-09-14, feedback user). */
+    public function assignmentLetterOnBehalfClient()
+    {
+        return $this->belongsTo(Client::class, 'assignment_letter_on_behalf_client_id');
+    }
+
+    /** Nama "atas nama" di Surat Tugas — belum dipilih = Pemberi Tugas (data lama). */
+    public function getAssignmentLetterOnBehalfNameAttribute(): string
+    {
+        return (string) (optional($this->assignmentLetterOnBehalfClient)->client_name
+            ?? optional($this->instructingClient)->client_name);
+    }
+
+    /** Dasar Permintaan di Surat Tugas — belum diisi = Dasar Permintaan di Identitas Proposal. */
+    public function getAssignmentLetterRequestBasisTextAttribute(): string
+    {
+        return trim((string) ($this->assignment_letter_request_basis ?? $this->request_basis));
+    }
+
+    /** "Nama Klien" — dipilih dari Database Klien (2026-09-14, feedback user). */
+    public function namedClient()
+    {
+        return $this->belongsTo(Client::class, 'client_id');
+    }
+
+    /**
+     * Pilihan "Telah diterima dari" di modal invoice (2026-09-14, feedback user):
+     * Pemberi Tugas, Nama Klien, lalu Pengguna Laporan — klien yang sama
+     * (mis. Pemberi Tugas sekaligus Pengguna Laporan) cukup muncul sekali.
+     *
+     * @return \Illuminate\Support\Collection<int, array{id:int, name:string, address:string, label:string}>
+     */
+    public function receivedFromOptions(): \Illuminate\Support\Collection
+    {
+        $map = [];
+        $add = function ($client, string $role) use (&$map) {
+            if (! $client) {
+                return;
+            }
+            $map[$client->id] ??= ['client' => $client, 'roles' => []];
+            $map[$client->id]['roles'][] = $role;
+        };
+
+        $add($this->instructingClient, 'Pemberi Tugas');
+        $add($this->namedClient, 'Nama Klien');
+        foreach ($this->intendedUsers as $user) {
+            $add($user, 'Pengguna Laporan');
+        }
+
+        return collect(array_values($map))->map(fn ($row) => [
+            'id'      => $row['client']->id,
+            'name'    => $row['client']->client_name,
+            'address' => (string) $row['client']->address,
+            'label'   => $row['client']->client_name . ' — ' . implode(', ', array_unique($row['roles'])),
+        ]);
+    }
 
     public function instructingClient()
     {
         return $this->belongsTo(Client::class, 'instructing_client_id');
+    }
+
+    /** "Pihak yang Menyetujui" — dipilih dari Database Klien. */
+    public function approverClient()
+    {
+        return $this->belongsTo(Client::class, 'approver_client_id');
+    }
+
+    /**
+     * Nama di kolom "Menyetujui," blok tanda tangan: klien yang dipilih, lalu
+     * isian teks lama (data sebelum field ini jadi pilihan klien), terakhir
+     * jatuh ke nama Pemberi Tugas.
+     */
+    public function getEffectiveApproverNameAttribute(): string
+    {
+        return (string) (optional($this->approverClient)->client_name
+            ?: trim((string) $this->approver_name)
+            ?: optional($this->instructingClient)->client_name);
+    }
+
+    /**
+     * User (akun sistem) yang ditugaskan sebagai penilai lapangan.
+     * Dipakai untuk filter "Proyek Saya" di dashboard — TIDAK dipakai
+     * di PDF (PDF tetap pakai kolom assigned_appraiser yang berupa teks,
+     * supaya nama tetap tercetak walau akunnya suatu saat dihapus).
+     */
+    public function assignedAppraiser()
+    {
+        return $this->belongsTo(User::class, 'assigned_appraiser_id');
+    }
+
+    /** Maksimal penilai lapangan per proyek (2026-09-15, feedback user). */
+    public const MAX_APPRAISERS = 3;
+
+    /**
+     * Semua penilai lapangan proyek (1-3 orang, tanggung jawab SETARA).
+     * assigned_appraiser_id/assigned_appraiser hanyalah ringkasan (urutan
+     * pertama & gabungan nama) — kepemilikan proyek memakai relasi ini.
+     */
+    public function appraisers()
+    {
+        return $this->belongsToMany(User::class, 'project_appraisers')
+            ->withPivot('sort_order')
+            ->withTimestamps()
+            ->orderBy('project_appraisers.sort_order');
+    }
+
+    /** Proyek yang salah satu penilai lapangannya adalah $userId. */
+    public function scopeForAppraiser($query, $userId)
+    {
+        return $query->where(function ($q) use ($userId) {
+            $q->whereHas('appraisers', fn ($a) => $a->where('users.id', $userId))
+              ->orWhere('assigned_appraiser_id', $userId);
+        });
+    }
+
+    /**
+     * User (jabatan "Penanggung Jawab") yang menandatangani proposal.
+     * Biodata-nya (nama + nomor izin MAPPI/RMK/Menkeu/OJK/Klasifikasi)
+     * mengisi blok tanda tangan .docx/PDF. Null = pakai penandatangan
+     * baku dari config('kjpp.signatory').
+     */
+    public function signedBy()
+    {
+        return $this->belongsTo(User::class, 'signed_by_user_id');
+    }
+
+    /**
+     * Daftar petugas yang dicetak di tabel "Adapun petugas kami" pada
+     * Surat Tugas — jumlah & komposisi jabatan bebas per proyek (mis. 2
+     * Penilai + 1 Reviewer, atau 1 Reviewer + 1 Penilai + 1 Pelaksana
+     * Inspeksi). Nama/Jabatan/No. MAPPI yang tercetak diambil dari
+     * biodata user masing-masing (lihat ProjectAssignmentStaff), bukan
+     * dari field terpisah di sini. Diurutkan sesuai urutan ditambahkan.
+     */
+    public function assignmentStaff()
+    {
+        return $this->hasMany(ProjectAssignmentStaff::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * Empat akun yang berperan pada alur review SLA Final (lihat konstanta
+     * REVIEW_* & accessor review_* di bawah). Semuanya belongsTo(User) —
+     * dipisah per tahap supaya jejak "siapa & kapan" jelas per aksi.
+     */
+    public function reviewSubmittedBy()
+    {
+        return $this->belongsTo(User::class, 'review_submitted_by_user_id');
+    }
+
+    public function reviewedBy()
+    {
+        return $this->belongsTo(User::class, 'reviewed_by_user_id');
+    }
+
+    public function reviewApprovedBy()
+    {
+        return $this->belongsTo(User::class, 'review_approved_by_user_id');
+    }
+
+    public function reviewRejectedBy()
+    {
+        return $this->belongsTo(User::class, 'review_rejected_by_user_id');
     }
 
     /**
@@ -81,45 +689,96 @@ class Project extends Model
             'client_id'
         )->withTimestamps();
     }
+    
+    public function valuationObjects()
+    {
+        return $this->hasMany(ProjectValuationObject::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Override teks baku proposal per-bab (Batch 3 — editor teks per-bab).
+     * Hanya bab yang diedit staf yang punya baris; sisanya pakai teks baku
+     * config/proposal_clauses.php. Dikonsumsi App\Services\ProposalDocxBuilder.
+     */
+    public function sectionTexts()
+    {
+        return $this->hasMany(ProposalSectionText::class);
+    }
+
+    /**
+     * Rekening bank yang dipilih di proposal (Batch 4 / Feature 5). Null =
+     * pakai bank ber-is_default (fallback: config('kjpp.bank_account')).
+     * Dipakai blok "Rekening Bank" proposal .docx + PDF Invoice.
+     */
+    public function bank()
+    {
+        return $this->belongsTo(Bank::class);
+    }
+
+    /** Rekening efektif untuk dokumen: pilihan proposal -> default -> null. */
+    public function effectiveBank(): ?Bank
+    {
+        return $this->bank ?? Bank::default();
+    }
 
     public function invoices()
     {
         return $this->hasMany(Invoice::class);
     }
 
-    public function dpInvoice()
-    {
-        return $this->hasOne(Invoice::class)->where('invoice_type', 'DP');
-    }
-
-    public function finalInvoice()
-    {
-        return $this->hasOne(Invoice::class)->where('invoice_type', 'Pelunasan');
-    }
-
     /**
-     * Accessor: jumlah hari SLA otomatis mengikuti report_style.
-     * Dipakai di tampilan Proposal & PDF, tidak perlu disimpan manual di DB.
+     * =========================================================================
+     * TAGIHAN & PEMBAYARAN — model FLEKSIBEL: proyek boleh punya berapa
+     * pun invoice/termin (bukan cuma "DP" + "Pelunasan"). Sistem TIDAK
+     * peduli itu termin ke berapa — cukup jumlahkan yang sudah Paid vs
+     * total_fee utk tahu sisa tagihannya berapa.
+     * =========================================================================
      */
-    public function getSlaDaysAttribute(): int
+
+    /** Total yang SUDAH dibayar (invoice berstatus Paid). */
+    public function getTotalPaidAttribute(): float
     {
-        return self::SLA_MAP[$this->report_style] ?? 7;
+        return round((float) $this->invoices->where('status', Invoice::STATUS_PAID)->sum('amount'), 2);
+    }
+
+    /** Sisa tagihan = total_fee - yang sudah Paid. Tidak pernah negatif. */
+    public function getRemainingBalanceAttribute(): float
+    {
+        return max(0, round((float) $this->total_fee - $this->total_paid, 2));
+    }
+
+    /** Lunas penuh kalau yang sudah Paid >= total_fee (toleransi Rp 1 pembulatan). */
+    public function getIsFullyPaidAttribute(): bool
+    {
+        return $this->total_paid >= ((float) $this->total_fee - 1);
     }
 
     /**
-     * Estimasi tanggal selesai kerja = survey_date + SLA hari kerja.
-     * Memakai Carbon::addWeekdays() (butuh nesbot/carbon-diff-in-weekdays
-     * yang sudah include di Carbon 2.x lewat method bawaan) sehingga
-     * Sabtu & Minggu otomatis di-skip tanpa loop manual.
-     * Mengembalikan Carbon instance null jika survey_date belum diisi.
+     * Label lengkap jenis laporan untuk ditampilkan di Blade/PDF, mis:
+     * "Long Report (Laporan Terinci / Comprehensive Style Report)".
+     */
+    public function getReportStyleLabelAttribute(): string
+    {
+        return match ($this->report_style) {
+            self::REPORT_LONG  => 'Long Report (Laporan Terinci / Comprehensive Style Report)',
+            self::REPORT_SHORT => 'Short Report (Laporan Ringkas / Short Form Report)',
+            default            => (string) $this->report_style,
+        };
+    }
+
+    /**
+     * Estimasi tanggal Draft/Resume Laporan selesai = survey_date +
+     * sla_draft_days hari kerja. Memakai Carbon::addWeekdays() sehingga
+     * Sabtu & Minggu otomatis di-skip. Null kalau survey_date atau
+     * sla_draft_days belum diisi.
      */
     public function getEstimatedCompletionDateAttribute(): ?\Carbon\Carbon
     {
-        if (!$this->survey_date) {
+        if (!$this->survey_date || !$this->sla_draft_days) {
             return null;
         }
 
-        return $this->survey_date->copy()->addWeekdays($this->sla_days);
+        return $this->survey_date->copy()->addWeekdays($this->sla_draft_days);
     }
 
     /**
@@ -131,6 +790,169 @@ class Project extends Model
     }
 
     /**
+     * =========================================================================
+     * ALUR PRODUKSI LAPORAN (2026-09-15, feedback user) — lihat WORKFLOW_STEPS
+     * & ProjectController::advanceWorkflow().
+     *
+     * SLA Draft/Resume (di atas) dihitung sejak survey_date. SLA Laporan Final
+     * dihitung sejak nilai disetujui (review_approved_at) sampai buku selesai
+     * dicetak (printed_at, proyek Selesai). Pembayaran tidak memengaruhi alur.
+     * =========================================================================
+     */
+
+    /** Proyek sudah pernah diajukan review (submitted/reviewed/approved). */
+    public function isReviewSubmitted(): bool
+    {
+        return $this->review_status !== null;
+    }
+
+    /** Nilai sudah disetujui -> SLA Laporan Final berjalan (atau sudah selesai). */
+    public function isReviewApproved(): bool
+    {
+        return in_array($this->review_status, [
+            self::REVIEW_APPROVED, self::STAGE_DRAFT_SUBMITTED, self::STAGE_DRAFT_CONFIRMED,
+            self::STAGE_DRAFT_REVIEWED, self::STAGE_PRINTED,
+        ], true);
+    }
+
+    /**
+     * Penilai lapangan, tanggal survei & Surat Tugas boleh disiapkan?
+     * (2026-09-15, feedback user) Hanya selama pekerjaan berjalan (In-Progress):
+     * DP di awal -> setelah invoice DP dibayar; Bayar Nanti -> setelah tombol
+     * "Mulai Tanpa DP" ditekan. Draft/Menunggu Klien/Selesai/Batal: terkunci.
+     */
+    public function canPrepareFieldwork(): bool
+    {
+        return $this->status === self::STATUS_IN_PROGRESS;
+    }
+
+    /** Nomor Laporan Final boleh diisi mulai draft laporan telah direview. */
+    public function isFinalReportStage(): bool
+    {
+        return in_array($this->review_status, [self::STAGE_DRAFT_REVIEWED, self::STAGE_PRINTED], true)
+            || $this->status === self::STATUS_SELESAI;
+    }
+
+    /** Apakah $user boleh bertindak sebagai "actor" langkah alur produksi. */
+    public static function userCanActAs(User $user, string $actor): bool
+    {
+        $reviewer = $user->canActAsReviewer();
+        $admin    = $user->hasPermission('proposals.manage');
+
+        return match ($actor) {
+            'surveyor'          => $user->hasPermission('survey.manage'),
+            'reviewer'          => $reviewer,
+            'admin'             => $admin,
+            'reviewer_or_admin' => $reviewer || $admin,
+            default             => false,
+        };
+    }
+
+    /** Langkah alur produksi yang bisa ditekan $user saat ini (key => definisi). */
+    public function availableWorkflowSteps(User $user): array
+    {
+        if ($this->status !== self::STATUS_IN_PROGRESS || ! $this->assigned_appraiser || ! $this->survey_date) {
+            return [];
+        }
+
+        return array_filter(
+            self::WORKFLOW_STEPS,
+            fn ($step) => $step['from'] === $this->review_status && self::userCanActAs($user, $step['actor'])
+        );
+    }
+
+    /** Tahap pekerjaan saat ini + siapa yang memegang giliran (Beranda, detail proyek). */
+    public function getStageAttribute(): array
+    {
+        $stage = fn (string $label, ?string $actor = null) => ['label' => $label, 'actor' => $actor];
+
+        return match (true) {
+            $this->status === self::STATUS_BATAL   => $stage('Dibatalkan'),
+            $this->status === self::STATUS_SELESAI => $stage('Selesai'),
+            $this->status === self::STATUS_DRAFT            => $stage('Draft proposal', 'Admin Produksi'),
+            $this->status === self::STATUS_WAITING_APPROVAL => $stage('Menunggu persetujuan klien', 'General Admin'),
+            $this->status === self::STATUS_DP_INVOICING => $stage('Menunggu pembayaran DP', 'General Admin'),
+            ! $this->assigned_appraiser || ! $this->survey_date => $stage('Menunggu jadwal survei', 'Admin Produksi'),
+            default => match ($this->review_status) {
+                self::REVIEW_SUBMITTED      => $stage('Review nilai', 'Reviewer / Admin Produksi'),
+                self::REVIEW_APPROVED       => $stage('Penyusunan draft laporan', 'Surveyor'),
+                self::STAGE_DRAFT_SUBMITTED => $stage('Konfirmasi draft laporan', 'Admin Produksi'),
+                self::STAGE_DRAFT_CONFIRMED => $stage('Review draft laporan', 'Reviewer'),
+                self::STAGE_DRAFT_REVIEWED  => $stage('Proses cetak buku', 'Admin Produksi'),
+                default                     => $stage('Survei & penilaian', 'Surveyor'),
+            },
+        };
+    }
+
+    /** Sejak kapan proyek berada di tahap saat ini (untuk "menunggu X hari"). */
+    public function getStageSinceAttribute(): ?\Carbon\Carbon
+    {
+        return match ($this->review_status) {
+            self::REVIEW_SUBMITTED      => $this->review_submitted_at,
+            self::REVIEW_APPROVED       => $this->review_rejected_at ?? $this->review_approved_at,
+            self::STAGE_DRAFT_SUBMITTED => $this->draft_submitted_at,
+            self::STAGE_DRAFT_CONFIRMED => $this->draft_confirmed_at,
+            self::STAGE_DRAFT_REVIEWED  => $this->draft_reviewed_at,
+            self::STAGE_PRINTED         => $this->printed_at,
+            default                     => $this->review_rejected_at,
+        };
+    }
+
+    /** SLA yang sedang berlaku: Final setelah nilai disetujui, selain itu Draft. */
+    public function getActiveSlaAttribute(): ?array
+    {
+        // SLA hanya berjalan selama pekerjaan berjalan (2026-09-15).
+        if ($this->status !== self::STATUS_IN_PROGRESS) {
+            return null;
+        }
+        if ($this->isReviewApproved() && $this->estimated_final_completion_date) {
+            return ['phase' => 'Final', 'text' => $this->final_sla_label, 'state' => $this->final_sla_state,
+                    'date' => $this->estimated_final_completion_date];
+        }
+        if ($this->estimated_completion_date) {
+            return ['phase' => 'Draft', 'text' => $this->sla_label, 'state' => $this->sla_state,
+                    'date' => $this->estimated_completion_date];
+        }
+
+        return null;
+    }
+
+    /**
+     * Estimasi tanggal Laporan Final selesai = review_approved_at +
+     * sla_final_days hari kerja. Null kalau belum dikonfirmasi Admin
+     * Produksi / sla_final_days belum diisi.
+     */
+    public function getEstimatedFinalCompletionDateAttribute(): ?\Carbon\Carbon
+    {
+        if (! $this->review_approved_at || ! $this->sla_final_days) {
+            return null;
+        }
+
+        return $this->review_approved_at->copy()->addWeekdays($this->sla_final_days);
+    }
+
+    public function getEstimatedFinalCompletionDateFormattedAttribute(): ?string
+    {
+        return $this->estimated_final_completion_date?->translatedFormat('d F Y');
+    }
+
+    /** Sisa hari menuju deadline Laporan Final. Null kalau belum berjalan. */
+    public function getFinalSlaDaysRemainingAttribute(): ?int
+    {
+        return $this->daysRemainingUntil($this->estimated_final_completion_date);
+    }
+
+    public function getFinalSlaStateAttribute(): string
+    {
+        return $this->slaStateFor($this->final_sla_days_remaining, $this->status === self::STATUS_SELESAI);
+    }
+
+    public function getFinalSlaLabelAttribute(): string
+    {
+        return $this->slaLabelFor($this->final_sla_days_remaining, $this->status === self::STATUS_SELESAI);
+    }
+
+    /**
      * Mapping status -> kelas warna badge Tailwind. Dipusatkan di sini
      * supaya konsisten dipakai di halaman manapun (show, index, dsb),
      * tidak ditulis ulang di setiap Blade.
@@ -138,13 +960,13 @@ class Project extends Model
     public function getStatusBadgeClassesAttribute(): string
     {
         return match ($this->status) {
-            self::STATUS_DRAFT            => 'bg-gray-100 text-gray-700 border border-gray-300',
-            self::STATUS_WAITING_APPROVAL => 'bg-blue-100 text-blue-700 border border-blue-300',
-            self::STATUS_DP_INVOICING     => 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-            self::STATUS_IN_PROGRESS      => 'bg-green-100 text-green-700 border border-green-300',
-            self::STATUS_PELUNASAN        => 'bg-orange-100 text-orange-700 border border-orange-300',
-            self::STATUS_SELESAI          => 'bg-emerald-100 text-emerald-800 border border-emerald-300',
-            default                       => 'bg-gray-100 text-gray-700 border border-gray-300',
+            self::STATUS_DRAFT            => 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
+            self::STATUS_WAITING_APPROVAL => 'bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+            self::STATUS_DP_INVOICING     => 'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
+            self::STATUS_IN_PROGRESS      => 'bg-green-100 text-green-700 border border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+            self::STATUS_SELESAI          => 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
+            self::STATUS_BATAL           => 'bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800',
+            default                       => 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
         };
     }
 
@@ -176,11 +998,6 @@ class Project extends Model
      * disajikan" (Lelang) vs "dapat diminta oleh bank" (Penjaminan Utang).
      */
     public function getLiquidationValueIsMandatoryAttribute(): bool
-    {
-        return $this->proposal_purpose === self::PURPOSE_LELANG;
-    }
-
-    public function getRequiresExposureTimeAttribute(): bool
     {
         return $this->proposal_purpose === self::PURPOSE_LELANG;
     }
@@ -231,14 +1048,4 @@ class Project extends Model
             : $this->survey_date;
     }
 
-    /**
-     * Halaman tanda tangan Lelang punya baris tambahan "Mengetahui,
-     * [Bank]" di bawah tanda tangan KJPP — Bank yang dimaksud adalah
-     * instructing_client karena di dokumen Lelang, Pemberi Tugas SELALU
-     * pihak bank.
-     */
-    public function getShowsBankAcknowledgementAttribute(): bool
-    {
-        return $this->proposal_purpose === self::PURPOSE_LELANG;
-    }
 }

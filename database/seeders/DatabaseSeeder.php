@@ -8,9 +8,15 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Urutan WAJIB: ClientSeeder dulu, karena ProjectSeeder butuh
-        // client_id (instructing_client_id & intended_users) yang valid.
+        // Urutan WAJIB:
+        // 1. RolePermissionSeeder dulu — User butuh role_id yang valid.
+        // 2. UserSeeder — supaya langsung bisa login & coba tiap role.
+        // 3. ClientSeeder — Project butuh client_id yang valid.
+        // 4. ProjectSeeder — paling akhir, bergantung ke Client.
         $this->call([
+            RolePermissionSeeder::class,
+            BankSeeder::class,
+            UserSeeder::class,
             ClientSeeder::class,
             ProjectSeeder::class,
         ]);
