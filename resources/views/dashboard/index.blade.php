@@ -41,9 +41,12 @@
          menyatu dengan latar kabut indigo. --}}
     <div class="rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="min-w-0">
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">List Project</h1>
-                <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">Seluruh proposal &amp; proyek berjalan, urut dari yang terbaru.</p>
+            <div class="flex min-w-0 items-start gap-3">
+                <span class="mt-1 h-9 w-1 shrink-0 rounded-full bg-indigo-500" aria-hidden="true"></span>
+                <div class="min-w-0">
+                    <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">List Project</h1>
+                    <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">Seluruh proposal &amp; proyek berjalan, urut dari yang terbaru.</p>
+                </div>
             </div>
             {{-- Tab "Proyek Saya" disembunyikan untuk role admin (2026-09-13,
                  feedback user) — mereka tidak ditugaskan ke lapangan. Jabatan

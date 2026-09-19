@@ -19,12 +19,25 @@
     {{-- ===================== HEADER ===================== --}}
     <div class="rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="min-w-0">
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Timeline Project</h1>
-                <p class="mt-0.5 max-w-prose text-sm text-gray-600 dark:text-gray-400">
-                    Batang = rentang SLA draf laporan (tanggal survei &rarr; target selesai).
-                    Bagian pekat = waktu berjalan, sisanya = sisa hari SLA.
-                </p>
+            <div class="flex min-w-0 items-start gap-3">
+                <span class="mt-1 h-9 w-1 shrink-0 rounded-full bg-indigo-500" aria-hidden="true"></span>
+                <div class="min-w-0">
+                    <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Timeline Project</h1>
+                    <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">Batang = SLA draf laporan; bagian pekat = waktu berjalan.</p>
+                    {{-- Legenda pindah ke dalam kartu header (2026-09-20, feedback user);
+                         sebelumnya melayang di atas latar. --}}
+                    <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-rose-500"></span> Lewat deadline <strong class="text-gray-900 dark:text-gray-100">{{ $summary['overdue'] }}</strong>
+                        </span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-amber-500"></span> Mendekati &le;2 hari <strong class="text-gray-900 dark:text-gray-100">{{ $summary['dueSoon'] }}</strong>
+                        </span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span> On-track <strong class="text-gray-900 dark:text-gray-100">{{ $summary['onTrack'] }}</strong>
+                        </span>
+                    </div>
+                </div>
             </div>
             @unless (auth()->user()->seesOfficeWide())
                 @include('partials.segmented', ['items' => [
@@ -33,19 +46,6 @@
                 ]])
             @endunless
         </div>
-    </div>
-
-    {{-- ===================== RINGKASAN + LEGENDA ===================== --}}
-    <div class="flex flex-wrap items-center gap-2 text-xs">
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-            <span class="h-2 w-2 rounded-full bg-rose-500"></span> Lewat deadline: <strong>{{ $summary['overdue'] }}</strong>
-        </span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
-            <span class="h-2 w-2 rounded-full bg-amber-500"></span> Mendekati (&le;2 hari): <strong>{{ $summary['dueSoon'] }}</strong>
-        </span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
-            <span class="h-2 w-2 rounded-full bg-emerald-500"></span> On-track: <strong>{{ $summary['onTrack'] }}</strong>
-        </span>
     </div>
 
     {{-- ===================== GANTT ===================== --}}

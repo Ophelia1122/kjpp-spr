@@ -7,11 +7,14 @@
 
     <div class="rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="min-w-0">
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">SPJ Surveyor</h1>
+            <div class="flex min-w-0 items-start gap-3">
+                <span class="mt-1 h-9 w-1 shrink-0 rounded-full bg-indigo-500" aria-hidden="true"></span>
+                <div class="min-w-0">
+                    <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">SPJ Surveyor</h1>
                 <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
                     Proyek dengan tanggal survei {{ $from->translatedFormat('d M Y') }} &ndash; {{ $to->translatedFormat('d M Y') }}
-                </p>
+                    </p>
+                </div>
             </div>
             <div class="flex items-center gap-4 text-right">
                 <div>
