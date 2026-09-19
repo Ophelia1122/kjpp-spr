@@ -89,6 +89,7 @@ class ProposalController extends Controller
             'sla_final_days'           => $validated['sla_final_days'],
             'proposal_purpose'         => $validated['proposal_purpose'],
             'payment_scheme'           => $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP,
+            'payment_terms'            => $this->parsePaymentTerms($validated['payment_terms'] ?? null),
             'psak_classification'      => $validated['psak_classification'] ?? null,
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
             'is_public_company'        => $request->boolean('is_public_company'),
@@ -190,6 +191,9 @@ class ProposalController extends Controller
         // tidak ada perubahan diam-diam lewat request yang dimanipulasi.
         if (in_array($project->status, [Project::STATUS_DRAFT, Project::STATUS_WAITING_APPROVAL], true)) {
             $updateData['payment_scheme'] = $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP;
+        }
+        if (array_key_exists('payment_terms', $validated)) {
+            $updateData['payment_terms'] = $this->parsePaymentTerms($validated['payment_terms']);
         }
 
         $project->update($updateData);
@@ -500,6 +504,19 @@ class ProposalController extends Controller
      * Validasi bersama untuk store() & update() — supaya aturan validasi
      * tidak dobel-tulis dan berisiko berbeda antara create vs edit.
      */
+    /**
+     * Ubah isian "50,50" jadi array persen. Kosong = null (ikut default skema).
+     */
+    private function parsePaymentTerms(?string $value): ?array
+    {
+        $parts = array_filter(array_map('trim', explode(',', (string) $value)), fn ($v) => $v !== '');
+        if (! $parts) {
+            return null;
+        }
+
+        return array_values(array_map(fn ($v) => (float) str_replace(',', '.', $v), $parts));
+    }
+
     private function validateProposal(Request $request, ?Project $project = null): array
     {
         return $request->validate([
@@ -559,6 +576,22 @@ class ProposalController extends Controller
             // tidak dikirim (mis. edit setelah lewat tahap itu), diabaikan
             // di store()/update() dan nilai lama dipertahankan.
             'payment_scheme'           => 'nullable|in:' . implode(',', Project::PAYMENT_SCHEMES),
+            // Termin: daftar persen dipisah koma, totalnya harus 100 (2026-09-19).
+            'payment_terms'            => ['nullable', 'string', 'max:60', function ($attr, $value, $fail) {
+                $parts = array_filter(array_map('trim', explode(',', (string) $value)), fn ($v) => $v !== '');
+                if (! $parts) {
+                    return;
+                }
+                foreach ($parts as $part) {
+                    if (! is_numeric(str_replace(',', '.', $part)) || (float) str_replace(',', '.', $part) <= 0) {
+                        $fail('Termin harus berupa angka persen dipisah koma, contoh 50,50.');
+                        return;
+                    }
+                }
+                if (round(array_sum(array_map(fn ($v) => (float) str_replace(',', '.', $v), $parts)), 2) !== 100.0) {
+                    $fail('Jumlah seluruh termin harus 100%.');
+                }
+            }],
             'psak_classification'      => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|string|max:255',
             'financial_reporting_date' => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|date',
             'is_public_company'        => 'nullable|boolean',

@@ -247,6 +247,7 @@ class Project extends Model
         'sla_final_days',
         'proposal_purpose',
         'payment_scheme',
+        'payment_terms',
         'psak_classification',
         'financial_reporting_date',
         'is_public_company',
@@ -298,6 +299,7 @@ class Project extends Model
         'sla_final_days'           => 'integer',
         'proposal_date'             => 'date',
         'survey_date'               => 'date',
+        'payment_terms'             => 'array',
         'financial_reporting_date'  => 'date',
         'tax_invoice_date'          => 'date',
         'final_report_date'         => 'date',
@@ -324,6 +326,21 @@ class Project extends Model
      * Skema "Bayar Nanti" — boleh mulai kerja lapangan tanpa invoice/DP
      * lebih dulu lewat ProjectController::startWorkWithoutDp().
      */
+    /**
+     * Persentase termin pembayaran (2026-09-19, feedback user).
+     * Default ikut skema: DP di Awal = 50/50, Bayar Nanti = 100% di akhir.
+     * Staf boleh menimpanya per proposal, misalnya 30/70.
+     */
+    public function paymentTermPercents(): array
+    {
+        $saved = array_values(array_filter((array) ($this->payment_terms ?? []), fn ($n) => (float) $n > 0));
+        if ($saved) {
+            return array_map(fn ($n) => (float) $n, $saved);
+        }
+
+        return $this->isPaymentDeferred() ? [100.0] : [50.0, 50.0];
+    }
+
     public function isPaymentDeferred(): bool
     {
         return $this->payment_scheme === self::PAYMENT_SCHEME_LATER;

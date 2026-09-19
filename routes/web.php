@@ -7,6 +7,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SurveyReportController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -69,6 +70,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:clients.manage')->post('/clients/store-ajax', [ClientController::class, 'storeAjax'])->name('clients.storeAjax');
 
     // --- Klien: manajemen data ---
+    // SPJ Surveyor — rekap survei per penilai (2026-09-19, feedback user).
+    Route::middleware('permission:survey.view')->get('/spj-surveyor', [SurveyReportController::class, 'index'])->name('spj.index');
+
     Route::middleware('permission:clients.view')->get('/clients', [ClientController::class, 'index'])->name('clients.index');
     // Detail klien + proyek yang melibatkannya (2026-09-15).
     Route::middleware('permission:clients.view')->get('/clients/{client}', [ClientController::class, 'show'])

@@ -1063,7 +1063,6 @@ class ProposalDocxBuilder
         $this->sectionTitle('Biaya Jasa Penilaian');
         $p      = $this->project;
         $total  = round($p->total_fee);          // angka final (gross), rupiah bulat
-        $termin = round($total / 2);
         $pct    = $this->ppnPct();
 
         $rp = fn ($n) => 'Rp ' . number_format((float) $n, 0, ',', '.') . ',00';
@@ -1117,8 +1116,26 @@ class ProposalDocxBuilder
         $this->closeList();
         $this->s->addText($this->cl['termin_label'], $this->fBold, ['alignment' => Jc::START, 'spaceAfter' => 20] + $ind);
         $this->listJustClosed = false;
-        $this->listNum(strtr($this->cl['termin_1'], [':rp' => $rp($termin), ':terbilang' => Terbilang::make($termin)]), Jc::START);
-        $this->listNum(strtr($this->cl['termin_2'], [':rp' => $rp($total - $termin), ':terbilang' => Terbilang::make($total - $termin)]), Jc::START);
+        // Termin mengikuti persentase proposal (2026-09-19, feedback user):
+        // DP di Awal default 50/50, Bayar Nanti default 100%, dan staf boleh
+        // menimpanya. Sisa pembulatan jatuh ke termin terakhir supaya jumlah
+        // seluruh termin persis sama dengan total biaya.
+        $percents = $p->paymentTermPercents();
+        $last     = count($percents) - 1;
+        $sisa     = $total;
+
+        foreach ($percents as $i => $pctTerm) {
+            $nominal = $i === $last ? $sisa : round($total * $pctTerm / 100);
+            $sisa   -= $nominal;
+
+            $key = $last === 0 ? 'termin_item_last' : ($i === 0 ? 'termin_item_first' : ($i === $last ? 'termin_item_last' : 'termin_item_mid'));
+            $this->listNum(strtr($this->cl[$key], [
+                ':pct'        => rtrim(rtrim(number_format($pctTerm, 2, ',', '.'), '0'), ','),
+                ':pct_words'  => Terbilang::words((int) round($pctTerm)),
+                ':rp'         => $rp($nominal),
+                ':terbilang'  => Terbilang::make($nominal),
+            ]), Jc::START);
+        }
 
         // Rekening Bank & NPWP dalam 2 kolom: kiri = rekening (bisa 1–2),
         // kanan = NPWP (baku, dari config). Titik-dua dirapikan via kvTable.

@@ -210,7 +210,7 @@
         </div>
 
         <dl id="infoProjectBody" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-            <div class="sm:col-span-2">
+            <div>
                 <dt class="text-gray-500 dark:text-gray-400">Nama Klien</dt>
                 <dd class="font-medium text-gray-900 dark:text-gray-100">
                     {{ $project->effective_client_name }}
@@ -222,7 +222,7 @@
                     <dd class="text-gray-600 text-xs mt-0.5 whitespace-pre-line dark:text-gray-400">{{ $project->namedClient->address ?: '(alamat belum diisi pada data klien)' }}</dd>
                 @endif
             </div>
-            <div class="sm:col-span-2">
+            <div>
                 <dt class="text-gray-500 dark:text-gray-400">Pemberi Tugas</dt>
                 <dd class="font-medium text-gray-900 dark:text-gray-100">
                     {{-- Label jenis klien (Korporat/Perorangan/Perbankan) tidak ditampilkan,
@@ -265,7 +265,7 @@
                 </div>
             @endif
 
-            <div class="sm:col-span-2">
+            <div>
                 <dt class="text-gray-500 dark:text-gray-400">Jenis Laporan</dt>
                 <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->report_style_label }}</dd>
                 <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">
@@ -274,22 +274,6 @@
                     &nbsp;·&nbsp;
                     SLA Laporan Final:
                     <span class="font-medium text-gray-700 dark:text-gray-300">{{ $project->sla_final_days ? $project->sla_final_days . ' hari kerja' : '—' }}</span>
-                </dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-gray-400">Biaya Jasa</dt>
-                <dd class="font-medium text-gray-900 dark:text-gray-100">Rp {{ number_format($project->total_fee, 0, ',', '.') }}</dd>
-                <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">
-                    Fee Rp {{ number_format($project->fee_professional, 0, ',', '.') }}
-                    + PPN Rp {{ number_format($project->fee_ppn_amount, 0, ',', '.') }}
-                    @if (($project->transport_cost ?? 0) > 0)
-                        + Transport Rp {{ number_format($project->fee_transport_display, 0, ',', '.') }}
-                    @endif
-                    · {{ $project->fee_ppn_included ? 'sudah termasuk PPN' : 'PPN ditambahkan atas Fee & transport' }}
-                    {{-- Skema pembayaran (2026-09-15, feedback user). --}}
-                    · <b class="font-semibold text-gray-700 dark:text-gray-300">{{ $project->payment_scheme ?: \App\Models\Project::PAYMENT_SCHEME_DP }}</b>
-                    @if ($project->transport_reimbursed) · transport &amp; akomodasi ditanggung klien (reimburse) @endif
-                    @if ($project->fee_breakdown) · ditampilkan sebagai rincian @endif
                 </dd>
             </div>
             <div>
@@ -309,14 +293,6 @@
                 @endif
             </div>
             <div>
-                <dt class="text-gray-500 dark:text-gray-400">Pihak yang Menyetujui</dt>
-                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->effective_approver_name }}</dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-gray-400">Marketing</dt>
-                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->marketing_name ?: '—' }}</dd>
-            </div>
-            <div>
                 <dt class="text-gray-500 dark:text-gray-400">Rekening Pembayaran</dt>
                 @if ($project->bank)
                     <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->bank->bank_name }}{{ $project->bank->branch ? ' (' . $project->bank->branch . ')' : '' }} — {{ $project->bank->account_number }}</dd>
@@ -331,6 +307,30 @@
                     <dd class="font-medium text-gray-900 dark:text-gray-100">{{ config('kjpp.bank_account.bank_name') }} — {{ config('kjpp.bank_account.account_number') }}</dd>
                     <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">dari config (belum ada master rekening)</dd>
                 @endif
+            </div>
+            <div>
+                <dt class="text-gray-500 dark:text-gray-400">Biaya Jasa</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100">Rp {{ number_format($project->total_fee, 0, ',', '.') }}</dd>
+                <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">
+                    Fee Rp {{ number_format($project->fee_professional, 0, ',', '.') }}
+                    + PPN Rp {{ number_format($project->fee_ppn_amount, 0, ',', '.') }}
+                    @if (($project->transport_cost ?? 0) > 0)
+                        + Transport Rp {{ number_format($project->fee_transport_display, 0, ',', '.') }}
+                    @endif
+                    · {{ $project->fee_ppn_included ? 'sudah termasuk PPN' : 'PPN ditambahkan atas Fee & transport' }}
+                    {{-- Skema pembayaran (2026-09-15, feedback user). --}}
+                    · <b class="font-semibold text-gray-700 dark:text-gray-300">{{ $project->payment_scheme ?: \App\Models\Project::PAYMENT_SCHEME_DP }}</b>
+                    @if ($project->transport_reimbursed) · transport &amp; akomodasi ditanggung klien (reimburse) @endif
+                    @if ($project->fee_breakdown) · ditampilkan sebagai rincian @endif
+                </dd>
+            </div>
+            <div>
+                <dt class="text-gray-500 dark:text-gray-400">Pihak yang Menyetujui</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->effective_approver_name }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500 dark:text-gray-400">Marketing</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->marketing_name ?: '—' }}</dd>
             </div>
         </dl>
 
