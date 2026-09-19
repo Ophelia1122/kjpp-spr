@@ -46,8 +46,9 @@
     {{-- min-w diturunkan 1180 -> 1040px (2026-09-13): nomor proposal kini
          diringkas, sehingga tabel muat di layar laptop tanpa geser samping. --}}
     {{-- Font dinaikkan 11 -> 12px (2026-09-13, feedback user, uji coba). --}}
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
-            <p class="text-xs font-semibold text-gray-700 dark:text-gray-200" id="resultsCount">{{ $projects->total() }} proyek ditemukan</p>
+        <div class="flex flex-wrap items-center justify-end gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+            {{-- Jumlah hasil tampil di caption header; nilai ini dipakai live search. --}}
+            <span id="resultsCount" hidden>{{ $projects->total() }}</span>
             <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                 <span>Tampilkan</span>
                 @foreach ([15, 25] as $size)
@@ -195,8 +196,7 @@
      Tabelnya butuh lebar ~980px; di layar sempit lebih enak dibaca sebagai
      kartu daripada digeser ke samping terus (2026-09-14, feedback user). --}}
 <div class="lg:hidden space-y-3">
-    <div class="flex items-center justify-between gap-2 px-1 text-xs text-gray-500 dark:text-gray-400">
-        <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $projects->total() }} proyek ditemukan</span>
+    <div class="flex items-center justify-end gap-2 px-1 text-xs text-gray-500 dark:text-gray-400">
         <span class="flex items-center gap-1.5">
             Tampilkan
             @foreach ([15, 25] as $size)

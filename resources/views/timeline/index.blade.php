@@ -17,36 +17,26 @@
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
-    <div class="rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex min-w-0 items-start gap-3">
-                <span class="mt-1 h-9 w-1 shrink-0 rounded-full bg-indigo-500" aria-hidden="true"></span>
-                <div class="min-w-0">
-                    <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Timeline Project</h1>
-                    <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">Batang = SLA draf laporan; bagian pekat = waktu berjalan.</p>
-                    {{-- Legenda pindah ke dalam kartu header (2026-09-20, feedback user);
-                         sebelumnya melayang di atas latar. --}}
-                    <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
-                        <span class="inline-flex items-center gap-1.5">
-                            <span class="h-2 w-2 rounded-full bg-rose-500"></span> Lewat deadline <strong class="text-gray-900 dark:text-gray-100">{{ $summary['overdue'] }}</strong>
-                        </span>
-                        <span class="inline-flex items-center gap-1.5">
-                            <span class="h-2 w-2 rounded-full bg-amber-500"></span> Mendekati &le;2 hari <strong class="text-gray-900 dark:text-gray-100">{{ $summary['dueSoon'] }}</strong>
-                        </span>
-                        <span class="inline-flex items-center gap-1.5">
-                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span> On-track <strong class="text-gray-900 dark:text-gray-100">{{ $summary['onTrack'] }}</strong>
-                        </span>
-                    </div>
-                </div>
-            </div>
-            @unless (auth()->user()->seesOfficeWide())
-                @include('partials.segmented', ['items' => [
-                    ['url' => route('timeline', ['mine' => 0]), 'label' => 'Semua Proyek', 'active' => ! $mine, 'icon' => 'M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z'],
-                    ['url' => route('timeline', ['mine' => 1]), 'label' => 'Proyek Saya', 'active' => (bool) $mine, 'icon' => 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z'],
-                ]])
-            @endunless
-        </div>
-    </div>
+    {{-- Caption cukup legenda warna (2026-09-20, feedback user). --}}
+    @php
+        // Legenda warna SLA sebagai caption header (2026-09-20, feedback user).
+        $dot = fn ($color, $label, $n) => '<span class="inline-flex items-center gap-1.5">'
+            . '<span class="inline-block h-2 w-2 rounded-full ' . $color . '"></span> ' . $label
+            . ' <strong class="text-gray-900 dark:text-gray-100">' . $n . '</strong></span>';
+        $legend = '<span class="inline-flex flex-wrap items-center gap-x-4 gap-y-1">'
+            . $dot('bg-rose-500', 'Lewat deadline', $summary['overdue'])
+            . $dot('bg-amber-500', 'Mendekati &le;2 hari', $summary['dueSoon'])
+            . $dot('bg-emerald-500', 'On-track', $summary['onTrack'])
+            . '</span>';
+    @endphp
+    <x-page-header title="Timeline Project" :subtitle="$legend">
+        @unless (auth()->user()->seesOfficeWide())
+            @include('partials.segmented', ['items' => [
+                ['url' => route('timeline', ['mine' => 0]), 'label' => 'Semua Proyek', 'active' => ! $mine, 'icon' => 'M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z'],
+                ['url' => route('timeline', ['mine' => 1]), 'label' => 'Proyek Saya', 'active' => (bool) $mine, 'icon' => 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z'],
+            ]])
+        @endunless
+    </x-page-header>
 
     {{-- ===================== GANTT ===================== --}}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 overflow-x-auto lift dark:bg-gray-800 dark:border-gray-700">

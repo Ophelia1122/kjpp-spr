@@ -4,18 +4,15 @@
 
 @section('content')
 <div class="max-w-lg mx-auto py-8">
-    <div class="flex items-center justify-between mb-2">
-        <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Bot WhatsApp</h1>
+    <x-page-header class="mb-6" title="Bot WhatsApp" subtitle='Mengirim notifikasi ke grup WhatsApp kantor saat proyek <b>diajukan review</b> (mention Reviewer) dan saat
+        <b>dikembalikan ke Surveyor</b> (mention Surveyor). Nomor yang di-mention diambil dari Nomor WhatsApp di data pengguna.'>
         @if ($configured)
             <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">Aktif</span>
         @else
             <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">Nonaktif</span>
         @endif
-    </div>
-    <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
-        Mengirim notifikasi ke grup WhatsApp kantor saat proyek <b>diajukan review</b> (mention Reviewer) dan saat
-        <b>dikembalikan ke Surveyor</b> (mention Surveyor). Nomor yang di-mention diambil dari Nomor WhatsApp di data pengguna.
-    </p>
+    </x-page-header>
+
 
     <form action="{{ route('settings.whatsapp.update') }}" method="POST" class="space-y-4 bg-white rounded-lg border border-gray-200 shadow-sm p-6 dark:bg-gray-800 dark:border-gray-700">
         @csrf

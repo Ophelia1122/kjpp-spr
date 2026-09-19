@@ -5,10 +5,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
-    <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Log Aktivitas</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $logs->total() }} aktivitas tercatat</p>
-    </div>
+    <x-page-header title="Log Aktivitas" subtitle="{{ $logs->total() }} aktivitas tercatat" />
 
     {{-- Filter langsung diterapkan saat diubah, tanpa tombol (seragam, 2026-09-15). --}}
     <form id="auditFilter" method="GET" action="{{ route('audit.index') }}" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 flex flex-wrap gap-3 items-end dark:bg-gray-800 dark:border-gray-700">

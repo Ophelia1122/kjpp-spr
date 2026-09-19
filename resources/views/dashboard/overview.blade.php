@@ -31,20 +31,8 @@
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
-    <div class="flex items-end justify-between flex-wrap gap-3">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Ringkasan Project</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Ringkasan monitoring proyek &middot; {{ now()->translatedFormat('d F Y') }}</p>
-        </div>
-        {{-- Tombol "Buka Dashboard Project" dihapus (2026-09-15, feedback
-             user) — List Project sudah selalu ada di sidebar. --}}
-    </div>
-
-    @if ($totalProposals === 0)
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-10 text-center text-gray-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
-            Belum ada proposal. Widget monitoring akan muncul setelah proposal pertama dibuat.
-        </div>
-    @else
+    <x-page-header title="Ringkasan Project"
+        subtitle="Ringkasan monitoring proyek &middot; {{ now()->translatedFormat('d F Y') }}" />
 
     {{-- ===================== KARTU ANGKA ===================== --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -29,8 +29,9 @@
         </div>
     </div>
 
+    {{-- Kartu filter selebar isinya saja & rata kanan (2026-09-20, feedback user). --}}
     <form method="GET" action="{{ route('spj.index') }}"
-          class="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          class="ml-auto flex w-fit max-w-full flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div>
             <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Dari tanggal</label>
             <input type="date" name="from" lang="id" value="{{ $from->toDateString() }}"

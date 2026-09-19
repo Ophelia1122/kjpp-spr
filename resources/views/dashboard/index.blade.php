@@ -37,30 +37,19 @@
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
-    {{-- Kartu putih (2026-09-19, feedback user): judul & caption sebelumnya
-         menyatu dengan latar kabut indigo. --}}
-    <div class="rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex min-w-0 items-start gap-3">
-                <span class="mt-1 h-9 w-1 shrink-0 rounded-full bg-indigo-500" aria-hidden="true"></span>
-                <div class="min-w-0">
-                    <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">List Project</h1>
-                    <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">Seluruh proposal &amp; proyek berjalan, urut dari yang terbaru.</p>
-                </div>
-            </div>
-            {{-- Tab "Proyek Saya" disembunyikan untuk role admin (2026-09-13,
-                 feedback user) — mereka tidak ditugaskan ke lapangan. Jabatan
-                 Reviewer tetap melihatnya (lihat User::seesOfficeWide). --}}
-            @unless (auth()->user()->seesOfficeWide())
-                @include('partials.segmented', ['items' => [
-                    ['url' => route('dashboard', array_merge(request()->except(['mine', 'page']), ['mine' => 0])),
-                     'label' => 'Semua Proyek', 'active' => ! $mine, 'icon' => 'M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z'],
-                    ['url' => route('dashboard', array_merge(request()->except(['mine', 'page']), ['mine' => 1])),
-                     'label' => 'Proyek Saya', 'active' => (bool) $mine, 'icon' => 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z'],
-                ]])
-            @endunless
-        </div>
-    </div>
+    {{-- Jumlah hasil ikut caption (2026-09-20, feedback user); angkanya
+         diperbarui live-search lewat #headerCount. --}}
+    <x-page-header title="List Project"
+        subtitle='Seluruh <span id="headerCount" class="font-semibold text-gray-800 dark:text-gray-200">{{ $projects->total() }}</span> proyek ditemukan, urut dari yang terbaru.'>
+        @unless (auth()->user()->seesOfficeWide())
+            @include('partials.segmented', ['items' => [
+                ['url' => route('dashboard', array_merge(request()->except(['mine', 'page']), ['mine' => 0])),
+                 'label' => 'Semua Proyek', 'active' => ! $mine, 'icon' => 'M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z'],
+                ['url' => route('dashboard', array_merge(request()->except(['mine', 'page']), ['mine' => 1])),
+                 'label' => 'Proyek Saya', 'active' => (bool) $mine, 'icon' => 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z'],
+            ]])
+        @endunless
+    </x-page-header>
 
     {{-- ===================== FILTER & PENCARIAN ===================== --}}
     <form id="searchForm" method="GET" action="{{ route('dashboard') }}"
@@ -282,6 +271,13 @@
 @push('scripts')
     <script>
         initLiveSearch({ form: '#searchForm', results: '#searchResults' });
+
+        // Angka di caption header ikut hasil pencarian (2026-09-20).
+        new MutationObserver(function () {
+            var src = document.getElementById('resultsCount');
+            var dst = document.getElementById('headerCount');
+            if (src && dst) dst.textContent = src.textContent.trim();
+        }).observe(document.getElementById('searchResults'), { childList: true, subtree: true });
 
         // ---------- Modal Export Excel ----------
         function openExportModal() {

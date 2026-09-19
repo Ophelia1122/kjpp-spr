@@ -16,18 +16,14 @@
     {{-- ===================== HEADER + FILTER PERIODE =====================
          Periode memuat ulang halaman penuh (bukan live search) karena kartu
          ringkasan juga ikut berubah (2026-09-13). --}}
-    <div class="flex items-end justify-between flex-wrap gap-3">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard Pembayaran</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Rekap Invoice/DP &amp; Kwitansi lintas proyek &middot; Periode: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $periodLabel }}</span></p>
-        </div>
-        {{-- Filter periode di kotak putih berbingkai + input bertepi jelas supaya
-             tidak menyatu dengan latar halaman (2026-09-14, feedback user). --}}
-        @php
-            $dateInput = 'rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100';
-        @endphp
-        <form method="GET" action="{{ route('dashboard.pembayaran') }}"
-              class="flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    {{-- Header + filter periode dalam satu kartu (2026-09-20, feedback user). --}}
+    @php
+        $dateInput = 'rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100';
+    @endphp
+    <x-page-header title="Dashboard Pembayaran"
+        subtitle='Rekap Invoice/DP &amp; Kwitansi lintas proyek &middot; Periode: <span class="font-medium text-gray-800 dark:text-gray-200">{{ $periodLabel }}</span>'>
+    <form method="GET" action="{{ route('dashboard.pembayaran') }}"
+              class="flex flex-wrap items-end gap-2">
             <input type="hidden" name="q" value="{{ request('q') }}">
             <input type="hidden" name="status" value="{{ request('status') }}">
             <input type="hidden" name="sort" value="{{ request('sort') }}">
@@ -57,8 +53,8 @@
                     </svg>
                 </button>
             @endcan
-        </form>
-    </div>
+    </form>
+    </x-page-header>
 
     {{-- ===================== KARTU ANGKA =====================
          Alur uang dari kiri ke kanan: Nilai Kontrak → Ditagih → Diterima,

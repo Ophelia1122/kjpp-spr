@@ -5,16 +5,16 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
-    <div class="flex items-center justify-between flex-wrap gap-3">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Kelola Rekening Bank</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ $banks->count() }} rekening terdaftar — dipilih per proposal, dipakai di Invoice &amp; blok "Rekening Bank" proposal.</p>
-        </div>
+    <x-page-header title="Kelola Rekening Bank"
+        subtitle='{{ $banks->count() }} rekening terdaftar — dipilih per proposal, dipakai di Invoice &amp; blok "Rekening Bank" proposal.'>
         <a href="{{ route('banks.create') }}"
-           class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
-            + Tambah Rekening
+           class="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+            </svg>
+            Tambah Rekening
         </a>
-    </div>
+    </x-page-header>
 
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto dark:bg-gray-800 dark:border-gray-700">
         @include('partials.scroll-hint')

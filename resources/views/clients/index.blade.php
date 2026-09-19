@@ -5,10 +5,8 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
-    <div class="flex items-center justify-between gap-3">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Database Klien</h1>
+    <x-page-header title="Database Klien" subtitle="Data klien yang dipakai sebagai pemberi tugas, pengguna laporan &amp; pihak menyetujui.">
         @can('clients.manage')
-            {{-- Ukuran disamakan dengan "Proposal Baru" di List Project (2026-09-19). --}}
             <a href="{{ route('clients.create') }}" title="Tambah klien baru"
                class="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -17,7 +15,7 @@
                 Klien Baru
             </a>
         @endcan
-    </div>
+    </x-page-header>
 
     <form id="searchForm" method="GET" action="{{ route('clients.index') }}" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 flex gap-3 dark:bg-gray-800 dark:border-gray-700">
         <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau alamat klien..."
