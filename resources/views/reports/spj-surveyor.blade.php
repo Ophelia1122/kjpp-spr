@@ -16,7 +16,7 @@
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-4 text-right">
+            <div class="flex items-center gap-4">
                 <div>
                     <p class="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Proyek</p>
                     <p class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ $totalProjects }}</p>
@@ -31,18 +31,18 @@
 
     {{-- Kartu filter selebar isinya saja & rata kanan (2026-09-20, feedback user). --}}
     <form method="GET" action="{{ route('spj.index') }}"
-          class="ml-auto flex w-fit max-w-full flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div>
+          class="flex w-full flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:ml-auto sm:w-fit sm:max-w-full dark:border-gray-700 dark:bg-gray-800">
+        <div class="min-w-[150px] flex-1 sm:flex-none">
             <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Dari tanggal</label>
             <input type="date" name="from" lang="id" value="{{ $from->toDateString() }}"
-                   class="rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600">
+                   class="w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600">
         </div>
-        <div>
+        <div class="min-w-[150px] flex-1 sm:flex-none">
             <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Sampai tanggal</label>
             <input type="date" name="to" lang="id" value="{{ $to->toDateString() }}"
-                   class="rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600">
+                   class="w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600">
         </div>
-        <div class="min-w-[200px]">
+        <div class="w-full min-w-[200px] sm:w-auto">
             <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Penilai</label>
             <select name="appraiser" class="w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600">
                 <option value="">Semua penilai</option>
@@ -75,7 +75,9 @@
                 </p>
             </div>
 
-            <div class="overflow-x-auto">
+            {{-- Tabel untuk layar lebar; layar sempit memakai kartu di bawah
+                 (2026-09-20, feedback user) supaya tak perlu digeser samping. --}}
+            <div class="hidden overflow-x-auto lg:block">
                 <table class="w-full min-w-[720px] text-[12px]">
                     <thead class="border-b border-gray-200 bg-gray-50 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
                         <tr>
@@ -108,6 +110,38 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+
+            {{-- ---------- KARTU (HP & TABLET) ---------- --}}
+            <div class="divide-y divide-gray-100 lg:hidden dark:divide-gray-700">
+                @foreach ($row['projects'] as $p)
+                    <div class="p-4">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <a href="{{ route('proposals.show', $p) }}" title="{{ $p->proposal_number }}"
+                                   class="text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">{{ $p->proposal_number_short }}</a>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $p->effective_client_name ?: '-' }}</p>
+                            </div>
+                            <span class="shrink-0 whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                {{ $p->survey_date->translatedFormat('d M Y') }}
+                            </span>
+                        </div>
+
+                        <p class="mt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                            Objek disurvei ({{ $p->valuationObjects->count() }})
+                        </p>
+                        <div class="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                            @forelse ($p->valuationObjects as $obj)
+                                <div class="rounded-md bg-gray-50 px-2 py-1.5 dark:bg-gray-900">
+                                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $loop->iteration }}. {{ $obj->short_label }}</span>
+                                    <span class="block text-gray-500 dark:text-gray-400">{{ $obj->location ?: '(lokasi belum diisi)' }}</span>
+                                </div>
+                            @empty
+                                <span class="text-gray-400 dark:text-gray-500">(belum ada objek)</span>
+                            @endforelse
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
     @empty
