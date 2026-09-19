@@ -5,21 +5,23 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
-    <div class="flex flex-wrap items-end justify-between gap-3">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">SPJ Surveyor</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Proyek dengan tanggal survei {{ $from->translatedFormat('d M Y') }} &ndash; {{ $to->translatedFormat('d M Y') }}
-            </p>
-        </div>
-        <div class="flex items-center gap-3 text-right">
-            <div>
-                <p class="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Proyek</p>
-                <p class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ $totalProjects }}</p>
+    <div class="rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">SPJ Surveyor</h1>
+                <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
+                    Proyek dengan tanggal survei {{ $from->translatedFormat('d M Y') }} &ndash; {{ $to->translatedFormat('d M Y') }}
+                </p>
             </div>
-            <div class="border-l border-gray-200 pl-3 dark:border-gray-700">
-                <p class="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Objek</p>
-                <p class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ $totalObjects }}</p>
+            <div class="flex items-center gap-4 text-right">
+                <div>
+                    <p class="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Proyek</p>
+                    <p class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ $totalProjects }}</p>
+                </div>
+                <div class="border-l border-gray-200 pl-4 dark:border-gray-700">
+                    <p class="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Objek</p>
+                    <p class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ $totalObjects }}</p>
+                </div>
             </div>
         </div>
     </div>

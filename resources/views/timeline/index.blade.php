@@ -17,30 +17,22 @@
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
-    <div class="flex items-end justify-between flex-wrap gap-3">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Timeline Project</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Batang = rentang SLA draf laporan (tanggal survei &rarr; target selesai).
-                Bagian pekat = waktu berjalan, sisanya = sisa hari SLA.
-            </p>
-            {{-- Filter cakupan — pola yang sama dengan List Project, termasuk
-                 disembunyikan untuk role admin (2026-09-14, lihat User::seesOfficeWide). --}}
-            @unless (auth()->user()->seesOfficeWide())
-            <div class="flex gap-2 mt-2">
-                <a href="{{ route('timeline', ['mine' => 0]) }}"
-                   class="px-3 py-1 text-xs rounded-full font-medium {{ ! $mine ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }} dark:text-gray-400">
-                    🗂 Semua Proyek
-                </a>
-                <a href="{{ route('timeline', ['mine' => 1]) }}"
-                   class="px-3 py-1 text-xs rounded-full font-medium {{ $mine ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }} dark:text-gray-400">
-                    👤 Proyek Saya
-                </a>
+    <div class="rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-0">
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Timeline Project</h1>
+                <p class="mt-0.5 max-w-prose text-sm text-gray-600 dark:text-gray-400">
+                    Batang = rentang SLA draf laporan (tanggal survei &rarr; target selesai).
+                    Bagian pekat = waktu berjalan, sisanya = sisa hari SLA.
+                </p>
             </div>
+            @unless (auth()->user()->seesOfficeWide())
+                @include('partials.segmented', ['items' => [
+                    ['url' => route('timeline', ['mine' => 0]), 'label' => 'Semua Proyek', 'active' => ! $mine, 'icon' => 'M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z'],
+                    ['url' => route('timeline', ['mine' => 1]), 'label' => 'Proyek Saya', 'active' => (bool) $mine, 'icon' => 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z'],
+                ]])
             @endunless
         </div>
-        {{-- Tombol "Dashboard Project" dihapus (2026-09-15, feedback user) —
-             List Project sudah selalu ada di sidebar. --}}
     </div>
 
     {{-- ===================== RINGKASAN + LEGENDA ===================== --}}
