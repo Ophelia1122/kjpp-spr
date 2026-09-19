@@ -8,29 +8,21 @@ use Illuminate\Http\Request;
 
 /**
  * TIMELINE PROJECT — Gantt mini: SAMPAI 3 segmen berurutan per proyek di
- * sumbu tanggal yang sama, mengikuti alur 2 SLA (lihat Project::REVIEW_*):
+ * sumbu tanggal yang sama, mengikuti alur produksi (Project::WORKFLOW_STEPS):
  *
  *   1. Segmen DRAFT   : survey_date -> estimated_completion_date (target
- *      SLA Draf/Resume). Aktif & dua-tona (elapsed/sisa) selama surveyor
- *      BELUM submit untuk review; begitu review_status terisi (submitted/
- *      reviewed/approved) segmen ini "dikunci" jadi abu-abu solid (riwayat
- *      — surveyor sudah selesai, tak perlu terus mengejar target lagi).
- *   2. Segmen GAP      : review_submitted_at -> review_approved_at (atau
- *      hari ini kalau belum dikonfirmasi) — waktu proses Reviewer & Admin
- *      Produksi yang TIDAK terhitung SLA manapun. Digambar netral (abu-abu
- *      putus-putus) supaya jelas itu bukan bug/lubang, cuma proses berjalan.
- *      Hanya muncul kalau proyek pernah disubmit (review_status !== null).
- *   3. Segmen FINAL    : review_approved_at -> estimated_final_completion_date
- *      (target SLA Laporan Final). Muncul HANYA setelah Admin Produksi
- *      konfirmasi (review_approved_at terisi) — sebelum itu tanggalnya
- *      memang belum bisa diketahui. Pakai dua-tona + perpanjangan putus-
- *      putus kalau lewat deadline, identik dengan segmen Draft.
+ *      SLA Draf/Resume). Aktif & dua-tona selama Surveyor BELUM submit review
+ *      nilai; begitu review_status terisi segmen ini "dikunci" abu-abu.
+ *   2. Segmen GAP      : review_submitted_at -> review_approved_at (atau hari
+ *      ini bila nilai belum disetujui) — waktu review nilai, tidak terhitung
+ *      SLA mana pun. Digambar netral (abu-abu putus-putus).
+ *   3. Segmen FINAL    : review_approved_at (nilai disetujui) ->
+ *      estimated_final_completion_date (target SLA Laporan Final). Dua-tona +
+ *      perpanjangan putus-putus bila lewat deadline.
  *
- * Kalau proyek DIKEMBALIKAN ke Surveyor (rejectReviewToSurveyor), review_
- * status di-null-kan lagi -> segmen Draft otomatis kembali AKTIF (bukan
- * abu-abu) walau review_submitted_at lama masih tersimpan, jadi deteksi
- * "draft selesai" pakai Project::isReviewSubmitted() (cek review_status),
- * BUKAN cek review_submitted_at langsung.
+ * Bila nilai DIKEMBALIKAN ke Surveyor, review_status kembali null -> segmen
+ * Draft aktif lagi; karena itu deteksi "draft selesai" memakai
+ * Project::isReviewSubmitted(), BUKAN review_submitted_at.
  *
  * "state"/"label" pada tiap $bar merepresentasikan FASE YANG SEDANG AKTIF
  * (Final kalau sudah confirmed, kalau belum ya Draft) — dipakai utk warna
@@ -40,7 +32,7 @@ use Illuminate\Http\Request;
  * Proyek yang belum punya survey_date / sla_draft_days tidak bisa diplot,
  * jadi ditampilkan terpisah sebagai "Belum Terjadwal" — TAPI hanya yang
  * berstatus In-Progress / Scheduled (tahap dimana survei sudah semestinya
- * dijadwalkan). Draft/DP Invoicing/Pelunasan belum relevan buat timeline
+ * dijadwalkan). Draft/Menunggu Klien/DP Invoicing belum relevan buat timeline
  * SLA jadi tidak perlu memenuhi daftar ini.
  *
  * Proyek "Selesai" SENGAJA tidak ikut diplot sama sekali (pakai
@@ -78,8 +70,8 @@ class TimelineController extends Controller
             $mine = false;
         }
 
-        $scoped = fn () => Project::with('instructingClient')
-            ->when($mine, fn ($q) => $q->where('assigned_appraiser_id', auth()->id()));
+        $scoped = fn () => Project::with('instructingClient', 'namedClient')
+            ->when($mine, fn ($q) => $q->forAppraiser(auth()->id()));
 
         $plottable = $scoped()
             ->active()

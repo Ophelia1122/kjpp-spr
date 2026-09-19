@@ -58,6 +58,10 @@
 
     {{-- ===================== GANTT ===================== --}}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 overflow-x-auto lift dark:bg-gray-800 dark:border-gray-700">
+        <p class="-mt-2 mb-2 flex items-center justify-end gap-1 text-xs text-gray-400 md:hidden dark:text-gray-500">
+            Geser ke samping
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
+        </p>
         @if ($bars->isEmpty())
             <p class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                 @if ($mine)
@@ -102,7 +106,8 @@
                                     {{ $bar['project']->proposal_number_short }}
                                 </a>
                                 <span class="block text-[11px] text-gray-500 truncate dark:text-gray-400">
-                                    {{ $bar['project']->instructingClient->client_name ?? '-' }}
+                                    {{ $bar['project']->effective_client_name ?: '-' }}<br>
+                                    <b>{{ $bar['project']->assigned_appraiser ?: '-' }}</b>
                                 </span>
                             </div>
 
@@ -206,7 +211,7 @@
                    class="flex items-center justify-between gap-4 px-5 py-3 border-t border-gray-100 hover:bg-blue-50/40 dark:hover:bg-blue-900/20 dark:border-gray-800">
                     <span class="min-w-0">
                         <span class="block text-sm font-medium text-gray-900 truncate dark:text-gray-100" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</span>
-                        <span class="block text-xs text-gray-500 truncate dark:text-gray-400">{{ $p->instructingClient->client_name ?? '-' }}</span>
+                        <span class="block text-xs text-gray-500 truncate dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</span>
                     </span>
                     <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
                         {{ $p->status_short }}

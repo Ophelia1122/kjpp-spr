@@ -18,7 +18,9 @@
     <form id="searchForm" method="GET" action="{{ route('users.index') }}" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 flex gap-3 dark:bg-gray-800 dark:border-gray-700">
         <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau email..."
                class="flex-1 rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
-        <button type="submit" class="px-4 py-2 text-sm rounded-md bg-gray-800 text-white hover:bg-gray-900">Cari</button>
+        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+        <input type="hidden" name="sort" value="{{ request('sort') }}">
+        <input type="hidden" name="dir" value="{{ request('dir') }}">
     </form>
 
     <div id="searchResults" class="space-y-6">

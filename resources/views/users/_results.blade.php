@@ -1,15 +1,19 @@
-    <p class="text-sm text-gray-500 dark:text-gray-400">{{ $users->total() }} pengguna terdaftar</p>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $users->total() }} pengguna terdaftar</p>
+        @include('partials.per-page', ['paginator' => $users])
+    </div>
 
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto dark:bg-gray-800 dark:border-gray-700">
+        @include('partials.scroll-hint')
         <table class="min-w-[640px] w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
-                    <th class="px-4 py-3">Nama</th>
+                    <th class="px-4 py-3">@include('partials.sort-link', ['key' => 'name', 'label' => 'Nama'])</th>
                     <th class="px-4 py-3">Email</th>
                     {{-- Keterangan singkat supaya Role vs Jabatan tidak tertukar (2026-09-14). --}}
-                    <th class="px-4 py-3">Role <span class="block text-[10px] font-normal normal-case tracking-normal text-gray-400 dark:text-gray-500">menu yang bisa dibuka</span></th>
+                    <th class="px-4 py-3">@include('partials.sort-link', ['key' => 'role', 'label' => 'Role']) <span class="block text-[10px] font-normal normal-case tracking-normal text-gray-400 dark:text-gray-500">menu yang bisa dibuka</span></th>
                     <th class="px-4 py-3">Jabatan <span class="block text-[10px] font-normal normal-case tracking-normal text-gray-400 dark:text-gray-500">tugas &amp; tanda tangan</span></th>
-                    <th class="px-4 py-3 whitespace-nowrap">Login Terakhir</th>
+                    <th class="px-4 py-3 whitespace-nowrap">@include('partials.sort-link', ['key' => 'last_login_at', 'label' => 'Login Terakhir'])</th>
                     <th class="px-4 py-3 text-center">Status</th>
                     <th class="px-4 py-3 text-center w-24">Aksi</th>
                 </tr>
@@ -47,7 +51,7 @@
                                 </a>
                                 @if ($user->id !== auth()->id())
                                     <form action="{{ route('users.destroy', $user) }}" method="POST"
-                                          onsubmit="return confirm('Yakin hapus pengguna {{ $user->name }}?')">
+                                          data-confirm="Yakin hapus pengguna {{ $user->name }}?">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" title="Hapus pengguna"

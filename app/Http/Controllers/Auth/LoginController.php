@@ -43,7 +43,9 @@ class LoginController extends Controller
         // SELALU ke Beranda (2026-09-15, feedback user). Sebelumnya pakai
         // intended(), yang mengembalikan user ke halaman terakhir yang sempat
         // dibuka sebelum sesi habis — sering List Project, bukan Beranda.
-        return redirect()->route('home');
+        // Flash "welcome" memunculkan layar sambutan gelap sekali saja di
+        // halaman berikutnya (2026-09-15, feedback user) — lihat layouts/app.
+        return redirect()->route('home')->with('welcome', true);
     }
 
     public function logout(Request $request)

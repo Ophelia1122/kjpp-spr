@@ -26,6 +26,8 @@ class Invoice extends Model
         'status',
         'payment_date',
         'term_description',
+        'received_from_client_id',
+        'on_behalf_of_client_id',
     ];
 
     protected $casts = [
@@ -51,6 +53,34 @@ class Invoice extends Model
     public function getAgeDaysAttribute(): int
     {
         return (int) $this->display_date->copy()->startOfDay()->diffInDays(now()->startOfDay());
+    }
+
+    /** "Telah diterima dari" yang dipilih di modal invoice (2026-09-14). */
+    public function receivedFromClient()
+    {
+        return $this->belongsTo(Client::class, 'received_from_client_id');
+    }
+
+    /**
+     * Pihak yang dicetak sebagai "Telah diterima Dari" (Invoice) & "Sudah
+     * terima dari" (Kwitansi). Invoice lama tanpa pilihan -> Pemberi Tugas.
+     */
+    public function getPayerAttribute(): ?Client
+    {
+        return $this->receivedFromClient ?? optional($this->project)->instructingClient;
+    }
+
+    /** Pihak pada kalimat "Biaya Jasa Penilaian Properti an. …" (2026-09-14). */
+    public function onBehalfOfClient()
+    {
+        return $this->belongsTo(Client::class, 'on_behalf_of_client_id');
+    }
+
+    /** Nama untuk "an. …" — invoice lama tanpa pilihan -> Pemberi Tugas. */
+    public function getOnBehalfNameAttribute(): string
+    {
+        return (string) (optional($this->onBehalfOfClient)->client_name
+            ?? optional(optional($this->project)->instructingClient)->client_name);
     }
 
     public function project()

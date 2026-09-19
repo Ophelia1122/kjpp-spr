@@ -33,8 +33,6 @@
         .amount-box { font-size: 18px; font-weight: bold; }
         .checkbox { display: inline-block; width: 8px; height: 8px; border: 1px solid #000; margin-right: 3px; vertical-align: middle; }
 
-        .footer { margin-top: 8px; text-align: center; font-size: 7px; line-height: 1.3; color: #333; }
-
         /* Garis potong. Glyph gunting butuh DejaVu Sans (bawaan dompdf) —
            Helvetica tidak punya karakter itu. */
         .cut { position: relative; height: 26px; }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 55px 55px 75px 55px; }
+        @page { margin: 36px 55px 75px 55px; }
         body { font-family: 'Helvetica', Arial, sans-serif; font-size: 10.5px; color: #000; line-height: 1.5; }
         table { width: 100%; border-collapse: collapse; }
         .text-right { text-align: right; }
@@ -15,7 +15,7 @@
 
         {{-- ===== Kop surat ===== --}}
         .lh-logo { text-align: center; margin-bottom: 6px; }
-        .lh-logo img { width: 380px; }
+        .lh-logo img { width: 475px; }
         hr.thick { border: none; border-top: 2.5px solid #000; margin: 4px 0 16px; }
 
         .doc-title { text-align: center; font-size: 19px; font-weight: bold; margin: 4px 0 16px; }
@@ -34,24 +34,32 @@
     <div class="lh-logo">
         <img src="{{ public_path('images/logo-spr-long.png') }}" alt="KJPP Sugianto Prasodjo dan Rekan">
     </div>
+    <br>
     <hr class="thick">
 
     <div class="doc-title">I&nbsp;N&nbsp;V&nbsp;O&nbsp;I&nbsp;C&nbsp;E</div>
 
-    {{-- ===================== KOTAK INVOICE ===================== --}}
-    <table class="frame">
+    {{-- Nomor invoice di kotak berbingkai sendiri, di luar tabel utama
+         (2026-09-14, feedback user). --}}
+    <table style="margin-bottom: 8px;">
         <tr>
-            <td class="b-bottom" style="width: 60%;">
-                Telah diterima Dari
-            </td>
-            <td class="b-bottom text-right no-box">
+            <td>&nbsp;</td>
+            <td style="width: 1%; white-space: nowrap; border: 1.3px solid #000; padding: 6px 12px;">
                 No. <strong>{{ $invoice->invoice_number }}</strong>
             </td>
         </tr>
+    </table>
+
+    {{-- ===================== KOTAK INVOICE ===================== --}}
+    <table class="frame">
+        {{-- "Telah diterima Dari" satu kolom dengan Pemberi Tugas di bawahnya
+             (2026-09-14, feedback user). --}}
         <tr>
             <td class="b-bottom" colspan="2">
-                <strong>{{ $project->instructingClient->client_name }}</strong><br>
-                <span class="small">{{ $project->instructingClient->address }}</span>
+                Telah diterima Dari<br>
+                {{-- Pihak "Telah diterima dari" yang dipilih per invoice (2026-09-14). --}}
+                <strong>{{ optional($invoice->payer)->client_name }}</strong><br>
+                <span class="small">{{ optional($invoice->payer)->address }}</span>
             </td>
         </tr>
 
@@ -67,22 +75,36 @@
                 <br><br>
                 <span class="bold italic">
                     Pembayaran {{ $invoice->term_description ?: 'Biaya Jasa Penilaian' }}
-                    Biaya Jasa Penilaian Properti an. {{ $project->instructingClient->client_name }}
+                    Biaya Jasa Penilaian Properti an. {{ $invoice->on_behalf_name }}
                     yang berlokasi di :
                 </span>
                 <br>
-                @foreach ($project->valuationObjects as $object)
-                    <br>{{ $loop->iteration }}. {{ $object->location }}<br>
-                @endforeach
-                <br>
-                Sesuai dengan Surat Penawaran No. {{ $project->proposal_number }}<br>
-                Tanggal {{ $project->effective_proposal_date->translatedFormat('d F Y') }}
-                <br><br>
-                Ppn {{ rtrim(rtrim(number_format($invoice->ppn_rate * 100, 2, ',', ''), '0'), ',') }}%
+                {{-- Lebih dari 5 lokasi: satu kalimat rujukan ke proposal. Uraian
+                     lokasi 10px, sedikit lebih kecil dari isi (2026-09-14, feedback user). --}}
+                @if ($project->invoice_location_summary)
+                    <br><span style="font-size: 10px;">{{ $project->invoice_location_summary }}</span>
+                @else
+                    @foreach ($project->valuationObjects as $object)
+                        <br><span style="font-size: 10px;">{{ $loop->iteration }}. {{ $object->location }}</span>
+                    @endforeach
+                    <br><br>
+                    Sesuai dengan Surat Penawaran No. {{ $project->proposal_number }}<br>
+                    Tanggal {{ $project->effective_proposal_date->translatedFormat('d F Y') }}
+                @endif
             </td>
             <td class="text-right no-box">
+                <br><br><br>
                 Rp&nbsp;&nbsp;&nbsp;{{ number_format($invoice->net_amount, 0, ',', '.') }}
-                <br><br><br><br><br><br><br><br><br><br>
+            </td>
+        </tr>
+
+        {{-- Label "Ppn" & nominalnya satu baris tabel supaya selalu sejajar,
+             berapa pun panjang uraian di atasnya (2026-09-14, feedback user). --}}
+        <tr>
+            <td style="width: 60%; padding-top: 10px;">
+                Ppn {{ rtrim(rtrim(number_format($invoice->ppn_rate * 100, 2, ',', ''), '0'), ',') }}%
+            </td>
+            <td class="text-right no-box" style="padding-top: 10px;">
                 Rp&nbsp;&nbsp;&nbsp;{{ number_format($invoice->ppn_amount, 0, ',', '.') }}
             </td>
         </tr>
@@ -117,7 +139,8 @@
             </td>
             <td style="width: 45%; vertical-align: top; text-align: center;">
                 Jakarta, {{ $invoice->displayDate->translatedFormat('d F Y') }}
-                <br><br><br><br><br>
+                {{-- Ruang tanda tangan +2 baris (2026-09-14, feedback user). --}}
+                <br><br><br><br><br><br>
                 {{-- Penandatangan = Penanggung Jawab proyek (akun user), data
                      baku config hanya cadangan (2026-09-15, feedback user). --}}
                 <strong>{{ optional($project->signedBy)->name ?: config('kjpp.signatory.name') }}, MAPPI (Cert.)</strong><br>

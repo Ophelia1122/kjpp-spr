@@ -21,6 +21,9 @@
     $oldApprover = old('approver_client_id')
         ? \App\Models\Client::find(old('approver_client_id'))
         : null;
+    $oldNamed = old('client_id')
+        ? \App\Models\Client::find(old('client_id'))
+        : null;
     $clientBoot = fn ($c) => $c ? ['id' => $c->id, 'client_name' => $c->client_name, 'address' => (string) $c->address] : null;
     $oldObjects = array_values((array) old('objects', []));
     $oldPsak = (array) old('psak_classification', []);
@@ -124,17 +127,35 @@
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Pihak Terkait</h2>
 
             <div class="space-y-4">
-                {{-- Nama Klien (debitur/pemilik aset) — terpisah dari Pemberi Tugas
-                     (2026-09-15, feedback user). --}}
-                <div>
+                {{-- Nama Klien (debitur/pemilik aset) — dipilih dari Database Klien,
+                     sama seperti Pemberi Tugas & Pengguna Laporan (2026-09-14, feedback user). --}}
+                <div class="relative">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Nama Klien
-                        @include('partials.icon-info', ['tip' => 'Pihak yang asetnya dinilai / debitur (mis. PT pemilik aset), bisa berbeda dari Pemberi Tugas — contoh: Pemberi Tugas bank untuk penjaminan utang atau lelang. Dipakai di baris "Hal" proposal. Kosongkan = otomatis pakai nama Pemberi Tugas.'])
+                        @include('partials.icon-info', ['tip' => 'Pihak yang asetnya dinilai / debitur (mis. PT pemilik aset), bisa berbeda dari Pemberi Tugas — contoh: Pemberi Tugas bank untuk penjaminan utang atau lelang. Dipakai di baris "Hal" proposal & List Project. Kosongkan = otomatis pakai Pemberi Tugas.'])
                     </label>
-                    <input type="text" name="client_name" value="{{ old('client_name') }}"
-                           placeholder="Kosongkan = otomatis pakai nama Pemberi Tugas"
-                           class="mt-1 w-full rounded-md shadow-sm {{ $errCls('client_name') }}">
-                    @error('client_name')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    <div class="flex gap-2 mt-1">
+                        <div class="relative flex-1">
+                            <input type="text" id="named_client_search" autocomplete="off"
+                                   placeholder="Kosongkan = otomatis Pemberi Tugas. Ketik untuk mencari..."
+                                   class="w-full rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 {{ $errCls('client_id') }}">
+                            <div id="named_client_results"
+                                 class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"></div>
+                        </div>
+                        <button type="button" onclick="openClientModal('named')" title="Tambah klien baru"
+                                class="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
+                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                            </svg>
+                            Klien Baru
+                        </button>
+                    </div>
+                    <div id="named_client_chip" style="display:none" class="mt-2 items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
+                        <div class="min-w-0"><div id="named_client_chip_text" class="font-medium"></div><div id="named_client_chip_address" class="text-xs opacity-80 whitespace-pre-line"></div></div>
+                        <button type="button" onclick="clearNamedClient()" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">&times;</button>
+                    </div>
+                    <input type="hidden" name="client_id" id="named_client_id" value="">
+                    @error('client_id')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Pemberi Tugas (AJAX combobox) --}}
@@ -590,6 +611,7 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Alamat</label>
                 <textarea id="modal_client_address" rows="2" class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600"></textarea>
             </div>
+            @include('partials.client-duplicate-check')
         </div>
         <div class="mt-5 flex justify-end gap-2">
             <button type="button" onclick="closeClientModal()"
@@ -607,6 +629,7 @@
         instructing: @json($clientBoot($oldInstructing)),
         intended: @json($oldIntended->map($clientBoot)->values()),
         approver: @json($clientBoot($oldApprover)),
+        named: @json($clientBoot($oldNamed)),
     };
 </script>
 
@@ -867,6 +890,33 @@
         ).join('');
     }
 
+    // ---------- Nama Klien (opsional, satu klien dari Database Klien) ----------
+    const namedInput = document.getElementById('named_client_search');
+    const namedResults = document.getElementById('named_client_results');
+
+    namedInput.addEventListener('input', debounce(async (e) => {
+        const keyword = e.target.value.trim();
+        if (keyword.length < 2) { namedResults.classList.add('hidden'); return; }
+        renderResults(namedResults, await searchClients(keyword), setNamedClient);
+    }));
+
+    function setNamedClient(client) {
+        document.getElementById('named_client_id').value = client.id;
+        showClientChip('named_client', client);
+        namedInput.value = '';
+        namedInput.classList.add('hidden');
+    }
+
+    function clearNamedClient() {
+        document.getElementById('named_client_id').value = '';
+        document.getElementById('named_client_chip').style.display = 'none';
+        namedInput.classList.remove('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!namedInput.contains(e.target) && !namedResults.contains(e.target)) namedResults.classList.add('hidden');
+    });
+
     // ---------- Pihak yang Menyetujui (opsional, satu klien) ----------
     const approverInput = document.getElementById('approver_client_search');
     const approverResults = document.getElementById('approver_client_results');
@@ -911,6 +961,7 @@
     function openClientModal(target) {
         activeModalTarget = target;
         document.getElementById('clientModalErrors').classList.add('hidden');
+        if (window.clientDupReset) clientDupReset();
         document.getElementById('clientModal').classList.remove('hidden');
         document.getElementById('clientModal').classList.add('flex');
     }
@@ -920,12 +971,24 @@
         document.getElementById('clientModal').classList.remove('flex');
     }
 
+    // Pasang klien (baru dibuat ATAU dipilih dari peringatan klien kembar) ke kolom asal modal.
+    function applyModalClient(client) {
+        if (activeModalTarget === 'instructing') setInstructingClient(client);
+        else if (activeModalTarget === 'approver') setApproverClient(client);
+        else if (activeModalTarget === 'named') setNamedClient(client);
+        else addIntendedUser(client);
+    }
+
     async function submitNewClient() {
         const payload = {
             client_name: document.getElementById('modal_client_name').value,
             client_type: document.getElementById('modal_client_type').value,
             address: document.getElementById('modal_client_address').value,
         };
+        if ((window.clientDupMatches || []).some((c) => c.same_address) && !window.clientDupDismissed
+            && !confirm('Klien dengan nama & alamat yang sama sudah ada. Tetap buat klien baru?')) {
+            return;
+        }
 
         try {
             const response = await fetch(storeAjaxUrl, {
@@ -949,13 +1012,7 @@
 
             const client = { id: data.client.id, client_name: data.client.client_name, address: data.client.address || '' };
 
-            if (activeModalTarget === 'instructing') {
-                setInstructingClient(client);
-            } else if (activeModalTarget === 'approver') {
-                setApproverClient(client);
-            } else {
-                addIntendedUser(client);
-            }
+            applyModalClient(client);
 
             closeClientModal();
         } catch (err) {
@@ -1104,6 +1161,7 @@
         if (boot.instructing) setInstructingClient(boot.instructing);
         (boot.intended || []).forEach(addIntendedUser);
         if (boot.approver) setApproverClient(boot.approver);
+        if (boot.named) setNamedClient(boot.named);
 
         toggleLkFields();
         recalcFeeTotal();

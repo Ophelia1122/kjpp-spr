@@ -17,6 +17,7 @@
     </div>
 
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto dark:bg-gray-800 dark:border-gray-700">
+        @include('partials.scroll-hint')
         <table class="min-w-[640px] w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
@@ -57,7 +58,7 @@
                                 </a>
                                 @if ($bank->projects_count === 0)
                                     <form action="{{ route('banks.destroy', $bank) }}" method="POST"
-                                          onsubmit="return confirm('Hapus rekening &quot;{{ $bank->bank_name }} - {{ $bank->account_number }}&quot;?')">
+                                          data-confirm="Hapus rekening &quot;{{ $bank->bank_name }} - {{ $bank->account_number }}&quot;?">
                                         @csrf @method('DELETE')
                                         <button type="submit" title="Hapus rekening"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-red-100 hover:text-red-700 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-300">

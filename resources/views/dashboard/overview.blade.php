@@ -10,7 +10,6 @@
         Project::STATUS_WAITING_APPROVAL => '#3b82f6',
         Project::STATUS_DP_INVOICING     => '#eab308',
         Project::STATUS_IN_PROGRESS      => '#22c55e',
-        Project::STATUS_PELUNASAN        => '#f97316',
         Project::STATUS_SELESAI          => '#059669',
         Project::STATUS_BATAL            => '#f43f5e',
     ];
@@ -110,7 +109,7 @@
          angka uang cukup di Dashboard Pembayaran supaya tidak dobel. --}}
 
     {{-- ===================== STATUS BARS + DONUT PIPELINE ===================== --}}
-    <div class="grid gap-6 lg:grid-cols-2">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 *:min-w-0">
 
         {{-- Proyek per Status --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
@@ -133,7 +132,8 @@
         {{-- Komposisi Pipeline (donut) --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-400">Komposisi Pipeline</h2>
-            <div class="flex items-center gap-6">
+            {{-- flex-wrap di HP supaya donut + legenda tidak melebar (2026-09-15). --}}
+            <div class="flex flex-wrap items-center gap-6 sm:flex-nowrap">
                 <div class="relative h-40 w-40 shrink-0">
                     <svg viewBox="0 0 36 36" class="h-40 w-40 -rotate-90">
                         <circle cx="18" cy="18" r="15.9155" fill="none" class="stroke-gray-100 dark:stroke-gray-700" stroke-width="3.8"/>
@@ -175,7 +175,7 @@
     </div>
 
     {{-- ===================== MONTHLY + PURPOSE ===================== --}}
-    <div class="grid gap-6 lg:grid-cols-2">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 *:min-w-0">
 
         {{-- Proposal masuk per bulan --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
@@ -214,6 +214,7 @@
 
     {{-- ===================== PROYEK TERBARU ===================== --}}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto lift dark:bg-gray-800 dark:border-gray-700">
+        @include('partials.scroll-hint')
         <div class="px-6 pt-6">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Proyek Terbaru</h2>
         </div>
@@ -221,7 +222,7 @@
             <thead class="bg-gray-50 border-y border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
                     <th class="px-6 py-3">No. Proposal</th>
-                    <th class="px-6 py-3">Pemberi Tugas</th>
+                    <th class="px-6 py-3">Nama Klien</th>
                     <th class="px-6 py-3">Jenis</th>
                     <th class="px-6 py-3 w-52">Status</th>
                     <th class="px-6 py-3 whitespace-nowrap">Dibuat</th>
@@ -233,7 +234,7 @@
                         <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">
                             <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
                         </td>
-                        <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->instructingClient->client_name ?? '-' }}</td>
+                        <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</td>
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $p->proposal_purpose }}</td>
                         <td class="px-6 py-3">
                             <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
@@ -250,6 +251,7 @@
     {{-- ===================== PERLU DITINDAKLANJUTI (DRAFT & DP INVOICING) ===================== --}}
     @if ($followUps->isNotEmpty())
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto lift dark:bg-gray-800 dark:border-gray-700">
+        @include('partials.scroll-hint')
             <div class="px-6 pt-6">
                 <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Perlu Ditindaklanjuti</h2>
                 <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
@@ -260,7 +262,7 @@
                 <thead class="bg-gray-50 border-y border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                     <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
                         <th class="px-6 py-3">No. Proposal</th>
-                        <th class="px-6 py-3">Pemberi Tugas</th>
+                        <th class="px-6 py-3">Nama Klien</th>
                         <th class="px-6 py-3 w-52">Status</th>
                         <th class="px-6 py-3 text-right whitespace-nowrap">Reminder</th>
                     </tr>
@@ -279,7 +281,7 @@
                             <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">
                                 <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
                             </td>
-                            <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->instructingClient->client_name ?? '-' }}</td>
+                            <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</td>
                             <td class="px-6 py-3">
                                 <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
                                     {{ $p->status_short }}

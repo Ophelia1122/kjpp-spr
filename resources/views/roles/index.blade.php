@@ -23,6 +23,7 @@
              bisa digeser horizontal di layar HP, bukan bikin seluruh
              halaman melebar dan berantakan. --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto dark:bg-gray-800 dark:border-gray-700">
+            @include('partials.scroll-hint')
             <table class="min-w-[720px] w-full text-sm">
                 <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                     <tr>

@@ -26,7 +26,8 @@
                     <tr>
                         <td>Tgl.<br>Date</td>
                         <td>:</td>
-                        <td class="bold">{{ optional($invoice->payment_date)->translatedFormat('d F Y') }}</td>
+                        {{-- Skema Bayar Nanti boleh cetak sebelum dibayar -> pakai tanggal invoice. --}}
+                        <td class="bold">{{ ($invoice->payment_date ?? $invoice->display_date)->translatedFormat('d F Y') }}</td>
                     </tr>
                 </table>
             </td>
@@ -40,7 +41,8 @@
                 <span class="underline">Sudah terima dari</span><br>
                 <span class="italic small">Received Form</span>
             </td>
-            <td>{{ $project->instructingClient->client_name }}</td>
+            {{-- Pihak "Telah diterima dari" yang dipilih per invoice (2026-09-14). --}}
+            <td>{{ optional($invoice->payer)->client_name }}</td>
         </tr>
         <tr class="dots-row">
             <td class="label-col">
@@ -56,7 +58,7 @@
             </td>
             <td>
                 Pembayaran {{ $invoice->term_description ?: 'Biaya Jasa Penilaian' }}
-                Biaya Jasa Penilaian Properti an. {{ $project->instructingClient->client_name }}
+                Biaya Jasa Penilaian Properti an. {{ $invoice->on_behalf_name }}
             </td>
         </tr>
         <tr class="dots-row">
@@ -81,8 +83,16 @@
     <table class="frame">
         <tr>
             <td style="width: 45%;">
-                <span class="small">Rp.</span>
-                <span class="amount-box">{{ number_format($invoice->amount, 0, ',', '.') }},00</span>
+                {{-- Nominal meniru kwitansi baku kantor: "Rp." besar + angka di atas
+                     bidang arsiran bergaris tebal (2026-09-14, feedback user). --}}
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="width: 46px; padding: 0 4px 0 0; font-size: 22px; font-weight: bold; vertical-align: bottom;">Rp.</td>
+                        <td style="padding: 3px 6px; font-size: 19px; font-weight: bold; text-align: center; border-top: 3px solid #000; border-bottom: 1.5px solid #000; background-image: url('{{ public_path('images/hatch.png') }}');">
+                            {{ number_format($invoice->amount, 0, ',', '.') }},00
+                        </td>
+                    </tr>
+                </table>
                 <table class="small" style="margin-top: 5px;">
                     <tr>
                         <td style="width: 55px;"><span class="checkbox"></span> CASH</td>
@@ -106,7 +116,9 @@
                     @endif
                     <tr><td>Account</td><td>: {{ $bank_info['account_number'] ?? '-' }}</td></tr>
                 </table>
-                <div class="text-right" style="margin-top: 26px;">
+                {{-- Ruang tanda tangan lebar; nama & jabatan rata tengah di antara
+                     awal "Mohon ditransfer" dan bingkai kanan (2026-09-14, feedback user). --}}
+                <div class="text-center" style="margin-top: 104px;">
                     {{-- Penandatangan = Penanggung Jawab proyek (akun user), data
                          baku config hanya cadangan (2026-09-15, feedback user). --}}
                     <strong>{{ optional($project->signedBy)->name ?: config('kjpp.signatory.name') }}, MAPPI (Cert.)</strong><br>
@@ -114,18 +126,15 @@
                 </div>
             </td>
         </tr>
+        {{-- Catatan keabsahan di DALAM tabel, rata tengah, 2 baris dimulai
+             bahasa Inggris (2026-09-14, feedback user). --}}
+        <tr>
+            <td colspan="2" class="small text-center" style="border-top: 1px dotted #999; padding-top: 3px; padding-bottom: 3px;">
+                <span class="italic">This receipt will be cleared after Bilyet Giro/Cheque can be cleared</span><br>
+                Kwitansi ini baru dianggap sah, setelah pembayaran dengan Bilyet Giro/Cek tsb, dapat diuangkan
+            </td>
+        </tr>
     </table>
 
-    <p class="small text-center" style="margin: 4px 0 0;">
-        Kwitansi ini baru dianggap sah, setelah pembayaran dengan Bilyet Giro/Cek tsb, dapat diuangkan &middot;
-        <span class="italic">This receipt will be cleared after Bilyet Giro/Cheque can be cleared</span>
-    </p>
-
-    {{-- Footer alamat kantor — ikut di dalam tiap lembar (bukan position:fixed
-         per halaman) supaya kedua potongan tetap punya kop alamat sendiri. --}}
-    <div class="footer">
-        @foreach (config('kjpp.footer.lines') as $line)
-            {{ $line }}<br>
-        @endforeach
-    </div>
+    {{-- Footer alamat kantor dibuang (2026-09-14, feedback user). --}}
 </div>

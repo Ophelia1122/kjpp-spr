@@ -9,19 +9,24 @@
         <a href="{{ route('users.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">&larr; Kembali</a>
     </div>
 
-    <form action="{{ route('users.store') }}" method="POST" class="space-y-4 bg-white rounded-lg border border-gray-200 shadow-sm p-6 dark:bg-gray-800 dark:border-gray-700">
+    <form action="{{ route('users.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4 bg-white rounded-lg border border-gray-200 shadow-sm p-6 dark:bg-gray-800 dark:border-gray-700">
         @csrf
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Lengkap</label>
-            <input type="text" name="name" value="{{ old('name') }}" required
-                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-        </div>
-
-        <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-            <input type="email" name="email" value="{{ old('email') }}" required
-                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+        {{-- Foto (ikon edit/trash) di samping Nama & Email (2026-09-15). --}}
+        <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+            @include('partials.avatar-upload', ['avatarUser' => null])
+            <div class="w-full min-w-0 flex-1 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Lengkap</label>
+                    <input type="text" name="name" value="{{ old('name') }}" required
+                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                    <input type="email" name="email" value="{{ old('email') }}" required
+                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                </div>
+            </div>
         </div>
 
         <div>
@@ -30,6 +35,8 @@
                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
             <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Minimal 8 karakter.</p>
         </div>
+
+        @include('partials.whatsapp-field', ['waValue' => null])
 
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>

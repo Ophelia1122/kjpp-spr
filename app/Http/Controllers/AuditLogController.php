@@ -20,6 +20,8 @@ class AuditLogController extends Controller
             $query->where('action', 'like', '%' . $request->action . '%');
         }
 
+        // Zona waktu aplikasi & database sudah WIB (2026-09-14), jadi tanggal
+        // filter langsung dibandingkan tanpa konversi.
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -28,7 +30,8 @@ class AuditLogController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $logs = $query->paginate(30)->withQueryString();
+        $perPage = in_array((int) $request->get('per_page'), [15, 25], true) ? (int) $request->get('per_page') : 25;
+        $logs = $query->paginate($perPage)->withQueryString();
         $users = User::orderBy('name')->get(['id', 'name']);
 
         return view('audit.index', compact('logs', 'users'));

@@ -1,6 +1,8 @@
 *.log
 .DS_Store
-/.claude
+/.claude/*
+# Skill Caveman dipakai bersama tim (19 Sep 2026) — ikut repo.
+!/.claude/skills/
 /public/fonts
 /storage/fonts
 /storage/app/tmp
@@ -29,3 +31,7 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+# Dump database & backup — jangan pernah masuk repo.
+/*.sql
+/*.sql.gz
+/backups/

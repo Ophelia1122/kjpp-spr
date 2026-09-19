@@ -133,6 +133,12 @@ sudo docker exec -it kjpp-db sh -c 'exec mysql -u root -p"$MYSQL_ROOT_PASSWORD" 
 
 ### D4. Build & nyalakan aplikasi
 
+> **Jangan deploy lewat menu Docker → Project di UGOS untuk pertama kali.** Menu itu hanya *mengunduh*
+> image dari internet, padahal image `kjpp-app` harus **dibangun** dari `Dockerfile` di folder proyek.
+> Gejalanya di Deployment Log: `pull access denied for kjpp-app, repository does not exist` dan
+> `require 'docker login'`. Bangun lewat SSH dengan perintah di bawah (ada `--build`). Setelah image
+> `kjpp-app:latest` ada di NAS, menu Project boleh dipakai untuk start/stop.
+
 ```bash
 sudo docker compose up -d --build app
 ```
@@ -209,6 +215,8 @@ Simpan salinan backup **di luar NAS** (laptop / cloud). Folder penting untuk dic
 
 | Gejala | Penyebab & solusi |
 |---|---|
+| MySQL: `Database is uninitialized and password option is not specified` | File `.env` tidak terbaca compose. Cek `ls -la | grep env` (jangan sampai bernama `.env.txt`), pastikan `.env` sejajar `docker-compose.yml` dan `DB_ROOT_PASSWORD`/`DB_PASSWORD` terisi. Perbaiki, lalu `sudo docker compose down` → hapus folder `mysql-data` yang masih kosong → `sudo docker compose up -d db` |
+| `pull access denied for kjpp-app` / diminta `docker login` | Image aplikasi **dibangun sendiri**, tidak ada di Docker Hub. Deploy lewat menu Project sebelum image dibuat → lewat SSH: `sudo docker compose build app` lalu `sudo docker compose up -d` |
 | Build gagal saat `apt-get` / `composer` | Koneksi internet NAS terputus → ulangi `docker compose up -d --build app` |
 | Container `app` langsung berhenti, log: `.env tidak ditemukan` | File `.env` belum dibuat di folder proyek (Bagian C1) |
 | `SQLSTATE[HY000] [2002]` / tidak bisa konek DB | `kjpp-db` belum healthy, atau `DB_PASSWORD` di `.env` berubah setelah database dibuat. Password MySQL hanya diset saat `mysql-data` pertama kali dibuat |
@@ -237,5 +245,7 @@ Simpan salinan backup **di luar NAS** (laptop / cloud). Folder penting untuk dic
   diuji build** karena laptop tidak memiliki Docker. Uji pertama kali akan terjadi di NAS — kalau ada error
   saat build/start, catat pesan lognya.
 - Menu UGOS Pro (nama menu Control Panel/App Center) bisa sedikit berbeda antar versi firmware.
-- Alternatif tanpa SSH: Docker → **Project → Create**, arahkan ke folder `/volume1/docker/kjpp-app`
-  berisi `docker-compose.yml`. Namun langkah impor database (D3) tetap paling mudah lewat SSH.
+- Menu Docker → **Project → Create** TIDAK bisa dipakai untuk pemasangan pertama: menu itu hanya menarik
+  image dari internet, sedangkan `kjpp-app` dibangun dari `Dockerfile`. Bangun dulu lewat SSH
+  (`sudo docker compose build app`), setelah itu Project boleh dipakai untuk start/stop. Impor database (D3)
+  juga tetap paling mudah lewat SSH.

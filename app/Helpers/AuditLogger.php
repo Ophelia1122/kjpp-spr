@@ -16,7 +16,7 @@ class AuditLogger
      *   AuditLogger::record('proposal.created', "Membuat proposal {$project->proposal_number}", $project);
      *   AuditLogger::record('auth.login', "Login berhasil"); // tanpa subject
      */
-    public static function record(string $action, string $description, ?Model $subject = null): void
+    public static function record(string $action, string $description, ?Model $subject = null, ?string $note = null): void
     {
         AuditLog::create([
             'user_id'      => auth()->id(), // null kalau dipanggil sebelum login (mis. saat seeding)
@@ -24,6 +24,8 @@ class AuditLogger
             'subject_type' => $subject ? $subject::class : null,
             'subject_id'   => $subject?->id,
             'description'  => $description,
+            // Catatan opsional per langkah alur proyek (2026-09-14).
+            'note'         => filled($note) ? $note : null,
         ]);
     }
 }

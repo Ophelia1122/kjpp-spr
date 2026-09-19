@@ -137,7 +137,7 @@ class ProjectSeeder extends Seeder
         ]);
 
         // ===================================================================
-        // SKENARIO 4 — Pelunasan (Invoice Pelunasan Unpaid) | 2 OBJEK SEKALIGUS
+        // SKENARIO 4 — Proses cetak buku (Invoice Pelunasan Unpaid) | 2 OBJEK SEKALIGUS
         // (Tanah & Bangunan + Mesin & Peralatan) — CONTOH MULTI-OBJEK
         // Jenis: Lelang (Pemberi Tugas = Bank, sesuai aturan bisnis Lelang).
         // ===================================================================
@@ -151,7 +151,8 @@ class ProjectSeeder extends Seeder
             'sla_draft_days'        => 2,
             'sla_final_days'        => 3,
             'proposal_purpose'      => Project::PURPOSE_LELANG,
-            'status'                => Project::STATUS_PELUNASAN,
+            'status'                => Project::STATUS_IN_PROGRESS,
+            'review_status'         => Project::STAGE_DRAFT_REVIEWED,
             'assigned_appraiser'    => 'Siti Nurhaliza, S.T., MAPPI (Cert.)',
             'survey_date'           => now()->subDays(6),
         ]);

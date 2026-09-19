@@ -22,8 +22,9 @@
     // penilaian sudah dikonfirmasi, kalau belum ya fase Draft. Logika sama
     // dengan badge SLA di halaman detail proposal.
     $activeSlaFor = function ($project) {
+        // SLA hanya berjalan selama pekerjaan berjalan (In-Progress) — 2026-09-15.
         if (!$project->assigned_appraiser || !$project->survey_date
-            || $project->isCancelled() || $project->status === \App\Models\Project::STATUS_SELESAI) {
+            || $project->status !== \App\Models\Project::STATUS_IN_PROGRESS) {
             return null;
         }
         return ($project->isReviewApproved() && $project->estimated_final_completion_date)
@@ -37,9 +38,10 @@
     <p class="text-sm text-gray-500 dark:text-gray-400" id="resultsCount">{{ $projects->total() }} proyek ditemukan</p>
     <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
         <span>Tampilkan</span>
-        @foreach ([15, 25, 50, 100] as $size)
+        {{-- Cukup 15 & 25 per halaman (2026-09-14, feedback user) — 50/100 berat dimuat. --}}
+        @foreach ([15, 25] as $size)
             <a href="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => null]) }}"
-               class="px-2 py-1 rounded-md font-medium {{ (int) request('per_page', 15) === $size ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+               class="px-2 py-1 rounded-md font-medium {{ $projects->perPage() === $size ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700' }}">
                 {{ $size }}
             </a>
         @endforeach
@@ -65,7 +67,7 @@
                 @php
                     $cols = [
                         ['key' => 'proposal_number', 'label' => 'No. Proposal',  'class' => 'px-3 py-3'],
-                        ['key' => null,              'label' => 'Pemberi Tugas', 'class' => 'px-3 py-3 min-w-[190px]'],
+                        ['key' => null,              'label' => 'Nama Klien',    'class' => 'px-3 py-3 min-w-[190px]'],
                         ['key' => 'status',          'label' => 'Status',        'class' => 'px-3 py-3 w-[126px]'],
                         ['key' => 'deadline',        'label' => 'SLA',           'class' => 'px-3 py-3 w-[104px]', 'tip' => 'Urutkan berdasarkan tenggat SLA — yang paling mepet di atas'],
                         // Fee Jasa & Sisa Tagihan dihapus (2026-09-13, feedback user) —
@@ -119,7 +121,8 @@
                         title="{{ $project->proposal_number }}">
                         {{ $project->proposal_number_short }}
                     </td>
-                    <td class="px-3 py-3 text-gray-700 dark:text-gray-300">{{ $project->instructingClient->client_name ?? '-' }}</td>
+                    {{-- Nama Klien, bukan Pemberi Tugas (2026-09-14, feedback user). --}}
+                    <td class="px-3 py-3 text-gray-700 dark:text-gray-300">{{ $project->effective_client_name ?: '-' }}</td>
                     <td class="px-3 py-3 text-center">
                         <span class="inline-block px-2.5 py-1 rounded-full font-semibold whitespace-nowrap {{ $project->status_badge_classes }}"
                               title="{{ $project->status }}">
@@ -163,8 +166,11 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
                                         </svg>
                                     </a>
+                                @endif
+                                {{-- Proyek Batal bisa dihapus permanen (2026-09-14, feedback user). --}}
+                                @if (in_array($project->status, [\App\Models\Project::STATUS_DRAFT, \App\Models\Project::STATUS_BATAL], true))
                                     <form action="{{ route('proposals.destroy', $project) }}" method="POST"
-                                          onsubmit="return confirm('Yakin hapus proposal {{ $project->proposal_number }}? Aksi ini tidak bisa dibatalkan.')">
+                                          data-confirm="{{ $project->status === \App\Models\Project::STATUS_BATAL ? 'Hapus permanen proyek batal ' . $project->proposal_number . ' beserta seluruh invoice-nya? Aksi ini tidak bisa dibatalkan.' : 'Yakin hapus proposal ' . $project->proposal_number . '? Aksi ini tidak bisa dibatalkan.' }}">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" title="Hapus proposal"
@@ -207,7 +213,7 @@
                     <div class="min-w-0">
                         {{-- Kartu HP disamakan dengan tabel desktop (2026-09-13, feedback user). --}}
                         <p class="font-semibold text-gray-900 dark:text-gray-100" title="{{ $project->proposal_number }}">{{ $project->proposal_number_short }}</p>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $project->instructingClient->client_name ?? '-' }}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $project->effective_client_name ?: '-' }}</p>
                     </div>
                     <span class="shrink-0 inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $project->status_badge_classes }}"
                           title="{{ $project->status }}">
@@ -236,16 +242,18 @@
             </a>
 
             @can('proposals.manage')
-                @if ($project->status === \App\Models\Project::STATUS_DRAFT)
+                @if (in_array($project->status, [\App\Models\Project::STATUS_DRAFT, \App\Models\Project::STATUS_BATAL], true))
                     <div class="mt-2 flex items-center gap-1.5 border-t border-gray-100 pt-2 dark:border-gray-700">
+                        @if ($project->status === \App\Models\Project::STATUS_DRAFT)
                         <a href="{{ route('proposals.edit', $project) }}" title="Edit proposal"
                            class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
                             <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
                             </svg>
                         </a>
+                        @endif
                         <form action="{{ route('proposals.destroy', $project) }}" method="POST"
-                              onsubmit="return confirm('Yakin hapus proposal {{ $project->proposal_number }}? Aksi ini tidak bisa dibatalkan.')">
+                              data-confirm="{{ $project->status === \App\Models\Project::STATUS_BATAL ? 'Hapus permanen proyek batal ' . $project->proposal_number . ' beserta seluruh invoice-nya? Aksi ini tidak bisa dibatalkan.' : 'Yakin hapus proposal ' . $project->proposal_number . '? Aksi ini tidak bisa dibatalkan.' }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" title="Hapus proposal"

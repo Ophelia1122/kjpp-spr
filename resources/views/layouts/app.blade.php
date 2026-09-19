@@ -5,7 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Internal Web-App KJPP')</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    @include('partials.favicon')
+    {{-- C. Crossfade dari halaman login ke aplikasi (View Transitions, 2026-09-15).
+         Hanya dipakai bila datang dari /login — navigasi antarhalaman aplikasi
+         dilewati supaya tidak terasa lambat. --}}
+    <style>
+        @view-transition { navigation: auto; }
+        /* Opsi 1: lewat gelap dulu (#020617) supaya perpindahan gelap <-> terang tidak silau. */
+        ::view-transition { background: #020617; }
+        ::view-transition-old(root) { animation: vt-dim-out .25s cubic-bezier(.4, 0, 1, 1) both; }
+        ::view-transition-new(root) { animation: vt-dim-in .35s cubic-bezier(0, 0, .2, 1) .15s both; }
+        @keyframes vt-dim-out { to { opacity: 0; } }
+        @keyframes vt-dim-in { from { opacity: 0; } }
+
+        /* Mode terang "kabut indigo" (2026-09-15, feedback user): latar #EEF1F8
+           (lihat <body>), garis & latar tabel ikut bernuansa indigo tipis. */
+        html:not(.dark) main .border-gray-200 { border-color: #DFE4F0; }
+        html:not(.dark) main .border-gray-100 { border-color: #E8ECF5; }
+        html:not(.dark) main .divide-gray-100 > :not(:last-child) { border-color: #E8ECF5; }
+        html:not(.dark) main .bg-gray-50 { background-color: #F5F7FC; }
+
+        /* Sakelar tema (partials/theme-switch): pentol matahari (terang) / bulan (gelap). */
+        .theme-switch { position: relative; display: inline-block; width: 3.25rem; height: 1.75rem; flex-shrink: 0; border-radius: 9999px;
+                        background: #1f2937; border: 1px solid rgba(148, 163, 184, .25); cursor: pointer;
+                        transition: background-color .25s ease, border-color .25s ease; }
+        .theme-switch:hover { border-color: rgba(148, 163, 184, .5); }
+        .theme-switch:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+        .theme-switch[aria-checked="true"] { background: #312e81; border-color: rgba(129, 140, 248, .45); }
+        .theme-switch .knob { position: absolute; top: 2px; left: 2px; display: grid; place-items: center; width: 1.375rem; height: 1.375rem;
+                              border-radius: 9999px; background: #fcd34d; color: #92400e; box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+                              transition: transform .3s cubic-bezier(.16, .84, .44, 1), background-color .3s ease, color .3s ease; }
+        .theme-switch[aria-checked="true"] .knob { transform: translateX(1.5rem); background: #e0e7ff; color: #3730a3; }
+        .theme-switch .knob svg { width: .875rem; height: .875rem; }
+        .theme-switch .icon-moon, .theme-switch[aria-checked="true"] .icon-sun { display: none; }
+        .theme-switch[aria-checked="true"] .icon-moon { display: block; }
+    </style>
+    <script>
+        window.addEventListener('pagereveal', function (e) {
+            if (e.viewTransition && !/\/login(\?|$)/.test(document.referrer ? new URL(document.referrer).pathname : '')) {
+                e.viewTransition.skipTransition();
+            }
+        });
+    </script>
+    {{-- Tailwind browser v4.3.3 disimpan lokal (2026-09-14): jsdelivr sering lambat/diblokir operator seluler. --}}
+    <script src="{{ asset('js/tailwindcss-browser.js') }}?v=4.3.3"></script>
     <style type="text/tailwindcss">
         @custom-variant dark (&:where(.dark, .dark *));
     </style>
@@ -56,7 +99,44 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-950">
+<body class="bg-[#EEF1F8] dark:bg-gray-950">
+    {{-- ===================== LAYAR SAMBUTAN SETELAH LOGIN (2026-09-15) =====================
+         Muncul sekali setelah login (session flash "welcome"): layar gelap senada
+         halaman login dengan logo & sapaan, lalu memudar memperlihatkan aplikasi —
+         supaya perpindahan gelap -> terang tidak silau. CSS murni, dihapus dari DOM
+         setelah selesai. --}}
+    @if (session('welcome'))
+        <div id="welcomeSplash" class="welcome-splash" aria-hidden="true">
+            <div class="welcome-blob" style="top:-10rem;left:-8rem;background:rgba(37,99,235,.30)"></div>
+            <div class="welcome-blob" style="bottom:-10rem;right:-6rem;background:rgba(99,102,241,.20)"></div>
+            <div class="welcome-inner">
+                <div class="welcome-logo">
+                    <img src="{{ asset('images/logo-spr-icon.png') }}" alt="">
+                    <span>SPR</span>
+                </div>
+                <p class="welcome-title">Selamat datang, {{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->first() }}</p>
+                <p class="welcome-sub">KJPP Sugianto Prasodjo &amp; Rekan</p>
+            </div>
+        </div>
+        <style>
+            .welcome-splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; overflow: hidden; background: #020617;
+                              animation: welcomeOut .55s cubic-bezier(.16,.84,.44,1) .95s forwards; }
+            .welcome-blob { position: absolute; width: 24rem; height: 24rem; border-radius: 9999px; filter: blur(64px); pointer-events: none; }
+            .welcome-inner { position: relative; text-align: center; color: #fff; animation: welcomeIn .5s cubic-bezier(.16,.84,.44,1) both; }
+            .welcome-logo { display: flex; align-items: center; justify-content: center; gap: .5rem; }
+            .welcome-logo img { height: 3rem; width: auto; }
+            .welcome-logo span { font: italic 700 1.875rem/1 Georgia, 'Times New Roman', serif; letter-spacing: -.01em; }
+            .welcome-title { margin-top: 1rem; font-size: 1.25rem; font-weight: 600; }
+            .welcome-sub { margin-top: .2rem; font-size: .875rem; color: #94a3b8; }
+            @keyframes welcomeIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+            @keyframes welcomeOut { to { opacity: 0; visibility: hidden; } }
+            @media (prefers-reduced-motion: reduce) {
+                .welcome-inner { animation: none; }
+                .welcome-splash { animation-duration: .01s; animation-delay: .7s; }
+            }
+        </style>
+        <script>setTimeout(function () { var s = document.getElementById('welcomeSplash'); if (s) s.remove(); }, 1700);</script>
+    @endif
     <div class="flex min-h-screen">
 
         {{-- ===================== OVERLAY (mobile, klik untuk tutup sidebar) ===================== --}}
@@ -71,10 +151,14 @@
                class="fixed inset-y-0 left-0 z-40 w-64 bg-gray-900 text-gray-100 flex flex-col
                       transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
             <div class="px-6 py-5 border-b border-gray-800 flex items-center justify-between">
-                <div>
-                    <div class="text-lg font-bold text-white">KJPP SPR</div>
-                    <div class="text-xs text-gray-400">Workshop Kebagusan</div>
-                </div>
+                {{-- Logo + teks SPR, sama dengan halaman login (2026-09-14, feedback user). --}}
+                <a href="{{ route('home') }}" class="block">
+                    <span class="flex items-center gap-2">
+                        <img src="{{ asset('images/logo-spr-icon.png') }}" alt="" class="h-9 w-auto">
+                        <span class="text-2xl font-bold italic tracking-tight text-white" style="font-family: Georgia, 'Times New Roman', serif;">SPR</span>
+                    </span>
+                    <span class="mt-0.5 block text-xs text-gray-400">Workshop Kebagusan</span>
+                </a>
                 <button onclick="closeSidebar()" class="lg:hidden text-gray-400 hover:text-white text-xl leading-none">&times;</button>
             </div>
 
@@ -159,6 +243,14 @@
                                 </a>
                             @endcan
 
+                            @can('users.manage')
+                                <a href="{{ route('settings.whatsapp.edit') }}"
+                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
+                                        {{ request()->routeIs('settings.whatsapp.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg> Bot WhatsApp
+                                </a>
+                            @endcan
+
                             @can('banks.manage')
                                 <a href="{{ route('banks.index') }}"
                                 class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
@@ -184,9 +276,7 @@
                 <div class="px-4 py-4 border-t border-gray-800">
                     <a href="{{ route('profile.show') }}"
                        class="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 hover:bg-gray-800 {{ request()->routeIs('profile.*') ? 'bg-gray-800' : '' }}">
-                        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gray-700 text-sm font-semibold text-white uppercase group-hover:bg-blue-600">
-                            {{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
-                        </span>
+                        @include('partials.user-avatar', ['avatarUser' => auth()->user(), 'avatarClass' => 'h-9 w-9 bg-gray-700 text-sm group-hover:bg-blue-600'])
                         <span class="min-w-0">
                             <span class="block truncate text-sm font-medium text-white">{{ auth()->user()->name }}</span>
                             <span class="block truncate text-xs text-gray-400">{{ auth()->user()->role->name ?? '-' }} · Profil Saya</span>
@@ -202,15 +292,7 @@
                             </button>
                         </form>
 
-                        <label class="inline-flex items-center justify-self-end gap-2 cursor-pointer" title="Mode Gelap/Terang">
-                            <span id="themeToggleIcon" class="text-xs">{{ auth()->user()->dark_mode ? '☀️' : '🌙' }}</span>
-                            <span class="relative inline-block h-5 w-9 shrink-0">
-                                <input type="checkbox" id="themeToggleCheckbox" class="peer sr-only" onchange="toggleTheme()"
-                                       {{ auth()->user()->dark_mode ? 'checked' : '' }}>
-                                <span class="absolute inset-0 rounded-full bg-gray-600 transition-colors peer-checked:bg-blue-600"></span>
-                                <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-4"></span>
-                            </span>
-                        </label>
+                        @include('partials.theme-switch', ['class' => 'justify-self-end'])
                     </div>
                 </div>
             @endauth
@@ -226,41 +308,46 @@
                  tetap dari sidebar yang sama (di-toggle di mobile). --}}
             <header class="lg:hidden bg-gray-900 text-white px-4 py-3 flex items-center gap-3 sticky top-0 z-20">
                 <button onclick="openSidebar()" class="text-2xl leading-none" aria-label="Buka menu">☰</button>
-                <div class="font-bold">KJPP SPR</div>
+                <a href="{{ route('home') }}" class="flex items-center gap-1.5">
+                    <img src="{{ asset('images/logo-spr-icon.png') }}" alt="" class="h-6 w-auto">
+                    <span class="text-lg font-bold italic tracking-tight" style="font-family: Georgia, 'Times New Roman', serif;">SPR</span>
+                </a>
+                {{-- Ganti tema langsung dari header HP (2026-09-15, feedback user). --}}
+                @include('partials.theme-switch', ['class' => 'ml-auto'])
             </header>
 
             <main class="flex-1 px-4 lg:px-8 py-6">
                 @if (session('success'))
                     <div class="mb-4 rounded-md bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
-                        <span>✅ {{ session('success') }}</span>
+                        <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>{{ session('success') }}</span>
                         <button type="button" onclick="this.closest('div').remove()" class="text-green-500 hover:text-green-700 dark:hover:text-green-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if (session('error'))
                     <div class="mb-4 rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
-                        <span>⚠️ {{ session('error') }}</span>
+                        <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>{{ session('error') }}</span>
                         <button type="button" onclick="this.closest('div').remove()" class="text-red-500 hover:text-red-700 dark:hover:text-red-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if (session('warning'))
                     <div class="mb-4 rounded-md bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
-                        <span>⚠️ {{ session('warning') }}</span>
+                        <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>{{ session('warning') }}</span>
                         <button type="button" onclick="this.closest('div').remove()" class="text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if (session('info'))
                     <div class="mb-4 rounded-md bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
-                        <span>ℹ️ {{ session('info') }}</span>
+                        <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>{{ session('info') }}</span>
                         <button type="button" onclick="this.closest('div').remove()" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if ($errors->any())
                     <div class="mb-4 rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 text-sm px-4 py-3">
-                        <p class="font-semibold mb-1">⚠️ Terjadi kesalahan input:</p>
+                        <p class="font-semibold mb-1">Terjadi kesalahan input:</p>
                         <ul class="list-disc list-inside space-y-0.5">
                             @foreach ($errors->all() as $error)
                                 <li>{{ $error }}</li>
@@ -274,6 +361,83 @@
         </div>
     </div>
 
+    {{-- ===================== MODAL KONFIRMASI GLOBAL (2026-09-15) =====================
+         Menggantikan dialog confirm() bawaan browser. Pakai: <form data-confirm="Pesan">. --}}
+    <div id="confirmModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
+            <div class="flex gap-3">
+                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <h2 id="confirmTitle" class="text-base font-semibold text-gray-900 dark:text-gray-100">Konfirmasi</h2>
+                    <p id="confirmMessage" class="mt-1 text-sm text-gray-600 dark:text-gray-300"></p>
+                </div>
+            </div>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" id="confirmCancel" class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+                <button type="button" id="confirmOk" class="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">Ya, lanjutkan</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const modal = document.getElementById('confirmModal');
+            let pendingForm = null;
+            const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); pendingForm = null; };
+            // Tangkap di fase capture supaya handler lain (mis. AJAX) tidak jalan sebelum dikonfirmasi.
+            document.addEventListener('submit', (e) => {
+                const form = e.target;
+                if (!form.dataset || !form.dataset.confirm || form.dataset.confirmed) return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                pendingForm = form;
+                document.getElementById('confirmMessage').textContent = form.dataset.confirm;
+                const destructive = /hapus|batal|kembalikan/i.test(form.dataset.confirm);
+                document.getElementById('confirmOk').className = 'px-4 py-2 text-sm font-medium rounded-md text-white '
+                    + (destructive ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.getElementById('confirmOk').focus();
+            }, true);
+            document.getElementById('confirmOk').addEventListener('click', () => {
+                const form = pendingForm;
+                close();
+                if (!form) return;
+                form.dataset.confirmed = '1';
+                form.requestSubmit ? form.requestSubmit() : form.submit();
+                delete form.dataset.confirmed;
+            });
+            document.getElementById('confirmCancel').addEventListener('click', close);
+            modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pendingForm) close(); });
+        })();
+
+        // ===================== CEGAH KLIK GANDA (2026-09-15) =====================
+        // Form POST yang benar-benar dikirim (tidak dicegat AJAX/konfirmasi) dikunci
+        // sampai halaman berganti: kiriman kedua diabaikan & tombolnya dinonaktifkan.
+        (function () {
+            document.addEventListener('submit', (e) => {
+                const form = e.target;
+                if (e.defaultPrevented || (form.method || '').toLowerCase() !== 'post') return;
+                if (form.dataset.submitting) { e.preventDefault(); return; }
+                form.dataset.submitting = '1';
+                const buttons = [...form.querySelectorAll('button[type="submit"], button:not([type]), input[type="submit"]')];
+                if (form.id) buttons.push(...document.querySelectorAll(`button[form="${form.id}"]`));
+                // Ditunda supaya nilai tombol (name/value) tetap ikut terkirim.
+                setTimeout(() => buttons.forEach((b) => { b.disabled = true; b.classList.add('opacity-60', 'cursor-wait'); }), 0);
+            });
+            // Kembali lewat tombol Back (bfcache) -> form bisa dipakai lagi.
+            window.addEventListener('pageshow', (e) => {
+                if (!e.persisted) return;
+                document.querySelectorAll('form[data-submitting]').forEach((f) => {
+                    delete f.dataset.submitting;
+                    f.querySelectorAll('button, input[type="submit"]').forEach((b) => { b.disabled = false; b.classList.remove('opacity-60', 'cursor-wait'); });
+                });
+            });
+        })();
+    </script>
+
     <script>
         function openSidebar() {
             document.getElementById('sidebar').classList.remove('-translate-x-full');
@@ -284,10 +448,14 @@
             document.getElementById('sidebarOverlay').classList.add('hidden');
         }
 
+        // Semua sakelar tema (sidebar & header HP) ikut disinkronkan.
         function toggleTheme() {
-            const isDark = document.getElementById('themeToggleCheckbox').checked;
+            const isDark = !document.documentElement.classList.contains('dark');
             document.documentElement.classList.toggle('dark', isDark);
-            document.getElementById('themeToggleIcon').textContent = isDark ? '☀️' : '🌙';
+            document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
+                btn.setAttribute('aria-checked', isDark ? 'true' : 'false');
+                btn.setAttribute('aria-label', isDark ? 'Ganti ke mode terang' : 'Ganti ke mode gelap');
+            });
             fetch('{{ route('profile.toggleTheme') }}', {
                 method: 'PUT',
                 headers: {
@@ -332,7 +500,9 @@
                     debounceTimer = setTimeout(() => runSearch(buildUrl()), 1000);
                 });
             });
-            form.querySelectorAll('select').forEach((select) => {
+            // Tanggal ikut memicu pencarian — tombol "Terapkan Filter" sudah
+            // dihapus (2026-09-14, feedback user).
+            form.querySelectorAll('select, input[type="date"]').forEach((select) => {
                 select.addEventListener('change', () => {
                     clearTimeout(debounceTimer);
                     runSearch(buildUrl());
@@ -354,6 +524,66 @@
                 runSearch(link.href);
             });
         }
+
+        // ---------- Menu tarik-turun [data-dropdown] (2026-09-14) ----------
+        // Saat dibuka, menu DIPINDAH ke <body> dan diposisikan `fixed` terhadap
+        // layar, lalu dikembalikan ke tempatnya saat ditutup. Alasannya:
+        //  - kartu memakai transform (animasi `main > *` & `.lift:hover`), dan
+        //    elemen ber-transform membuat `fixed` di dalamnya relatif ke kartu,
+        //    sehingga menu terlempar ke luar layar (bug "tombol unduh tidak
+        //    berfungsi", 2026-09-14);
+        //  - tabel overflow-x-auto memotong menu absolut di baris terbawah.
+        // Delegasi di document, jadi tetap jalan untuk isi hasil live search.
+        (function () {
+            function closeAll() {
+                document.querySelectorAll('[data-dropdown-menu]').forEach(function (menu) {
+                    if (menu.style.display === 'none') return;
+                    menu.style.display = 'none';
+                    if (menu._home) {
+                        menu._home.appendChild(menu);
+                        menu._home = null;
+                    }
+                    if (menu._toggle) menu._toggle.setAttribute('aria-expanded', 'false');
+                });
+            }
+
+            document.addEventListener('click', function (e) {
+                const toggle = e.target.closest('[data-dropdown-toggle]');
+                if (toggle) {
+                    e.preventDefault();
+                    const menu = toggle._menu || toggle.closest('[data-dropdown]').querySelector('[data-dropdown-menu]');
+                    toggle._menu = menu;
+                    const wasOpen = menu.style.display !== 'none';
+                    closeAll();
+                    if (wasOpen) return;
+
+                    menu._toggle = toggle;
+                    menu._home = menu.parentNode;
+                    document.body.appendChild(menu);
+                    menu.style.position = 'fixed';
+                    menu.style.display = 'block';
+                    const r = toggle.getBoundingClientRect();
+                    let top = r.bottom + 4;
+                    if (top + menu.offsetHeight > window.innerHeight - 8) {
+                        top = Math.max(8, r.top - menu.offsetHeight - 4);
+                    }
+                    menu.style.top = top + 'px';
+                    menu.style.left = Math.max(8, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+                    toggle.setAttribute('aria-expanded', 'true');
+                    return;
+                }
+
+                // Pilih item menu -> tutup menu (modal/konfirmasi tetap jalan).
+                if (e.target.closest('[data-dropdown-menu] [role="menuitem"]')) {
+                    setTimeout(closeAll, 0);
+                    return;
+                }
+                if (!e.target.closest('[data-dropdown-menu]')) closeAll();
+            });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+            window.addEventListener('scroll', function () { closeAll(); }, true);
+            window.addEventListener('resize', function () { closeAll(); });
+        })();
     </script>
     @stack('scripts')
 </body>

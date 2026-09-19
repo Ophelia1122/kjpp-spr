@@ -118,6 +118,18 @@ class ProjectValuationObject extends Model
     }
 
     /**
+     * Rincian objek untuk Surat Tugas — tanpa Luas Tanah & Luas Bangunan
+     * (2026-09-14, feedback user).
+     */
+    public function getAssignmentLetterDescriptionLinesAttribute(): array
+    {
+        return array_values(array_filter(
+            $this->description_lines,
+            fn ($line) => ! str_starts_with($line, 'Luas Tanah:') && ! str_starts_with($line, 'Luas Bangunan:')
+        ));
+    }
+
+    /**
      * Label ringkas 1 baris (dipakai di dashboard / summary, bukan PDF).
      */
     public function getShortLabelAttribute(): string

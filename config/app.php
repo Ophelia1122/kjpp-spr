@@ -65,7 +65,9 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Asia/Jakarta (2026-09-14, feedback user). Waktu lama digeser lewat
+    // migration 2024_01_23_000001_shift_timestamps_from_utc_to_wib.
+    'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------

@@ -39,7 +39,12 @@ class ProfileController extends Controller
             'sk_menkeu_date' => 'nullable|date',
             'sttd_ojk_date'  => 'nullable|date',
             'klasifikasi'    => 'nullable|string|max:255',
-        ]);
+            'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s]+$/'],
+            'avatar'          => User::AVATAR_RULES,
+            'remove_avatar'   => 'nullable|boolean',
+        ], User::$avatarMessages);
+
+        $user->applyAvatarUpload($request);
 
         $user->fill([
             'name'           => $validated['name'],
@@ -54,6 +59,7 @@ class ProfileController extends Controller
             'sk_menkeu_date' => $validated['sk_menkeu_date'] ?? null,
             'sttd_ojk_date'  => $validated['sttd_ojk_date'] ?? null,
             'klasifikasi'    => $validated['klasifikasi'] ?? null,
+            'whatsapp_number' => $validated['whatsapp_number'] ?? null,
         ])->save();
 
         AuditLogger::record('profile.updated', 'Memperbarui biodata profil sendiri', $user);

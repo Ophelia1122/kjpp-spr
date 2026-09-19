@@ -1205,7 +1205,9 @@ class ProposalDocxBuilder
         $r->addText('Menyetujui,', $this->fBody, ['spaceAfter' => 0]);
         $r->addText($approver, $this->fBold, ['spaceAfter' => 0]);
         $r->addTextBreak(7); // ruang tanda tangan + stempel
-        $r->addText('( _______________________________ )', $this->fBody, ['spaceAfter' => 0]);
+        // Garis dipendekkan (2026-09-14, feedback user) — versi lama lebih
+        // lebar dari kolom sehingga ")" turun ke baris kedua.
+        $r->addText('( ________________________ )', $this->fBody, ['spaceAfter' => 0]);
         $r->addText('Jabatan:', $this->fBody, ['spaceAfter' => 0]);
         $r->addText('Tanggal:', $this->fBody, ['spaceAfter' => 0]);
     }

@@ -13,8 +13,9 @@
         // Admin Produksi, kalau belum ya Draft. Null = belum relevan (belum
         // ada penilai/tanggal survei, atau proyek sudah Selesai/Batal).
         $activeSla = null;
+        // SLA hanya berjalan selama pekerjaan berjalan (In-Progress) — 2026-09-15.
         if ($project->assigned_appraiser && $project->survey_date
-            && !$project->isCancelled() && $project->status !== \App\Models\Project::STATUS_SELESAI) {
+            && $project->status === \App\Models\Project::STATUS_IN_PROGRESS) {
             $activeSla = ($project->isReviewApproved() && $project->estimated_final_completion_date)
                 ? ['label' => 'SLA Laporan Final', 'state' => $project->final_sla_state, 'text' => $project->final_sla_label, 'target' => $project->estimated_final_completion_date_formatted]
                 : ['label' => 'SLA Draft/Resume', 'state' => $project->sla_state, 'text' => $project->sla_label, 'target' => $project->estimated_completion_date_formatted];
@@ -55,10 +56,14 @@
             <span class="px-3 py-1.5 rounded-full text-sm font-semibold {{ $project->status_badge_classes }}">
                 {{ $project->status }}
             </span>
+            {{-- Pekerjaan bisa Selesai sebelum tagihan lunas (2026-09-15, feedback user). --}}
+            @if ($project->status === \App\Models\Project::STATUS_SELESAI && ! $project->is_fully_paid)
+                <span class="px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">Belum Lunas</span>
+            @endif
             @can('proposals.manage')
                 @if ($project->isCancelled())
                     <form action="{{ route('proposals.reactivate', $project) }}" method="POST"
-                          onsubmit="return confirm('Aktifkan kembali proyek {{ $project->proposal_number }}? Status akan kembali ke: {{ $project->status_before_cancel ?: \App\Models\Project::STATUS_DRAFT }}.')">
+                          data-confirm="Aktifkan kembali proyek {{ $project->proposal_number }}? Status akan kembali ke: {{ $project->status_before_cancel ?: \App\Models\Project::STATUS_DRAFT }}.">
                         @csrf
                         {{-- Tooltip instan (bukan label teks, 2026-09-14 feedback user). --}}
                         <button type="submit" aria-label="Aktifkan Kembali"
@@ -71,7 +76,7 @@
                     </form>
                 @else
                     <form action="{{ route('proposals.cancel', $project) }}" method="POST"
-                          onsubmit="return confirm('Batalkan proyek {{ $project->proposal_number }}? Data TIDAK dihapus — status menjadi Batal dan bisa diaktifkan kembali kapan saja.')">
+                          data-confirm="Batalkan proyek {{ $project->proposal_number }}? Data TIDAK dihapus — status menjadi Batal dan bisa diaktifkan kembali kapan saja.">
                         @csrf
                         <button type="submit" aria-label="Batalkan Project"
                                 class="group relative grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-900/30 dark:hover:text-rose-300">
@@ -99,7 +104,7 @@
         <a href="#section-surat-tugas" data-target="section-surat-tugas" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Surat Tugas</a>
         <a href="#section-tagihan" data-target="section-tagihan" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Tagihan</a>
         <a href="#section-faktur" data-target="section-faktur" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Faktur</a>
-        <a href="#section-laporan-resmi" data-target="section-laporan-resmi" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Laporan Resmi</a>
+        <a href="#section-laporan-resmi" data-target="section-laporan-resmi" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Laporan Final</a>
         <a href="#section-aksi" data-target="section-aksi" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Catatan</a>
     </div>
         @if ($activeSla)
@@ -209,10 +214,13 @@
                 <dt class="text-gray-500 dark:text-gray-400">Nama Klien</dt>
                 <dd class="font-medium text-gray-900 dark:text-gray-100">
                     {{ $project->effective_client_name }}
-                    @unless (trim((string) $project->client_name))
+                    @unless ($project->client_id || trim((string) $project->client_name))
                         <span class="text-gray-400 font-normal dark:text-gray-500" title="Nama Klien belum diisi — memakai nama Pemberi Tugas.">(= Pemberi Tugas)</span>
                     @endunless
                 </dd>
+                @if ($project->namedClient)
+                    <dd class="text-gray-600 text-xs mt-0.5 whitespace-pre-line dark:text-gray-400">{{ $project->namedClient->address ?: '(alamat belum diisi pada data klien)' }}</dd>
+                @endif
             </div>
             <div class="sm:col-span-2">
                 <dt class="text-gray-500 dark:text-gray-400">Pemberi Tugas</dt>
@@ -278,6 +286,8 @@
                         + Transport Rp {{ number_format($project->fee_transport_display, 0, ',', '.') }}
                     @endif
                     · {{ $project->fee_ppn_included ? 'sudah termasuk PPN' : 'PPN ditambahkan atas Fee & transport' }}
+                    {{-- Skema pembayaran (2026-09-15, feedback user). --}}
+                    · <b class="font-semibold text-gray-700 dark:text-gray-300">{{ $project->payment_scheme ?: \App\Models\Project::PAYMENT_SCHEME_DP }}</b>
                     @if ($project->transport_reimbursed) · transport &amp; akomodasi ditanggung klien (reimburse) @endif
                     @if ($project->fee_breakdown) · ditampilkan sebagai rincian @endif
                 </dd>
@@ -341,20 +351,21 @@
     </div>
 
     {{-- ===================== CARD PENILAI LAPANGAN & TANGGAL SURVEI =====================
-         Assign siapa yang turun lapangan + kapan, dengan pola kunci/edit yang
-         sama seperti Faktur Pajak/Surat Tugas — dipindah jadi kartu tersendiri
-         (sebelumnya nempel di blok status In-Progress, jadi hilang dari
-         tampilan begitu status proyek berubah lagi). Bisa diisi/diedit di
-         status apa pun selama proyek belum Selesai/Batal (lihat guard
-         sungguhannya di ProjectController@inputSurveyData). --}}
+         Assign siapa yang turun lapangan + kapan (pola kunci/edit seperti Faktur
+         Pajak). Hanya bisa diisi selama pekerjaan berjalan / In-Progress
+         (2026-09-15, feedback user) — sebelum DP dibayar kartu terkunci. Guard
+         sungguhannya di ProjectController@inputSurveyData. --}}
     @canany(['survey.manage', 'survey.view'])
         <div id="section-penilai" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-6 dark:bg-gray-800 dark:border-gray-700">
-            @php $hasSurvey = $project->assigned_appraiser_id && $project->survey_date; @endphp
+            @php
+                $hasSurvey  = $project->assigned_appraiser_id && $project->survey_date;
+                $surveyOpen = $project->canPrepareFieldwork();
+            @endphp
 
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Penilai Lapangan &amp; Tanggal Survei</h2>
                 @can('survey.manage')
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1" @unless ($surveyOpen) hidden @endunless>
                         @if ($hasSurvey)
                             <button type="button" id="surveyEditBtn" title="Edit"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
@@ -375,6 +386,16 @@
             </div>
 
             @can('survey.manage')
+                @unless ($surveyOpen)
+                    {{-- Terkunci: DP di awal sebelum DP dibayar, atau Selesai/Batal (2026-09-15). --}}
+                    @include('partials.fieldwork-lock')
+                    @if ($hasSurvey)
+                        <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                            Penilai: <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->assigned_appraiser }}</span>
+                            &middot; Survei: <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->survey_date->translatedFormat('d F Y') }}</span>
+                        </p>
+                    @endif
+                @else
                 {{-- Daftar Penilai Lapangan HANYA akun berperan Administrator atau
                      Surveyor (2026-09-13, feedback user) — Admin Keuangan/Produksi
                      tidak relevan turun lapangan jadi tidak perlu muncul di sini.
@@ -390,50 +411,101 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Nama Penilai Lapangan
+                                Nama Penilai Lapangan <span class="font-normal text-gray-400">(1–{{ \App\Models\Project::MAX_APPRAISERS }} orang)</span>
                                 <span class="inline-block align-text-bottom text-gray-400 dark:text-gray-500" title="Daftar ini menampilkan semua pengguna aktif, pilih akun Surveyor yang benar-benar turun lapangan karena mengikat pada Timeline Proyek.">
                                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/>
                                     </svg>
                                 </span>
                             </label>
-                            <select name="assigned_appraiser_id" id="survey_appraiser" required @disabled($hasSurvey)
-                                    @if ($hasSurvey) title="Terkunci — klik ikon Edit untuk mengubah." @endif
-                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
-                                <option value="">-- Pilih Penilai --</option>
-                                @foreach ($fieldAppraiserOptions as $appraiserOption)
-                                    <option value="{{ $appraiserOption->id }}" @selected(old('assigned_appraiser_id', $project->assigned_appraiser_id) == $appraiserOption->id)>
-                                        {{ $appraiserOption->name }} ({{ $appraiserOption->jabatan ?: '-' }})
-                                    </option>
-                                @endforeach
-                            </select>
+                            {{-- 1-3 penilai lapangan SETARA (2026-09-15, feedback user) — semua
+                                 ikut memiliki proyek (Beranda, Proyek Saya, Timeline, WhatsApp). --}}
+                            @php
+                                $chosenAppraisers = array_values(array_filter((array) old('appraiser_ids',
+                                    $project->appraisers->pluck('id')->all() ?: array_filter([$project->assigned_appraiser_id]))));
+                            @endphp
+                            <div class="mt-1 space-y-2" id="surveyAppraiserSlots">
+                                @for ($slot = 0; $slot < \App\Models\Project::MAX_APPRAISERS; $slot++)
+                                    @php $slotValue = $chosenAppraisers[$slot] ?? null; @endphp
+                                    <div class="survey-appraiser-slot flex items-center gap-2" @if ($slot > 0 && ! $slotValue) hidden @endif>
+                                        <select name="appraiser_ids[]" @if ($slot === 0) required @endif @disabled($hasSurvey)
+                                                @if ($hasSurvey) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                                class="survey-field min-w-0 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
+                                            <option value="">-- Pilih Penilai {{ $slot + 1 }} --</option>
+                                            @foreach ($fieldAppraiserOptions as $appraiserOption)
+                                                <option value="{{ $appraiserOption->id }}" @selected($slotValue == $appraiserOption->id)>
+                                                    {{ $appraiserOption->name }} ({{ $appraiserOption->jabatan ?: '-' }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @if ($slot > 0)
+                                            <button type="button" class="survey-appraiser-remove grid h-8 w-8 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30" title="Hapus penilai ini" @if ($hasSurvey) hidden @endif>&times;</button>
+                                        @endif
+                                    </div>
+                                @endfor
+                            </div>
+                            <button type="button" id="surveyAddAppraiser" hidden
+                                    class="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                + Tambah penilai (maks. {{ \App\Models\Project::MAX_APPRAISERS }})
+                            </button>
+                            @error('appraiser_ids') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                            @error('appraiser_ids.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Survei</label>
                             <input type="date" name="survey_date" id="survey_date" required @disabled($hasSurvey) lang="id"
+                                   data-survey-field
                                    @if ($hasSurvey) title="Terkunci — klik ikon Edit untuk mengubah." @endif
                                    value="{{ old('survey_date', $project->survey_date?->toDateString()) }}"
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                         </div>
                     </div>
                 </form>
-                @if ($hasSurvey)
-                    <script>
-                        (function () {
-                            var b = document.getElementById('surveyEditBtn');
-                            if (!b) return;
+                <script>
+                    (function () {
+                        var slots  = Array.from(document.querySelectorAll('#surveyAppraiserSlots .survey-appraiser-slot'));
+                        var addBtn = document.getElementById('surveyAddAppraiser');
+                        var editable = {{ $hasSurvey ? 'false' : 'true' }};
+
+                        function refreshAdd() {
+                            addBtn.hidden = !editable || slots.every(function (s) { return !s.hidden; });
+                        }
+                        addBtn.addEventListener('click', function () {
+                            var next = slots.find(function (s) { return s.hidden; });
+                            if (!next) return;
+                            next.hidden = false;
+                            next.querySelector('select').focus();
+                            refreshAdd();
+                        });
+                        slots.forEach(function (s) {
+                            var rm = s.querySelector('.survey-appraiser-remove');
+                            if (!rm) return;
+                            rm.addEventListener('click', function () {
+                                s.querySelector('select').value = '';
+                                s.hidden = true;
+                                refreshAdd();
+                            });
+                        });
+
+                        var b = document.getElementById('surveyEditBtn');
+                        if (b) {
                             b.addEventListener('click', function () {
-                                ['survey_appraiser', 'survey_date'].forEach(function (id) {
-                                    document.getElementById(id).disabled = false;
-                                    document.getElementById(id).removeAttribute('title');
+                                document.querySelectorAll('#surveyForm .survey-field, #surveyForm [data-survey-field]').forEach(function (el) {
+                                    el.disabled = false;
+                                    el.removeAttribute('title');
                                 });
-                                document.getElementById('survey_appraiser').focus();
+                                document.querySelectorAll('#surveyForm .survey-appraiser-remove').forEach(function (el) { el.hidden = false; });
+                                editable = true;
+                                refreshAdd();
+                                slots[0].querySelector('select').focus();
                                 b.hidden = true;
                                 document.getElementById('surveySaveBtn').hidden = false;
                             });
-                        })();
-                    </script>
-                @endif
+                        }
+                        refreshAdd();
+                    })();
+                </script>
+                @endunless
             @else
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
@@ -451,17 +523,21 @@
 
     {{-- ===================== CARD SURAT TUGAS =====================
          Nomor/Tanggal (kunci setelah diisi, sama seperti Faktur Pajak) +
-         upload barcode verifikasi (PNG 370x370, maks 5KB) + daftar
+         upload barcode verifikasi (PNG/JPG 370x370, maks 100KB) + daftar
          petugas bebas (jumlah & jabatan apa saja — dicetak di tabel
          "Adapun petugas kami") + tombol cetak PDF-nya. --}}
     @canany(['assignment_letter.manage', 'survey.view'])
         <div id="section-surat-tugas" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-6 dark:bg-gray-800 dark:border-gray-700">
-            @php $hasSurat = $project->assignment_letter_number || $project->assignment_letter_date; @endphp
+            @php
+                $hasSurat = $project->assignment_letter_number || $project->assignment_letter_date;
+                // Dikunci bersama kartu Penilai Lapangan (2026-09-15, feedback user).
+                $suratOpen = $project->canPrepareFieldwork();
+            @endphp
 
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Surat Tugas</h2>
                 @can('assignment_letter.manage')
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1" @unless ($suratOpen) hidden @endunless>
                         @if ($hasSurat)
                             <button type="button" id="suratEditBtn" title="Edit"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
@@ -481,6 +557,9 @@
                 @endcan
             </div>
 
+            @unless ($suratOpen)
+                @include('partials.fieldwork-lock')
+            @else
             @can('assignment_letter.manage')
                 <form action="{{ route('projects.updateAssignmentLetter', $project) }}" method="POST" enctype="multipart/form-data" id="suratTugasForm">
                     @csrf
@@ -503,6 +582,47 @@
                                    @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                         </div>
+
+                        {{-- "Kepada Yth" (2026-09-14, feedback user) — pilihan sama dengan
+                             "Penilaian Aset atas nama". Ikut terkunci bersama Nomor/Tanggal. --}}
+                        <div class="sm:col-span-2">
+                            <label for="surat_recipient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Kepada Yth</label>
+                            @php $suratRecipient = old('assignment_letter_recipient_client_id', $project->assignment_letter_recipient_client_id ?? $project->instructing_client_id); @endphp
+                            <select name="assignment_letter_recipient_client_id" id="surat_recipient"
+                                    @disabled($hasSurat)
+                                    @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                    class="mt-1 w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-900">
+                                @foreach ($project->receivedFromOptions() as $opt)
+                                    <option value="{{ $opt['id'] }}" @selected($opt['id'] == $suratRecipient)>{{ $opt['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- "Penilaian Aset atas nama" & Dasar Permintaan khusus Surat Tugas
+                             (2026-09-14, feedback user). Ikut terkunci bersama Nomor/Tanggal. --}}
+                        <div class="sm:col-span-2">
+                            <label for="surat_on_behalf" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Penilaian Aset atas nama</label>
+                            @php $suratOnBehalf = old('assignment_letter_on_behalf_client_id', $project->assignment_letter_on_behalf_client_id ?? $project->instructing_client_id); @endphp
+                            <select name="assignment_letter_on_behalf_client_id" id="surat_on_behalf"
+                                    @disabled($hasSurat)
+                                    @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                    class="mt-1 w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-900">
+                                @foreach ($project->receivedFromOptions() as $opt)
+                                    <option value="{{ $opt['id'] }}" @selected($opt['id'] == $suratOnBehalf)>{{ $opt['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="surat_request_basis" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Dasar Permintaan Penilaian
+                                @include('partials.icon-info', ['tip' => 'Dicetak di Surat Tugas tepat setelah nama klien. Awalnya sama dengan Dasar Permintaan di Identitas Proposal, dan bisa diubah khusus untuk Surat Tugas.'])
+                            </label>
+                            <textarea name="assignment_letter_request_basis" id="surat_request_basis" rows="2"
+                                      placeholder="Contoh: yang kami terima melalui Pesan WhatsApp permintaan penilaian tanggal 07 September 2026"
+                                      @disabled($hasSurat)
+                                      @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                      class="mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">{{ old('assignment_letter_request_basis', $project->assignment_letter_request_basis ?? $project->request_basis) }}</textarea>
+                        </div>
                     </div>
                 </form>
                 @if ($hasSurat)
@@ -511,7 +631,7 @@
                             var b = document.getElementById('suratEditBtn');
                             if (!b) return;
                             b.addEventListener('click', function () {
-                                ['surat_number', 'surat_date'].forEach(function (id) {
+                                ['surat_number', 'surat_date', 'surat_recipient', 'surat_on_behalf', 'surat_request_basis'].forEach(function (id) {
                                     var el = document.getElementById(id);
                                     if (el) { el.disabled = false; el.removeAttribute('title'); }
                                 });
@@ -644,15 +764,24 @@
             @can('survey.view')
                 <div class="mt-4">
                     @if ($project->assigned_appraiser && $project->survey_date)
-                        <a href="{{ route('projects.exportSuratTugas', $project) }}"
-                           class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-gray-800 text-white hover:bg-gray-900">
-                            📄 Cetak PDF Surat Tugas
-                        </a>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ route('projects.exportSuratTugas', $project) }}"
+                               class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-gray-800 text-white hover:bg-gray-900">
+                                📄 Cetak PDF Surat Tugas
+                            </a>
+                            {{-- Unduh versi Word (2026-09-14, feedback user). --}}
+                            <a href="{{ route('projects.exportSuratTugasWord', $project) }}"
+                               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/30">
+                                <span class="rounded border border-current px-1 text-[10px] font-bold leading-4">W</span>
+                                Unduh Word Surat Tugas
+                            </a>
+                        </div>
                     @else
                         <p class="text-xs text-gray-400 dark:text-gray-500">Cetak tersedia setelah data penilai lapangan &amp; tanggal survei diisi.</p>
                     @endif
                 </div>
             @endcan
+            @endunless
         </div>
     @endcanany
 
@@ -694,32 +823,16 @@
                                 </p>
                             </div>
 
-                            <div class="flex items-center gap-1.5">
+                            {{-- Aksi per invoice diringkas jadi 3 (2026-09-14, feedback user):
+                                 Unduh ▾ (invoice/kwitansi PDF & Word) · Tandai Dibayar · ⋯ (Edit, Hapus). --}}
+                            <div class="flex items-center gap-1">
                                 @can('invoices.view')
-                                    <a href="{{ route('invoices.exportInvoice', $inv) }}" title="Cetak Invoice"
-                                       class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
-                                        <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
-                                        </svg>
-                                    </a>
-                                    @if ($inv->status === 'Paid')
-                                        <a href="{{ route('invoices.exportKwitansi', $inv) }}" title="Cetak Kwitansi"
-                                           class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-teal-100 hover:text-teal-700 dark:text-gray-400 dark:hover:bg-teal-900/30 dark:hover:text-teal-300">
-                                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                            </svg>
-                                        </a>
-                                    @endif
+                                    @include('partials.invoice-download-menu', [
+                                        'inv' => $inv,
+                                        'kwitansiAvailable' => $inv->status === 'Paid' || $project->isPaymentDeferred(),
+                                    ])
                                 @endcan
                                 @can('invoices.manage')
-                                    {{-- Edit — mitigasi human error (salah nominal/keterangan), boleh
-                                         dipakai walau sudah Lunas (lihat catatan di InvoiceController@update). --}}
-                                    <button type="button"
-                                            onclick="openEditInvoiceModal('{{ route('invoices.update', $inv) }}', {{ (float) $inv->amount }}, {{ \Illuminate\Support\Js::from($inv->term_description ?? '') }}, {{ $inv->status === 'Paid' ? 'true' : 'false' }})"
-                                            title="Edit Invoice"
-                                            class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-blue-100 hover:text-blue-700 dark:text-gray-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
-                                        @include('partials.icon-pencil')
-                                    </button>
                                     @if ($inv->status !== 'Paid')
                                         <button type="button" onclick="openVerifyPaidModal('{{ route('invoices.markAsPaid', $inv) }}')" title="Tandai Dibayar"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 dark:text-gray-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
@@ -728,22 +841,41 @@
                                             </svg>
                                         </button>
                                     @endif
-                                    {{-- Hapus — sekarang tersedia juga untuk invoice yang sudah Lunas
-                                         (mitigasi human error: salah verifikasi lunas). Konfirmasi beda
-                                         teks kalau sudah Lunas supaya tidak terklik tanpa sadar. --}}
-                                    <form action="{{ route('invoices.destroy', $inv) }}" method="POST"
-                                          onsubmit="return confirm({{ $inv->status === 'Paid'
-                                                ? \Illuminate\Support\Js::from("Invoice {$inv->invoice_number} sudah berstatus Dibayar dengan kwitansi {$inv->kwitansi_number}. Yakin ingin menghapusnya? Aksi ini tidak bisa dibatalkan.")
-                                                : \Illuminate\Support\Js::from("Batalkan invoice {$inv->invoice_number}?") }})">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" title="Hapus Invoice"
-                                                class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-red-100 hover:text-red-700 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-300">
-                                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+
+                                    <div class="relative" data-dropdown>
+                                        <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false" title="Aksi lain"
+                                                class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
+                                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.9" stroke="currentColor" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
                                             </svg>
                                         </button>
-                                    </form>
+                                        <div data-dropdown-menu role="menu" style="display: none;"
+                                             class="z-50 w-48 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                            {{-- Edit — mitigasi human error (salah nominal/keterangan), boleh
+                                                 dipakai walau sudah Dibayar (lihat InvoiceController@update). --}}
+                                            <button type="button" role="menuitem"
+                                                    onclick="openEditInvoiceModal('{{ route('invoices.update', $inv) }}', {{ (float) $inv->amount }}, {{ \Illuminate\Support\Js::from($inv->term_description ?? '') }}, {{ $inv->status === 'Paid' ? 'true' : 'false' }}, {{ (int) ($inv->received_from_client_id ?? $project->instructing_client_id) }}, {{ (int) ($inv->on_behalf_of_client_id ?? $project->instructing_client_id) }})"
+                                                    class="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/60">
+                                                @include('partials.icon-pencil') Edit Invoice
+                                            </button>
+                                            {{-- Hapus — tersedia juga untuk invoice yang sudah Dibayar (mitigasi
+                                                 salah verifikasi). Konfirmasi beda teks kalau sudah Dibayar. --}}
+                                            <form action="{{ route('invoices.destroy', $inv) }}" method="POST"
+                                                  data-confirm="{{ $inv->status === 'Paid'
+                                                        ? "Invoice {$inv->invoice_number} sudah berstatus Dibayar dengan kwitansi {$inv->kwitansi_number}. Yakin ingin menghapusnya? Aksi ini tidak bisa dibatalkan."
+                                                        : "Hapus invoice {$inv->invoice_number}?" }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" role="menuitem"
+                                                        class="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
+                                                    <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                                                    </svg>
+                                                    Hapus Invoice
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
                                 @endcan
                             </div>
                         </div>
@@ -858,12 +990,8 @@
     {{-- ===================== CARD NOMOR LAPORAN RESMI =====================
          Dipisah dari kartu "Aksi Tersedia" (2026-09-13, feedback user: field
          ini butuh kartu sendiri yang lebar penuh, bukan numpang sempit di
-         Aksi Tersedia). Muncul dari status Pelunasan sampai Selesai.
-
-         Boleh diisi MULAI status Pelunasan, tidak perlu menunggu lunas
-         penuh (2026-09-14, feedback user: kadang nomor laporan sudah bisa
-         diambil sebelum tagihan lunas — status Pelunasan sendiri sudah
-         menjamin draf/pekerjaan disetujui, lihat markDraftComplete()).
+         Aksi Tersedia). Muncul mulai draft laporan telah direview (proses
+         cetak) sampai Selesai — wajib diisi sebelum "Buku Selesai Dicetak".
          Badge pembayaran di header MURNI informasi, tidak lagi mengunci
          form. Pola kunci/edit form-nya sama seperti Faktur Pajak: sekali
          terisi, field terkunci sampai ikon Edit ditekan.
@@ -873,20 +1001,21 @@
          isi — BUKAN Surveyor, beda dari data survei lapangan yang
          dipakai kartu Penilai Lapangan). --}}
     @canany(['final_report.manage', 'final_report.view'])
-        @if (in_array($project->status, [\App\Models\Project::STATUS_PELUNASAN, \App\Models\Project::STATUS_SELESAI]))
+        {{-- Muncul mulai draft laporan telah direview (proses cetak) — 2026-09-15. --}}
+        @if ($project->isFinalReportStage())
             <div id="section-laporan-resmi" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-6 dark:bg-gray-800 dark:border-gray-700">
                 @php $hasFinalReport = (bool) $project->final_report_number; @endphp
                 <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
-                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Nomor Laporan Resmi</h2>
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Nomor Laporan Final</h2>
                     <div class="flex items-center gap-2">
                         {{-- Badge "Menunggu lunas penuh" dibuang (2026-09-14,
-                             feedback user): Nomor Laporan Resmi tetap bisa
+                             feedback user): Nomor Laporan Final tetap bisa
                              diisi sebelum lunas, jadi badge itu menyesatkan
                              (kesannya masih terkunci). Badge "sudah lunas"
                              dipertahankan — itu murni info status proyek,
                              tidak menyiratkan sedang terkunci. --}}
                         @if ($project->status === \App\Models\Project::STATUS_SELESAI)
-                            <span class="text-xs font-semibold text-emerald-600 whitespace-nowrap dark:text-emerald-400">✔ Seluruh tagihan lunas. Proyek selesai.</span>
+                            <span class="text-xs font-semibold text-emerald-600 whitespace-nowrap dark:text-emerald-400">✔ Proyek selesai{{ $project->is_fully_paid ? ' · tagihan lunas' : '' }}.</span>
                         @endif
                         @can('final_report.manage')
                             <div class="flex items-center gap-1">
@@ -915,7 +1044,7 @@
                         @csrf
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Nomor Laporan Resmi</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Nomor Laporan Final</label>
                                 <input type="text" name="final_report_number" id="final_report_number" required @disabled($hasFinalReport)
                                        @if ($hasFinalReport) title="Terkunci — klik ikon Edit untuk mengubah." @endif
                                        value="{{ old('final_report_number', $project->final_report_number) }}"
@@ -956,7 +1085,7 @@
                     @endif
                 @elsecan('final_report.view')
                     <div class="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
-                        <p>Nomor Laporan Resmi: <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->final_report_number ?? '(belum diisi)' }}</span></p>
+                        <p>Nomor Laporan Final: <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->final_report_number ?? '(belum diisi)' }}</span></p>
                         <p>Tanggal Final: <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->final_report_date?->translatedFormat('d F Y') ?? '(belum diisi)' }}</span></p>
                         @if ($project->final_report_notes)
                             <p>Keterangan: <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->final_report_notes }}</span></p>
@@ -967,26 +1096,33 @@
         @endif
     @endcanany
 
-    {{-- ===================== PANEL AKSI (GATEKEEPING PER STATUS) =====================
-         Diletakkan paling bawah halaman (2026-09-13, feedback user).
-         Tombol "Batalkan Project"/"Aktifkan Kembali" sudah pindah jadi
-         ikon di header atas (2026-09-14, feedback user) — jadi kartu ini
-         cuma relevan untuk status yang masih punya tombol/aksi kontekstual
-         (Draft s.d. Pelunasan). Selesai & Batal tidak render kartu ini
-         sama sekali, tidak ada gunanya kartu kosong tanpa isi. --}}
-    @if (!$project->isCancelled() && $project->status !== \App\Models\Project::STATUS_SELESAI)
+    {{-- ===================== CATATAN & LANGKAH BERIKUTNYA =====================
+         Paling bawah halaman, tampil di semua status: panduan langkah per
+         status + Riwayat Proyek. Tombol aksinya ada di floating action bar. --}}
     <div id="section-aksi" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
         <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2.5 dark:text-gray-400">Catatan &amp; Langkah Berikutnya</h2>
 
-        {{-- ---------- STATUS: DRAFT / MENUNGGU PERSETUJUAN ---------- --}}
+        {{-- ---------- STATUS: DRAFT / MENUNGGU PERSETUJUAN (alur diperjelas 2026-09-15) ---------- --}}
         @if (in_array($project->status, [\App\Models\Project::STATUS_DRAFT, \App\Models\Project::STATUS_WAITING_APPROVAL]))
-            <p class="text-xs text-gray-400 dark:text-gray-500">
+            @php
+                $isDraftStep = $project->status === \App\Models\Project::STATUS_DRAFT;
+                $stepNow  = 'font-semibold text-gray-800 dark:text-gray-200';
+                $stepDone = 'text-gray-400 line-through dark:text-gray-500';
+            @endphp
+            <ol class="list-decimal list-inside space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                <li class="{{ $isDraftStep ? $stepNow : $stepDone }}">Kirim proposal ke klien — tombol <b>Kirim ke Klien</b>.</li>
                 @if ($project->isPaymentDeferred())
-                    Skema Bayar Nanti — tekan "Mulai Pekerjaan (Tanpa DP)" untuk langsung mulai kerja lapangan tanpa invoice, atau terbitkan invoice lewat kartu "Daftar Tagihan &amp; Pembayaran" di atas kalau ingin menagih lebih dulu.
+                    <li class="{{ $isDraftStep ? '' : $stepNow }}">Setelah klien setuju: tombol <b>Mulai Tanpa DP</b> (skema Bayar Nanti).</li>
                 @else
-                    Terbitkan invoice pertama lewat kartu "Daftar Tagihan &amp; Pembayaran" di atas untuk menandai klien setuju.
+                    <li class="{{ $isDraftStep ? '' : $stepNow }}">Setelah klien setuju: terbitkan <b>invoice DP</b> di kartu "Daftar Tagihan &amp; Pembayaran".</li>
+                    <li>Tandai invoice DP <b>Dibayar</b> — pekerjaan dimulai.</li>
                 @endif
-            </p>
+                @if ($project->isPaymentDeferred())
+                    <li>Isi penilai lapangan, tanggal survei &amp; Surat Tugas (terbuka setelah Mulai Tanpa DP).</li>
+                @else
+                    <li>Isi penilai lapangan, tanggal survei &amp; Surat Tugas (terbuka setelah DP dibayar).</li>
+                @endif
+            </ol>
 
         {{-- ---------- STATUS: DP INVOICING ---------- --}}
         @elseif ($project->status === \App\Models\Project::STATUS_DP_INVOICING)
@@ -1012,37 +1148,72 @@
                  ringkas di header (di bawah nomor proposal) — tidak diulang
                  lagi di sini supaya halaman tidak terlalu panjang. --}}
             @if ($project->assigned_appraiser && $project->survey_date)
-                <div class="space-y-3 mt-1">
+                <div class="space-y-2 mt-1">
+                    {{-- Tahap alur produksi saat ini (2026-09-15). Tombolnya ada
+                         di floating action bar (_floating_actions.blade.php). --}}
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                        Tahap sekarang: <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $project->stage['label'] }}</span>
+                        @if ($project->stage['actor'])
+                            <span class="text-gray-400 dark:text-gray-500">&middot; giliran {{ $project->stage['actor'] }}</span>
+                        @endif
+                    </p>
 
-                    @if ($project->review_rejected_at && $project->review_status !== \App\Models\Project::REVIEW_APPROVED)
+                    @if ($project->review_rejected_at)
                         <div class="rounded-md border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700 dark:border-rose-800 dark:bg-rose-900/30 dark:text-rose-400">
-                            ⚠️ Dikembalikan oleh <strong>{{ $project->reviewRejectedBy->name ?? '-' }}</strong>
-                            ({{ $project->review_rejected_at->translatedFormat('d M Y') }}):
+                            Dikembalikan oleh <strong>{{ $project->reviewRejectedBy->name ?? '-' }}</strong>
+                            ({{ $project->review_rejected_at->translatedFormat('d M Y, H:i') }}):
                             <span class="italic">&ldquo;{{ $project->review_rejection_note }}&rdquo;</span>
                         </div>
                     @endif
 
-                    {{-- Semua TOMBOL alur review sudah pindah ke floating
-                         action bar (partial _floating_actions.blade.php).
-                         Yang tersisa di sini murni informasi. --}}
-                    @if ($project->review_status === \App\Models\Project::REVIEW_APPROVED)
-                        <p class="text-xs text-emerald-700 font-medium dark:text-emerald-400">
-                            ✅ Disetujui oleh {{ $project->reviewApprovedBy->name ?? '-' }} ({{ $project->review_approved_at?->translatedFormat('d M Y') }})
-                        </p>
+                    @if ($project->review_status === \App\Models\Project::STAGE_DRAFT_REVIEWED && ! $project->final_report_number)
+                        <p class="text-xs text-amber-600 dark:text-amber-400">Isi Nomor Laporan Final di kartu "Nomor Laporan Final" sebelum menandai buku selesai dicetak.</p>
                     @endif
                 </div>
             @endif
 
-        {{-- ---------- STATUS: PELUNASAN ---------- --}}
-        @elseif ($project->status === \App\Models\Project::STATUS_PELUNASAN)
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-                Draf laporan sudah selesai. Terbitkan &amp; verifikasi sisa tagihan lewat kartu
-                "Daftar Tagihan &amp; Pembayaran" di atas — proyek otomatis pindah ke Selesai begitu lunas penuh.
-                Nomor Laporan Resmi bisa diisi di kartu "Nomor Laporan Resmi" di atas begitu lunas penuh.
-            </p>
+        {{-- ---------- STATUS: SELESAI (pembayaran bisa menyusul) ---------- --}}
+        @elseif ($project->status === \App\Models\Project::STATUS_SELESAI)
+            @if ($project->is_fully_paid)
+                <p class="text-xs text-emerald-600 dark:text-emerald-400">✔ Pekerjaan selesai dan tagihan sudah lunas.</p>
+            @else
+                <p class="text-xs text-amber-600 dark:text-amber-400">
+                    Pekerjaan selesai, tagihan belum lunas — sisa Rp {{ number_format($project->remaining_balance, 0, ',', '.') }}.
+                    Terbitkan/verifikasi tagihan lewat kartu "Daftar Tagihan &amp; Pembayaran".
+                </p>
+            @endif
         @endif
+
+        {{-- ---------- RIWAYAT PROYEK (2026-09-14, feedback user) ----------
+             Semua langkah alur proyek beserta tanggal, jam, pelaku, dan catatan. --}}
+        <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
+            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Riwayat Proyek</h3>
+            @forelse ($activityLogs as $log)
+                <div class="flex gap-3">
+                    <div class="flex flex-col items-center">
+                        <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {{ $log->timeline_dot }}"></span>
+                        @unless ($loop->last)
+                            <span class="mt-1 w-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+                        @endunless
+                    </div>
+                    <div class="min-w-0 flex-1 {{ $loop->last ? '' : 'pb-4' }}">
+                        <div class="flex flex-wrap items-baseline justify-between gap-x-3">
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $log->timeline_label }}</p>
+                            <time class="text-xs text-gray-500 tabular-nums whitespace-nowrap dark:text-gray-400">{{ $log->created_at->translatedFormat('d M Y, H:i') }}</time>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">oleh {{ $log->user->name ?? 'Sistem' }}</p>
+                        @if ($log->note)
+                            <p class="mt-1 rounded-md bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700 whitespace-pre-line dark:bg-gray-900/50 dark:text-gray-300">{{ $log->note }}</p>
+                        @else
+                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{{ $log->description }}</p>
+                        @endif
+                    </div>
+                </div>
+            @empty
+                <p class="text-xs text-gray-400 dark:text-gray-500">Belum ada riwayat.</p>
+            @endforelse
+        </div>
     </div>
-    @endif
 
 </div>
 
@@ -1062,6 +1233,29 @@
 
         <form action="{{ route('invoices.store', $project) }}" method="POST" class="space-y-3">
             @csrf
+            {{-- "Telah diterima dari" paling atas (2026-09-14, feedback user) — nama &
+                 alamat pihak ini dicetak di Invoice dan Kwitansi. --}}
+            @php $receivedFromOptions = $project->receivedFromOptions(); @endphp
+            <div>
+                <label for="inv_received_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Telah diterima dari</label>
+                <select id="inv_received_from" name="received_from_client_id" required
+                        class="mt-1 w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                    @foreach ($receivedFromOptions as $opt)
+                        <option value="{{ $opt['id'] }}" @selected($opt['id'] == $project->instructing_client_id)>{{ $opt['label'] }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Nama &amp; alamatnya dicetak di Invoice dan Kwitansi.</p>
+            </div>
+            {{-- "Biaya Jasa Penilaian Properti an. …" — pilihan sama (2026-09-14, feedback user). --}}
+            <div>
+                <label for="inv_on_behalf_of" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Biaya Jasa Penilaian Properti an.</label>
+                <select id="inv_on_behalf_of" name="on_behalf_of_client_id" required
+                        class="mt-1 w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                    @foreach ($receivedFromOptions as $opt)
+                        <option value="{{ $opt['id'] }}" @selected($opt['id'] == ($project->client_id ?? $project->instructing_client_id))>{{ $opt['label'] }}</option>
+                    @endforeach
+                </select>
+            </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">
                 Sisa Tagihan saat ini: <span class="font-semibold text-amber-600 dark:text-amber-400">Rp {{ number_format($project->remaining_balance, 0, ',', '.') }}</span>
                 dari total kontrak Rp {{ number_format((float) $project->total_fee, 0, ',', '.') }}.
@@ -1112,6 +1306,24 @@
         <form id="editInvoiceForm" method="POST" class="space-y-3">
             @csrf
             @method('PUT')
+            <div>
+                <label for="edit_inv_received_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Telah diterima dari</label>
+                <select id="edit_inv_received_from" name="received_from_client_id" required
+                        class="mt-1 w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                    @foreach ($project->receivedFromOptions() as $opt)
+                        <option value="{{ $opt['id'] }}">{{ $opt['label'] }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="edit_inv_on_behalf_of" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Biaya Jasa Penilaian Properti an.</label>
+                <select id="edit_inv_on_behalf_of" name="on_behalf_of_client_id" required
+                        class="mt-1 w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                    @foreach ($project->receivedFromOptions() as $opt)
+                        <option value="{{ $opt['id'] }}">{{ $opt['label'] }}</option>
+                    @endforeach
+                </select>
+            </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Angka Nominal (Rp)</label>
                 <input type="number" id="edit_inv_amount" name="amount" min="1" step="1" required
@@ -1166,16 +1378,19 @@
         </div>
         <form id="reviewRejectForm" method="POST" class="space-y-3">
             @csrf
+            {{-- Modal dipakai bersama semua langkah review (2026-09-14): pengembalian
+                 = alasan wajib; Submit/Sudah Direview/Konfirmasi = catatan opsional. --}}
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Alasan / Catatan Revisi</label>
-                <textarea id="reviewRejectReason" name="reason" rows="3" required
+                <label id="reviewNoteLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Alasan / Catatan Revisi</label>
+                <textarea id="reviewRejectReason" name="reason" rows="3" required maxlength="1000"
                           placeholder="Jelaskan apa yang perlu diperbaiki..."
                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600"></textarea>
+                <p id="reviewNoteHint" class="mt-1 text-xs text-gray-500 dark:text-gray-400" style="display:none"></p>
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeReviewRejectModal()"
                         class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
-                <button type="submit"
+                <button type="submit" id="reviewSubmitBtn"
                         class="px-4 py-2 text-sm rounded-md bg-rose-600 text-white hover:bg-rose-700">Kembalikan</button>
             </div>
         </form>
@@ -1218,8 +1433,10 @@
         });
     })();
 
-    function openEditInvoiceModal(actionUrl, amount, description, isPaid) {
+    function openEditInvoiceModal(actionUrl, amount, description, isPaid, receivedFromId, onBehalfOfId) {
         document.getElementById('editInvoiceForm').action = actionUrl;
+        if (receivedFromId) document.getElementById('edit_inv_received_from').value = receivedFromId;
+        if (onBehalfOfId) document.getElementById('edit_inv_on_behalf_of').value = onBehalfOfId;
         document.getElementById('edit_inv_amount').value = Math.round(amount);
         document.getElementById('edit_inv_description').value = description || '';
         document.getElementById('editInvoiceWarning').hidden = !isPaid;
@@ -1244,12 +1461,35 @@
 
 
     // ===================== MODAL: KEMBALIKAN REVIEW (perlu alasan) =====================
-    function openReviewRejectModal(actionUrl, title) {
+    function openReviewRejectModal(actionUrl, title, opts) {
+        opts = opts || {};
+        const optional = !!opts.optional;
+        const tones = {
+            rose: 'bg-rose-600 hover:bg-rose-700',
+            indigo: 'bg-indigo-600 hover:bg-indigo-700',
+            emerald: 'bg-emerald-600 hover:bg-emerald-700',
+        };
         document.getElementById('reviewRejectForm').action = actionUrl;
         document.getElementById('reviewRejectTitle').textContent = title;
-        document.getElementById('reviewRejectReason').value = '';
+
+        const field = document.getElementById('reviewRejectReason');
+        field.value = '';
+        field.name = 'note';
+        field.required = !optional;
+        field.placeholder = optional ? 'Tulis catatan bila perlu...' : 'Jelaskan apa yang perlu diperbaiki...';
+        document.getElementById('reviewNoteLabel').textContent = opts.label || (optional ? 'Catatan (opsional)' : 'Alasan / Catatan Revisi');
+
+        const hint = document.getElementById('reviewNoteHint');
+        hint.textContent = opts.hint || '';
+        hint.style.display = opts.hint ? '' : 'none';
+
+        const btn = document.getElementById('reviewSubmitBtn');
+        btn.textContent = opts.button || 'Kembalikan';
+        btn.className = 'px-4 py-2 text-sm rounded-md text-white ' + (tones[opts.tone] || tones.rose);
+
         document.getElementById('reviewRejectModal').classList.remove('hidden');
         document.getElementById('reviewRejectModal').classList.add('flex');
+        field.focus();
     }
     function closeReviewRejectModal() {
         document.getElementById('reviewRejectModal').classList.add('hidden');

@@ -3,10 +3,6 @@
 return [
     'company_name'    => 'KJPP SUGIANTO PRASODJO DAN REKAN',
     'company_tagline' => 'Public Appraisers & Consultants',
-    'company_address' => '18 OFFICE PARK LANTAI 3 UNIT A-3E Jalan Tahi Bonar Simatupang Nomor 18, Keluarahan Kebagusan, Kecamatan Pasar Minggu Jakarta Selatan DKI Jakarta 12520',
-    'company_phone'   => '(021) 2270 8777',
-    'company_email'   => 'kjppspr.jkt@gmail.com',
-    'company_logo'    => public_path('images/logo_spr.png'),
 
     // Font body dokumen proposal (.docx & hasil PDF-nya). Helvetica ≈ Arial
     // di Word/LibreOffice, jadi pakai 'Arial' untuk hasil yang identik.
@@ -64,13 +60,5 @@ return [
             'Branch Office: Denpasar (PS), Makassar (P), Semarang (PS), Pontianak (PS),  Surabaya (PS), Bandung (P),',
             'Cirebon (PS), Lampung (P), Palembang (P), Sukoharjo-Solo (PS), Serang (P), Karawang (P), Manado (PS), Medan (PS)',
         ],
-    ],
-
-    // Teks baku klausul standar — dipertahankan untuk kompatibilitas,
-    // tidak lagi dipakai (teks baku proposal sekarang di config/proposal_clauses.php).
-    'standard_clauses' => [
-        'independence' => 'Penilaian akan dilaksanakan secara independen dan objektif sesuai dengan Standar Penilaian Indonesia (SPI) yang berlaku.',
-        'validity'     => 'Penawaran ini berlaku selama 30 (tiga puluh) hari kalender sejak tanggal diterbitkan.',
-        'confidential' => 'Seluruh data dan informasi yang diberikan akan dijaga kerahasiaannya sesuai kode etik profesi penilai.',
     ],
 ];

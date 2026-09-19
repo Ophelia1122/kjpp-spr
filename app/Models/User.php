@@ -17,13 +17,99 @@ use Illuminate\Notifications\Notifiable;
     // saat user ini jadi penandatangan.
     'jabatan', 'partner_status', 'mappi_no', 'rmk_no', 'izin_menkeu_no',
     'sk_menkeu_no', 'sk_menkeu_date', 'sttd_ojk_no', 'sttd_ojk_date',
-    'klasifikasi',
+    'klasifikasi', 'whatsapp_number', 'avatar_path',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    // ===================== FOTO PROFIL (2026-09-15) =====================
+    /** Aturan validasi upload foto profil: JPG/PNG maks. 1 MB. */
+    public const AVATAR_RULES = ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:1024'];
+
+    public static array $avatarMessages = [
+        'avatar.mimes' => 'Foto profil harus berformat JPG atau PNG.',
+        'avatar.max'   => 'Ukuran foto profil maksimal 1 MB.',
+    ];
+
+    protected static function booted(): void
+    {
+        static::deleting(fn (User $user) => $user->deleteAvatarFile());
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        // asset() mengikuti host yang sedang dipakai (localhost:8899, Tailscale,
+        // NAS) — Storage::url() memakai APP_URL yang bisa beda port/host.
+        return $this->avatar_path
+            ? asset('storage/' . $this->avatar_path) . '?v=' . $this->updated_at?->timestamp
+            : null;
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        return \Illuminate\Support\Str::of($this->name)->explode(' ')->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('');
+    }
+
+    /**
+     * Terapkan isian form foto profil: file baru menggantikan yang lama,
+     * centang "hapus foto" mengosongkannya. Belum di-save().
+     */
+    public function applyAvatarUpload(\Illuminate\Http\Request $request): void
+    {
+        if ($request->hasFile('avatar')) {
+            $newPath = self::storeCompressedAvatar($request->file('avatar'));
+            // Foto lama langsung dibuang dari server begitu foto baru tersimpan
+            // (2026-09-15, feedback user) — tidak ada file yatim di avatars/.
+            $this->deleteAvatarFile();
+            $this->avatar_path = $newPath;
+        } elseif ($request->boolean('remove_avatar')) {
+            $this->deleteAvatarFile();
+            $this->avatar_path = null;
+        }
+    }
+
+    /**
+     * Simpan foto profil sebagai JPG persegi maks. 512px kualitas 82 — hasil
+     * akhirnya selalu puluhan s/d ratusan KB walau browser tidak sempat
+     * meng-crop (mis. browser lama). Tanpa GD: simpan file apa adanya
+     * (tetap dibatasi 1 MB oleh validasi).
+     */
+    private static function storeCompressedAvatar(\Illuminate\Http\UploadedFile $file): string
+    {
+        $src = function_exists('imagecreatefromstring') ? @imagecreatefromstring((string) file_get_contents($file->getRealPath())) : false;
+        if (! $src) {
+            return $file->store('avatars', 'public');
+        }
+
+        $w = imagesx($src);
+        $h = imagesy($src);
+        $side = min($w, $h);                       // potong tengah jadi persegi
+        $out  = min(512, $side);
+        $dst  = imagecreatetruecolor($out, $out);
+        imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255)); // PNG transparan -> putih
+        imagecopyresampled($dst, $src, 0, 0, intdiv($w - $side, 2), intdiv($h - $side, 2), $out, $out, $side, $side);
+
+        ob_start();
+        imagejpeg($dst, null, 82);
+        $jpeg = ob_get_clean();
+        imagedestroy($src);
+        imagedestroy($dst);
+
+        $path = 'avatars/' . \Illuminate\Support\Str::random(40) . '.jpg';
+        \Illuminate\Support\Facades\Storage::disk('public')->put($path, $jpeg);
+
+        return $path;
+    }
+
+    public function deleteAvatarFile(): void
+    {
+        if ($this->avatar_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($this->avatar_path);
+        }
+    }
 
     /**
      * Pilihan Jabatan (biodata). Hanya "Penanggung Jawab" yang boleh
@@ -119,6 +205,12 @@ class User extends Authenticatable
     public function isReviewer(): bool
     {
         return $this->jabatan === self::JABATAN_REVIEWER;
+    }
+
+    /** Nomor WhatsApp selalu disimpan "628..." supaya bisa di-mention bot. */
+    public function setWhatsappNumberAttribute(?string $value): void
+    {
+        $this->attributes['whatsapp_number'] = \App\Services\WhatsAppNotifier::normalizeNumber($value);
     }
 
     /**

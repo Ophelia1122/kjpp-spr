@@ -71,7 +71,8 @@ class ProposalController extends Controller
             'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
-            'client_name'              => $validated['client_name'] ?? null,
+            // Nama Klien dipilih dari Database Klien (2026-09-14, feedback user).
+            'client_id'                => $validated['client_id'] ?? null,
             'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
             'approver_client_id'       => $validated['approver_client_id'] ?? null,
             'marketing_name'           => $this->resolveMarketingName($validated),
@@ -122,7 +123,7 @@ class ProposalController extends Controller
             abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
         }
 
-        $project->load('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy', 'approverClient');
+        $project->load('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy', 'approverClient', 'namedClient');
 
         // Daftar penandatangan = Penanggung Jawab aktif. Kalau proposal ini
         // sudah punya penandatangan yang kini tidak lagi memenuhi syarat
@@ -159,7 +160,10 @@ class ProposalController extends Controller
             'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
-            'client_name'              => $validated['client_name'] ?? null,
+            // Nama Klien dipilih dari Database Klien (2026-09-14). Teks lama
+            // dipertahankan sampai diganti dengan pilihan klien.
+            'client_id'                => $validated['client_id'] ?? null,
+            'client_name'              => ! empty($validated['client_id']) ? null : $project->client_name,
             'signed_by_user_id'        => $validated['signed_by_user_id'] ?? null,
             'approver_client_id'       => $validated['approver_client_id'] ?? null,
             'marketing_name'           => $this->resolveMarketingName($validated),
@@ -219,16 +223,27 @@ class ProposalController extends Controller
      */
     public function destroy(Project $project)
     {
-        if ($project->status !== Project::STATUS_DRAFT) {
-            abort(403, 'Hanya proposal berstatus Draft yang dapat dihapus.');
+        // Proyek Batal juga boleh dihapus permanen (2026-09-14, feedback user) —
+        // invoice-nya ikut terhapus (FK cascade), jadi dikonfirmasi di UI.
+        $isCancelled = $project->status === Project::STATUS_BATAL;
+
+        if ($project->status !== Project::STATUS_DRAFT && ! $isCancelled) {
+            abort(403, 'Hanya proposal Draft atau proyek Batal yang dapat dihapus.');
         }
 
-        if ($project->invoices()->exists()) {
+        if (! $isCancelled && $project->invoices()->exists()) {
             abort(403, 'Proposal ini sudah memiliki invoice dan tidak dapat dihapus. Batalkan invoice-nya terlebih dahulu jika diperlukan.');
         }
 
         $proposalNumber = $project->proposal_number;
-        \App\Helpers\AuditLogger::record('proposal.deleted', "Menghapus proposal {$proposalNumber}", $project);
+        $invoiceCount   = $project->invoices()->count();
+        \App\Helpers\AuditLogger::record(
+            'proposal.deleted',
+            $isCancelled
+                ? "Menghapus permanen proyek batal {$proposalNumber} beserta {$invoiceCount} invoice"
+                : "Menghapus proposal {$proposalNumber}",
+            $project
+        );
         $project->delete();
 
         return redirect()
@@ -277,11 +292,23 @@ class ProposalController extends Controller
         return $response->deleteFileAfterSend(true);
     }
 
-    public function markApproved(Project $project)
+    /**
+     * Draft -> Menunggu Persetujuan Klien (2026-09-15, feedback user): menandai
+     * proposal sudah dikirim ke klien, supaya alur sebelum DP jelas.
+     */
+    public function markSentToClient(Project $project)
     {
+        abort_unless($project->status === Project::STATUS_DRAFT, 403, 'Hanya proposal Draft yang bisa ditandai terkirim ke klien.');
+
         $project->update(['status' => Project::STATUS_WAITING_APPROVAL]);
 
-        return back()->with('success', 'Proposal ditandai disetujui klien. Silakan buat Invoice DP.');
+        \App\Helpers\AuditLogger::record(
+            'proposal.sent_to_client',
+            "Mengirim proposal {$project->proposal_number} ke klien, menunggu persetujuan",
+            $project
+        );
+
+        return back()->with('success', 'Proposal ditandai terkirim ke klien. Setelah klien setuju, terbitkan invoice DP.');
     }
 
     /**
@@ -491,6 +518,7 @@ class ProposalController extends Controller
             // Nama Klien (debitur/pemilik aset) — opsional, kosong = nama
             // Pemberi Tugas. Dipakai di baris "Hal" proposal.
             'client_name'              => 'nullable|string|max:255',
+            'client_id'                => 'nullable|exists:clients,id',
             // Penandatangan proposal — opsional. Kosong = pakai penandatangan
             // baku config('kjpp.signatory'). Pilihan di form sudah dibatasi ke
             // user aktif berjabatan "Penanggung Jawab"; di sini cukup pastikan

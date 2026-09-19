@@ -28,6 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // mencari route bernama 'dashboard' lebih dulu — di aplikasi ini itu
         // List Project, jadi user mendarat di sana, bukan di Beranda.
         $middleware->redirectUsersTo(fn () => route('home'));
+
+        // Akses lewat HTTPS Tailscale Serve (2026-09-15): TLS diterima tailscaled
+        // lalu diteruskan ke container sebagai HTTP. Percayai header
+        // X-Forwarded-* supaya URL asset/redirect ikut https:// dan host
+        // *.ts.net — tanpa ini CSS/JS diblokir browser (mixed content).
+        // Akses langsung http://IP-NAS:8080 tetap normal (tanpa header itu).
+        $middleware->trustProxies(at: '*');
     })
     
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -11,129 +11,162 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardController extends Controller
 {
+    /** Batas penagihan pekerjaan Selesai yang belum lunas: N hari sejak buku dicetak. */
+    public const BILLING_DUE_DAYS = 3;
+
     /**
-     * BERANDA — dashboard operasional untuk SEMUA role (termasuk Surveyor).
-     * Isinya angka ringkas + daftar "butuh perhatian hari ini", TANPA data
-     * nilai kontrak (itu ada di overview() yang butuh izin dashboard.overview).
-     *
-     * SELALU DIPERSEMPIT ke proyek yang DITUGASKAN kepada user yang login
-     * (assigned_appraiser_id), jadi ini murni "pekerjaan saya" — proyek yang
-     * bukan garapannya tidak muncul. Pandangan menyeluruh ada di Dashboard
-     * Project & Timeline (punya tombol "Semua Proyek").
-     *
-     * Kartu "Invoice belum lunas" & item tagihan di daftar hanya muncul bagi
-     * user yang punya izin invoices.view (Surveyor tidak).
+     * Beranda = PR utama hari ini, dibedakan per peran (2026-09-15, feedback user):
+     *  - Surveyor/Penilai : proyek aktif miliknya (tahap, tanggal survei, SLA, catatan terakhir)
+     *  - Reviewer         : antrean review nilai & draft laporan, plus tab "Sebagai Penilai"
+     *  - Admin Produksi   : tindakan produksi & proyek dalam SLA Laporan Final
+     *  - General Admin    : Admin Produksi + invoice tertunggak & pekerjaan selesai belum lunas
+     *  - Administrator    : seperti General Admin, plus tab "Sebagai Reviewer"
+     * Ringkasan angka bulanan cukup di Ringkasan Project & Dashboard Pembayaran.
      */
-    public function home()
+    public function home(Request $request)
     {
-        $user           = auth()->user();
-        // Jabatan Reviewer tidak perlu kartu & daftar "Invoice belum lunas"
-        // (2026-09-15, feedback user) — pekerjaannya review, bukan penagihan,
-        // walaupun role akunnya (mis. Administrator) punya izin invoices.view.
-        $canSeeInvoices = $user->hasPermission('invoices.view')
-            && $user->jabatan !== User::JABATAN_REVIEWER;
-        $mineId         = auth()->id();
+        $user = auth()->user();
 
-        // Administrator, Admin Produksi, General Admin & jabatan Admin melihat
-        // angka SELURUH kantor (2026-09-13, feedback user). Jabatan lapangan
-        // (Penilai, Pelaksana Inspeksi) & Reviewer tetap hanya tugasnya sendiri,
-        // walaupun role akunnya Administrator.
-        $officeWide = $user->seesOfficeWide();
-        $scope = fn ($q) => $officeWide ? $q : $q->where('assigned_appraiser_id', $mineId);
+        $modes = [];
+        if ($user->seesOfficeWide()) {
+            $modes['kantor'] = $user->hasPermission('invoices.manage') ? 'Produksi & Keuangan' : 'Produksi';
+            if ($user->isAdministrator()) {
+                $modes['reviewer'] = 'Sebagai Reviewer';
+            }
+        } elseif ($user->isReviewer()) {
+            $modes['reviewer'] = 'Sebagai Reviewer';
+            $modes['penilai']  = 'Sebagai Penilai';
+        } else {
+            $modes['penilai'] = 'Proyek Saya';
+        }
+        $requested = (string) $request->query('mode', '');
+        $mode = isset($modes[$requested]) ? $requested : array_key_first($modes);
 
-        // Kartu "Proyek Selesai" — khusus jabatan Penilai/Pelaksana Inspeksi
-        // (dihitung dari assigned_appraiser_id, proyek yg jadi tanggung
-        // jawab lapangannya) dan Reviewer (dihitung dari reviewed_by_user_id,
-        // proyek yg pernah dia tandai "Sudah Direview"). Null = jabatan lain,
-        // kartu tidak ditampilkan.
-        $completedCount = null;
-        if (in_array($user->jabatan, [User::JABATAN_PENILAI, User::JABATAN_PELAKSANA_INSPEKSI], true)) {
-            $completedCount = Project::where('assigned_appraiser_id', $mineId)
-                ->where('status', Project::STATUS_SELESAI)
-                ->count();
-        } elseif ($user->jabatan === User::JABATAN_REVIEWER) {
-            $completedCount = Project::where('reviewed_by_user_id', $mineId)
-                ->where('status', Project::STATUS_SELESAI)
-                ->count();
+        $data = ['modes' => $modes, 'mode' => $mode, 'canFinance' => false, 'notes' => collect()];
+        $with = ['instructingClient', 'namedClient'];
+
+        if ($mode === 'penilai') {
+            $mine   = fn () => Project::forAppraiser($user->id);
+            $active = $mine()->with($with)->active()->get()
+                ->sortBy(fn ($p) => ($p->active_sla['date'] ?? null)?->timestamp ?? PHP_INT_MAX)
+                ->values();
+
+            $data['penilai'] = [
+                'active'           => $active,
+                'activeCount'      => $active->count(),
+                'surveyMonthCount' => $mine()->where('status', '!=', Project::STATUS_BATAL)
+                    ->whereBetween('survey_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
+                    ->count(),
+                'doneCount'        => $mine()->where('status', Project::STATUS_SELESAI)->count(),
+            ];
+            $data['notes'] = $this->latestNotes($active->pluck('id'));
         }
 
-        // "Menunggu Review Anda" — proyek yang sudah disubmit Surveyor tapi
-        // belum ditandai direview siapa pun (review_status = submitted).
-        // Ditampilkan utk jabatan Reviewer (bisa langsung bertindak) DAN
-        // Administrator (supaya tetap bisa memantau/verifikasi walau bukan
-        // Reviewer). Reviewer TIDAK dibatasi ke proyek tertentu — siapa pun
-        // berjabatan Reviewer boleh ambil proyek mana pun yang mengantre
-        // (lihat ProjectController@approveReview, gerbangnya jabatan bukan
-        // penugasan per-proyek).
-        $pendingReview = collect();
-        if ($user->jabatan === User::JABATAN_REVIEWER || $user->isAdministrator()) {
-            $pendingReview = Project::with('instructingClient', 'reviewSubmittedBy')
-                ->where('review_status', Project::REVIEW_SUBMITTED)
-                ->orderBy('review_submitted_at')
-                ->get();
-        }
-
-        $active = Project::with('instructingClient')
-            ->active()
-            ->tap($scope)
-            ->get();
-
-        // Proyek yang sudah punya jadwal (survey_date + sla_draft_days terisi).
-        $scheduled = $active->filter(fn ($p) => $p->estimated_completion_date !== null);
-        $overdue   = $scheduled->filter(fn ($p) => $p->sla_days_remaining < 0)
-                               ->sortBy('sla_days_remaining');
-        $dueSoon   = $scheduled->filter(fn ($p) => $p->sla_days_remaining >= 0 && $p->sla_days_remaining <= 2)
-                               ->sortBy('sla_days_remaining');
-
-        $surveyWeekCount = Project::where('status', '!=', Project::STATUS_BATAL)
-            ->tap($scope)
-            ->whereBetween('survey_date', [
-                now()->startOfWeek()->toDateString(),
-                now()->endOfWeek()->toDateString(),
-            ])
-            ->count();
-
-        $unpaid = collect();
-        if ($canSeeInvoices) {
-            $unpaid = Invoice::with('project.instructingClient')
-                ->where('status', Invoice::STATUS_UNPAID)
-                ->whereHas('project', $scope)
+        if ($mode === 'reviewer') {
+            $queue = Project::with([...$with, 'reviewSubmittedBy'])
+                ->where('status', Project::STATUS_IN_PROGRESS)
+                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::STAGE_DRAFT_CONFIRMED])
                 ->get()
-                ->filter(fn ($inv) => $inv->project && ! $inv->project->isCancelled());
+                ->sortBy(fn ($p) => $p->stage_since?->timestamp ?? 0)
+                ->values();
+
+            $data['reviewer'] = [
+                'queue'              => $queue,
+                'valueCount'         => $queue->where('review_status', Project::REVIEW_SUBMITTED)->count(),
+                'draftCount'         => $queue->where('review_status', Project::STAGE_DRAFT_CONFIRMED)->count(),
+                'reviewedMonthCount' => \App\Models\AuditLog::where('user_id', $user->id)
+                    ->whereIn('action', ['review.value_approved', 'draft.reviewed', 'review.approved_by_reviewer'])
+                    ->where('created_at', '>=', now()->startOfMonth())
+                    ->count(),
+            ];
+            $data['notes'] = $this->latestNotes($queue->pluck('id'));
         }
 
-        // Daftar "butuh perhatian": lewat deadline dulu, lalu mepet deadline,
-        // terakhir tagihan yang belum lunas.
-        $attention = collect();
+        if ($mode === 'kantor') {
+            $inProgress = Project::with($with)
+                ->where('status', Project::STATUS_IN_PROGRESS)
+                ->whereNotNull('review_status')
+                ->get();
 
-        foreach ($overdue as $p) {
-            $attention->push(['project' => $p, 'note' => $p->sla_label, 'tone' => 'red', 'rank' => 0]);
-        }
-        foreach ($dueSoon as $p) {
-            $attention->push(['project' => $p, 'note' => $p->sla_label, 'tone' => 'amber', 'rank' => 1]);
-        }
-        foreach ($unpaid as $inv) {
-            $attention->push([
-                'project' => $inv->project,
-                'note'    => ($inv->invoice_type === Invoice::TYPE_DP ? 'DP' : 'Pelunasan') . ' belum lunas',
-                'tone'    => 'slate',
-                'rank'    => 2,
-            ]);
+            $actions = $inProgress
+                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::STAGE_DRAFT_SUBMITTED, Project::STAGE_DRAFT_REVIEWED])
+                ->sortBy(fn ($p) => $p->stage_since?->timestamp ?? 0)
+                ->values();
+            $finalSla = $inProgress
+                ->filter(fn ($p) => $p->isReviewApproved())
+                ->sortBy(fn ($p) => $p->estimated_final_completion_date?->timestamp ?? PHP_INT_MAX)
+                ->values();
+
+            $data['produksi'] = [
+                'actions'           => $actions,
+                'finalSla'          => $finalSla,
+                'valueCount'        => $inProgress->where('review_status', Project::REVIEW_SUBMITTED)->count(),
+                'confirmCount'      => $inProgress->where('review_status', Project::STAGE_DRAFT_SUBMITTED)->count(),
+                'printCount'        => $inProgress->where('review_status', Project::STAGE_DRAFT_REVIEWED)->count(),
+                'finalOverdueCount' => $finalSla->filter(fn ($p) => ($p->final_sla_days_remaining ?? 0) < 0)->count(),
+            ];
+            $data['notes'] = $this->latestNotes($actions->pluck('id'));
+
+            if ($user->hasPermission('invoices.manage')) {
+                $data['canFinance'] = true;
+
+                $overdue = Invoice::with('project.instructingClient', 'project.namedClient')
+                    ->where('status', Invoice::STATUS_UNPAID)
+                    ->get()
+                    ->filter(fn ($inv) => $inv->project && ! $inv->project->isCancelled()
+                        && $inv->age_days > PaymentDashboardController::OVERDUE_DAYS)
+                    ->sortByDesc('age_days')
+                    ->values();
+
+                $unpaidDone = Project::with([...$with, 'invoices'])
+                    ->where('status', Project::STATUS_SELESAI)
+                    ->get()
+                    ->reject(fn ($p) => $p->is_fully_paid)
+                    ->map(function ($p) {
+                        $doneAt = $p->printed_at ?? $p->updated_at;
+                        $due    = $doneAt->copy()->startOfDay()->addDays(self::BILLING_DUE_DAYS);
+
+                        return [
+                            'project'   => $p,
+                            'doneAt'    => $doneAt,
+                            'due'       => $due,
+                            'dueDays'   => (int) now()->startOfDay()->diffInDays($due, false),
+                            'notBilled' => max(0, round((float) $p->total_fee - (float) $p->invoices->sum('amount'), 2)),
+                        ];
+                    })
+                    ->sortBy(fn ($row) => $row['due']->timestamp)
+                    ->values();
+
+                $data['keuangan'] = [
+                    'overdue'       => $overdue,
+                    'overdueSum'    => $overdue->sum('amount'),
+                    'unpaidDone'    => $unpaidDone,
+                    'unpaidDoneSum' => $unpaidDone->sum(fn ($row) => $row['project']->remaining_balance),
+                    'overdueDays'   => PaymentDashboardController::OVERDUE_DAYS,
+                    'dueDays'       => self::BILLING_DUE_DAYS,
+                ];
+            }
         }
 
-        return view('dashboard.home', [
-            'activeCount'     => $active->count(),
-            'overdueCount'    => $overdue->count(),
-            'surveyWeekCount' => $surveyWeekCount,
-            'unpaidCount'     => $unpaid->count(),
-            'canSeeInvoices'  => $canSeeInvoices,
-            'attention'       => $attention->sortBy('rank')->values()->take(8),
-            'weekRange'       => now()->startOfWeek()->translatedFormat('d M')
-                                 . ' – ' . now()->endOfWeek()->translatedFormat('d M'),
-            'completedCount'  => $completedCount,
-            'pendingReview'   => $pendingReview,
-            'officeWide'      => $officeWide,
-        ]);
+        return view('dashboard.home', $data);
+    }
+
+    /** Catatan terakhir (dari Riwayat Proyek) per proyek, key = project id. */
+    private function latestNotes($projectIds)
+    {
+        $ids = collect($projectIds);
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return \App\Models\AuditLog::with('user')
+            ->where('subject_type', Project::class)
+            ->whereIn('subject_id', $ids)
+            ->whereNotNull('note')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->keyBy('subject_id');
     }
 
     /**
@@ -178,7 +211,7 @@ class DashboardController extends Controller
         // invoices di-eager-load karena kolom "Sisa Tagihan" memakai accessor
         // remaining_balance yang menghitung dari relasi invoices — tanpa ini
         // jadi N+1 (1 query per baris tabel).
-        $query = Project::with(['instructingClient', 'assignedAppraiser', 'invoices', 'valuationObjects']);
+        $query = Project::with(['instructingClient', 'namedClient', 'assignedAppraiser', 'invoices', 'valuationObjects']);
 
         // Filter "Proyek Saya" — menampilkan HANYA proyek yang
         // assigned_appraiser_id-nya cocok dengan user yang sedang login.
@@ -203,7 +236,7 @@ class DashboardController extends Controller
         }
 
         if ($mine) {
-            $query->where('assigned_appraiser_id', auth()->id());
+            $query->forAppraiser(auth()->id());
         }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -225,6 +258,13 @@ class DashboardController extends Controller
                     now()->startOfWeek()->toDateString(),
                     now()->endOfWeek()->toDateString(),
                 ]);
+        } elseif ($focus === 'survey_month') {
+            // Kartu "Survei bulan ini" di Beranda Surveyor (2026-09-15).
+            $query->where('status', '!=', Project::STATUS_BATAL)
+                ->whereBetween('survey_date', [
+                    now()->startOfMonth()->toDateString(),
+                    now()->endOfMonth()->toDateString(),
+                ]);
         }
 
         if ($request->filled('q')) {
@@ -233,6 +273,9 @@ class DashboardController extends Controller
                 $q->where('proposal_number', 'like', "%{$keyword}%")
                   ->orWhere('client_name', 'like', "%{$keyword}%")
                   ->orWhereHas('instructingClient', function ($sub) use ($keyword) {
+                      $sub->where('client_name', 'like', "%{$keyword}%");
+                  })
+                  ->orWhereHas('namedClient', function ($sub) use ($keyword) {
                       $sub->where('client_name', 'like', "%{$keyword}%");
                   })
                   ->orWhereHas('intendedUsers', function ($sub) use ($keyword) {
@@ -246,7 +289,7 @@ class DashboardController extends Controller
             $query->where('proposal_purpose', $request->purpose);
         }
         if ($request->filled('appraiser')) {
-            $query->where('assigned_appraiser_id', $request->appraiser);
+            $query->forAppraiser($request->appraiser);
         }
         if ($request->filled('from')) {
             $query->whereDate('created_at', '>=', $request->from);
@@ -323,7 +366,7 @@ class DashboardController extends Controller
         }
 
         $perPage = (int) $request->get('per_page', 15);
-        if (!in_array($perPage, [15, 25, 50, 100], true)) {
+        if (!in_array($perPage, [15, 25], true)) {
             $perPage = 15;
         }
 
@@ -339,7 +382,7 @@ class DashboardController extends Controller
         // (supaya penilai lama/nonaktif tetap bisa dicari riwayatnya).
         $appraiserOptions = \App\Models\User::query()
             ->where(function ($q) {
-                $q->whereIn('id', Project::whereNotNull('assigned_appraiser_id')->distinct()->pluck('assigned_appraiser_id'))
+                $q->whereIn('id', \Illuminate\Support\Facades\DB::table('project_appraisers')->select('user_id'))
                   ->orWhere(function ($active) {
                       $active->where('is_active', true)->whereIn('jabatan', [
                           \App\Models\User::JABATAN_PENILAI,
@@ -422,7 +465,7 @@ class DashboardController extends Controller
             ];
         });
 
-        $recent = Project::with('instructingClient')
+        $recent = Project::with('instructingClient', 'namedClient')
             ->latest()
             ->limit(6)
             ->get(['id', 'proposal_number', 'instructing_client_id', 'proposal_purpose', 'status', 'created_at']);
@@ -431,7 +474,7 @@ class DashboardController extends Controller
         // sudah berapa hari sejak DIBUAT (created_at, bukan proposal_date
         // manual), supaya tidak "hilang" tanpa tindak lanjut. Yang paling
         // lama menunggu ditaruh paling atas.
-        $followUps = Project::with('instructingClient')
+        $followUps = Project::with('instructingClient', 'namedClient')
             ->whereIn('status', [Project::STATUS_DRAFT, Project::STATUS_DP_INVOICING])
             ->get(['id', 'proposal_number', 'instructing_client_id', 'status', 'created_at'])
             ->sortByDesc(fn ($p) => $p->created_at->diffInDays(now()))
@@ -457,10 +500,28 @@ class DashboardController extends Controller
      * dashboard) menjadi file Excel (.xlsx).
      * Membutuhkan package: composer require maatwebsite/excel
      */
+    /** Export Excel dengan rentang waktu & filter dari modal (2026-09-14, feedback user). */
     public function exportExcel(Request $request)
     {
-        $filename = 'Daftar-Proyek-KJPP-' . now()->format('Y-m-d') . '.xlsx';
+        $filters = $request->validate([
+            'date_field' => 'nullable|in:proposal_date,created_at,survey_date',
+            'from'       => 'nullable|date',
+            'to'         => 'nullable|date|after_or_equal:from',
+            'status'     => 'nullable|string|max:100',
+            'purpose'    => 'nullable|string|max:100',
+            'appraiser'  => 'nullable|integer',
+            'q'          => 'nullable|string|max:255',
+            'mine'       => 'nullable|boolean',
+        ], ['to.after_or_equal' => 'Tanggal "Sampai" harus sama atau setelah tanggal "Dari".']);
 
-        return Excel::download(new ProjectsExport($request->all()), $filename);
+        if (auth()->user()->seesOfficeWide()) {
+            $filters['mine'] = false;
+        }
+
+        $range = ! empty($filters['from']) || ! empty($filters['to'])
+            ? '-' . ($filters['from'] ?? 'awal') . '_sd_' . ($filters['to'] ?? now()->toDateString())
+            : '-' . now()->format('Y-m-d');
+
+        return Excel::download(new ProjectsExport($filters), 'Daftar-Proyek-KJPP' . $range . '.xlsx');
     }
 }

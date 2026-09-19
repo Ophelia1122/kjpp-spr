@@ -1,4 +1,7 @@
-FROM php:8.3-fpm
+# Pin Debian Bookworm: tag generik php:8.3-fpm kini dapat berpindah ke
+# rilis Debian/LibreOffice baru. LibreOffice 25.2 pada base terbaru gagal
+# merender teks pada DOCX PhpWord proposal dalam mode headless.
+FROM php:8.3-fpm-bookworm
 
 # --- Dependency sistem: Laravel + nginx/supervisor + LibreOffice (proposal .docx -> PDF) ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -57,8 +60,12 @@ COPY docker/php-fpm-kjpp.conf /usr/local/etc/php-fpm.d/zz-kjpp.conf
 COPY docker/entrypoint.sh /usr/local/bin/kjpp-entrypoint
 
 # sed: buang CRLF kalau file sempat tersimpan dengan format Windows.
+# chmod a+rX: file yang disalin dari Windows lewat SMB sering mendarat 770
+# root:root, sehingga nginx/php-fpm (www-data) tidak bisa membaca
+# public/index.php -> 403/404 (2026-09-16, kejadian nyata saat deploy NAS).
 RUN sed -i 's/\r$//' /usr/local/bin/kjpp-entrypoint \
     && chmod +x /usr/local/bin/kjpp-entrypoint \
+    && chmod -R a+rX /var/www/html \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80

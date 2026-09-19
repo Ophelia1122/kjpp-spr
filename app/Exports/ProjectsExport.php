@@ -13,8 +13,9 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class ProjectsExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
     /**
-     * @param array $filters Filter yang sama dengan yang dipakai di DashboardController@index
-     *                       (status, q) supaya hasil export = apa yang sedang dilihat user.
+     * @param array $filters Dari modal Export Excel di List Project (2026-09-14):
+     *                       date_field + from/to (rentang waktu), status, purpose,
+     *                       appraiser, q, mine.
      */
     public function __construct(private array $filters = [])
     {
@@ -22,25 +23,44 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
 
     public function collection()
     {
-        $query = Project::with(['instructingClient', 'intendedUsers', 'invoices'])->latest();
+        $f     = $this->filters;
+        $query = Project::with(['instructingClient', 'namedClient', 'intendedUsers', 'invoices']);
 
-        if (!empty($this->filters['status'])) {
-            $query->where('status', $this->filters['status']);
+        $dateField = in_array($f['date_field'] ?? null, ['proposal_date', 'created_at', 'survey_date'], true)
+            ? $f['date_field']
+            : 'proposal_date';
+        if (! empty($f['from'])) {
+            $query->whereDate($dateField, '>=', $f['from']);
+        }
+        if (! empty($f['to'])) {
+            $query->whereDate($dateField, '<=', $f['to']);
         }
 
-        if (!empty($this->filters['q'])) {
-            $keyword = $this->filters['q'];
+        if (! empty($f['status'])) {
+            $query->where('status', $f['status']);
+        }
+        if (! empty($f['purpose'])) {
+            $query->where('proposal_purpose', $f['purpose']);
+        }
+        if (! empty($f['appraiser'])) {
+            $query->forAppraiser($f['appraiser']);
+        }
+        if (! empty($f['mine'])) {
+            $query->forAppraiser(auth()->id());
+        }
+
+        if (! empty($f['q'])) {
+            $keyword = $f['q'];
             $query->where(function ($q) use ($keyword) {
                 $q->where('proposal_number', 'like', "%{$keyword}%")
-                  ->orWhereHas('instructingClient', function ($sub) use ($keyword) {
-                      $sub->where('client_name', 'like', "%{$keyword}%");
-                  });
+                  ->orWhere('client_name', 'like', "%{$keyword}%")
+                  ->orWhereHas('instructingClient', fn ($sub) => $sub->where('client_name', 'like', "%{$keyword}%"))
+                  ->orWhereHas('namedClient', fn ($sub) => $sub->where('client_name', 'like', "%{$keyword}%"))
+                  ->orWhereHas('intendedUsers', fn ($sub) => $sub->where('client_name', 'like', "%{$keyword}%"));
             });
         }
-        if (!empty($this->filters['mine'])) {
-        $query->where('assigned_appraiser_id', auth()->id());
-        }
-        return $query->get();
+
+        return $query->orderBy($dateField)->orderBy('id')->get();
     }
 
     public function headings(): array
@@ -51,6 +71,7 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             'Status',
             'Jenis Proposal',
             'Pemberi Tugas',
+            'Nama Klien',
             'Pengguna Laporan',
             'Jenis Objek',
             'Alamat Objek',
@@ -66,7 +87,7 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             'Total Dibayar (Rp)',
             'Sisa Tagihan (Rp)',
             'Status Pembayaran',
-            'Nomor Laporan Resmi',
+            'Nomor Laporan Final',
             'Tanggal Dibuat',
         ];
     }
@@ -87,6 +108,7 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $project->status,
             $project->proposal_purpose,
             $project->instructingClient->client_name ?? '-',
+            $project->effective_client_name ?: '-',
             $project->intendedUsers->pluck('client_name')->implode(', '),
             $project->asset_type,
             $project->asset_address,

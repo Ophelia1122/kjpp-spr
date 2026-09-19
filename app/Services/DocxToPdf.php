@@ -84,7 +84,10 @@ class DocxToPdf
             $bin,
             '-env:UserInstallation=' . $profileUri,
             '--headless', '--norestore', '--nologo', '--nofirststartwizard',
-            '--convert-to', 'pdf',
+            // Pakai filter Writer secara eksplisit. Pada beberapa versi
+            // LibreOffice headless, filter default `pdf` dapat menghasilkan
+            // PDF dengan gambar/border tetapi teks DOCX tidak ter-render.
+            '--convert-to', 'pdf:writer_pdf_Export',
             '--outdir', $outDir,
             $docxPath,
         ];

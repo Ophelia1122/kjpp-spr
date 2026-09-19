@@ -58,15 +58,13 @@ otomatis menjalankan `storage:link`, `migrate --force`, dan `optimize`.
 
 **Langkah pemasangan lengkap: [`tutorial-install-ugreen-nas.md`](tutorial-install-ugreen-nas.md).**
 
-## 2. Tailwind masih dari CDN (opsional untuk diubah)
+**Akses dari luar kantor lewat Tailscale: [`tutorial-deploy-nas-tailscale.md`](tutorial-deploy-nas-tailscale.md).**
 
-`resources/views/layouts/app.blade.php` memuat Tailwind dari `cdn.jsdelivr.net` dan CSS-nya dikompilasi
-di browser tiap buka halaman. **Jaringan NAS kantor terhubung internet** (dikonfirmasi user,
-15 Sep 2026), jadi ini **tidak menghalangi deploy**.
+## 2. Tailwind (browser build, disimpan lokal)
 
-Tetap dicatat karena dua hal kecil: tampilan bergantung pada ketersediaan `cdn.jsdelivr.net`, dan
-browser mengompilasi CSS di setiap halaman. Kalau suatu saat ingin lebih mandiri/cepat, Tailwind bisa
-di-build jadi file CSS statis (Vite) — bukan prioritas.
+Tailwind browser v4.3.3 kini disimpan di `public/js/tailwindcss-browser.js` (14 Sep 2026) — tidak lagi
+bergantung pada `cdn.jsdelivr.net`. CSS masih dikompilasi di browser tiap buka halaman; kalau suatu saat
+ingin lebih cepat, Tailwind bisa di-build jadi file CSS statis (Vite) — bukan prioritas.
 
 ## 3. Dokumen proposal (.docx → PDF)
 

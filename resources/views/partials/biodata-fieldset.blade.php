@@ -25,6 +25,8 @@
                class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
     </div>
 
+    {{-- Nomor WhatsApp dipindah ke bawah Password (partials/whatsapp-field, 2026-09-15). --}}
+
     {{-- Penilai, Penanggung Jawab & Reviewer (2026-09-15, feedback user) --}}
     <div data-bio="rmk" class="hidden">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor RMK</label>

@@ -55,16 +55,24 @@ Route::middleware('auth')->group(function () {
     // 'invoices.view' (Surveyor tidak punya, sesuai akses invoice lain).
     Route::middleware('permission:invoices.view')
         ->get('/dashboard/pembayaran', [\App\Http\Controllers\PaymentDashboardController::class, 'index'])->name('dashboard.pembayaran');
+    // Atur "nomor terakhir" Invoice & Kwitansi (ikon pengaturan, 2026-09-14).
+    Route::middleware('permission:invoices.manage')
+        ->put('/dashboard/pembayaran/penomoran', [\App\Http\Controllers\PaymentDashboardController::class, 'updateNumbering'])->name('dashboard.pembayaran.numbering');
     Route::middleware('permission:reports.export')
         ->get('/dashboard/export-excel', [DashboardController::class, 'exportExcel'])->name('dashboard.exportExcel');
 
     // --- Klien: pencarian AJAX (dipakai di dalam form proposal, hanya butuh 'view') ---
     Route::middleware('permission:clients.view')->get('/clients/search', [ClientController::class, 'search'])->name('clients.search');
+    // Peringatan klien kembar di modal Tambah Klien Baru (2026-09-15).
+    Route::middleware('permission:clients.view')->get('/clients/similar', [ClientController::class, 'similar'])->name('clients.similar');
     // --- Klien: tambah lewat modal (aksi 'manage') ---
     Route::middleware('permission:clients.manage')->post('/clients/store-ajax', [ClientController::class, 'storeAjax'])->name('clients.storeAjax');
 
     // --- Klien: manajemen data ---
     Route::middleware('permission:clients.view')->get('/clients', [ClientController::class, 'index'])->name('clients.index');
+    // Detail klien + proyek yang melibatkannya (2026-09-15).
+    Route::middleware('permission:clients.view')->get('/clients/{client}', [ClientController::class, 'show'])
+        ->whereNumber('client')->name('clients.show');
     Route::middleware('permission:clients.manage')->group(function () {
         Route::get('/clients/{client}/edit', [ClientController::class, 'edit'])->name('clients.edit');
         Route::put('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
@@ -79,7 +87,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/proposals/{project}/edit', [ProposalController::class, 'edit'])->name('proposals.edit');
         Route::put('/proposals/{project}', [ProposalController::class, 'update'])->name('proposals.update');
         Route::delete('/proposals/{project}', [ProposalController::class, 'destroy'])->name('proposals.destroy');
-        Route::post('/proposals/{project}/approve', [ProposalController::class, 'markApproved'])->name('proposals.markApproved');
+        // Draft -> Menunggu Persetujuan Klien (2026-09-15).
+        Route::post('/proposals/{project}/send-to-client', [ProposalController::class, 'markSentToClient'])->name('proposals.markSentToClient');
 
         // --- Proposal: Batal / Aktifkan kembali (Batch 7) ---
         // Non-destruktif: data proyek tetap utuh, hanya status yang berubah.
@@ -109,6 +118,9 @@ Route::middleware('auth')->group(function () {
     // --- Survei Lapangan: lihat (termasuk cetak Surat Tugas — dokumen hasil, bukan aksi ubah data) ---
     Route::middleware('permission:survey.view')
         ->get('/projects/{project}/surat-tugas', [ProjectController::class, 'exportSuratTugas'])->name('projects.exportSuratTugas');
+    // Surat Tugas versi Word (.docx), izin sama dengan cetak PDF (2026-09-14).
+    Route::middleware('permission:survey.view')
+        ->get('/projects/{project}/surat-tugas/word', [ProjectController::class, 'exportSuratTugasWord'])->name('projects.exportSuratTugasWord');
     // --- Surat Tugas: isi Nomor/Tanggal/Barcode + kelola daftar petugas (Administrator & Admin Keuangan) ---
     Route::middleware('permission:assignment_letter.manage')->group(function () {
         Route::put('/projects/{project}/assignment-letter', [ProjectController::class, 'updateAssignmentLetter'])->name('projects.updateAssignmentLetter');
@@ -120,8 +132,6 @@ Route::middleware('auth')->group(function () {
     // --- Survei Lapangan: kelola (input data) ---
     Route::middleware('permission:survey.manage')->group(function () {
         Route::post('/projects/{project}/survey-data', [ProjectController::class, 'inputSurveyData'])->name('projects.inputSurveyData');
-        // --- Alur review SLA Final, tahap 1 (Surveyor): ajukan review ---
-        Route::post('/projects/{project}/review/submit', [ProjectController::class, 'submitForReview'])->name('projects.review.submit');
     });
 
     // --- Nomor Laporan Resmi: Admin Produksi & Admin Keuangan (2026-09-14,
@@ -129,30 +139,25 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:final_report.manage')
         ->post('/projects/{project}/final-report-number', [ProjectController::class, 'inputFinalReportNumber'])->name('projects.inputFinalReportNumber');
 
-    // --- Alur review SLA Final, tahap 2 (Reviewer) — gerbangnya JABATAN
-    //     (User::isReviewer()), bukan izin/role, jadi TIDAK dibungkus
-    //     middleware 'permission:...'. Dicek langsung di controller.
-    Route::post('/projects/{project}/review/approve', [ProjectController::class, 'approveReview'])->name('projects.review.approve');
-    Route::post('/projects/{project}/review/reject-to-surveyor', [ProjectController::class, 'rejectReviewToSurveyor'])->name('projects.review.rejectToSurveyor');
-
-    // --- Alur review SLA Final, tahap 3 (Admin Produksi) ---
-    Route::middleware('permission:proposals.manage')->group(function () {
-        Route::post('/projects/{project}/review/confirm', [ProjectController::class, 'confirmReviewApproval'])->name('projects.review.confirm');
-        Route::post('/projects/{project}/review/reject-to-reviewer', [ProjectController::class, 'rejectReviewToReviewer'])->name('projects.review.rejectToReviewer');
-    });
+    // --- Alur produksi laporan (2026-09-15) — satu pintu untuk semua tombol
+    //     perpindahan peran. Hak akses per langkah (Surveyor / Reviewer /
+    //     Admin Produksi) dicek di controller, lihat Project::WORKFLOW_STEPS.
+    Route::post('/projects/{project}/workflow/{step}', [ProjectController::class, 'advanceWorkflow'])
+        ->where('step', '[a-z_]+')->name('projects.workflow');
 
     // --- Invoice: lihat (termasuk cetak PDF invoice/kwitansi) ---
     Route::middleware('permission:invoices.view')->group(function () {
-        Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
         Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'exportInvoice'])->name('invoices.exportInvoice');
         Route::get('/invoices/{invoice}/kwitansi', [InvoiceController::class, 'exportKwitansi'])->name('invoices.exportKwitansi');
+        // Versi Word (.docx) untuk isi yang perlu disesuaikan manual (2026-09-14).
+        Route::get('/invoices/{invoice}/word', [InvoiceController::class, 'exportInvoiceWord'])->name('invoices.exportInvoiceWord');
+        Route::get('/invoices/{invoice}/kwitansi/word', [InvoiceController::class, 'exportKwitansiWord'])->name('invoices.exportKwitansiWord');
     });
     // --- Invoice: kelola (terbitkan/verifikasi/batalkan) ---
     // "invoices.store" = SATU pintu terbit invoice, fleksibel berapa
     // kali/termin (menggantikan generateDp/generateFinal lama).
     Route::middleware('permission:invoices.manage')->group(function () {
         Route::post('/projects/{project}/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
-        Route::post('/projects/{project}/draft-complete', [ProjectController::class, 'markDraftComplete'])->name('projects.markDraftComplete');
         Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markAsPaid'])->name('invoices.markAsPaid');
         Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
@@ -186,5 +191,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        // Bot notifikasi WhatsApp (2026-09-14)
+        Route::get('/settings/whatsapp', [\App\Http\Controllers\WhatsAppSettingsController::class, 'edit'])->name('settings.whatsapp.edit');
+        Route::put('/settings/whatsapp', [\App\Http\Controllers\WhatsAppSettingsController::class, 'update'])->name('settings.whatsapp.update');
+        Route::get('/settings/whatsapp/groups', [\App\Http\Controllers\WhatsAppSettingsController::class, 'groups'])->name('settings.whatsapp.groups');
+        Route::post('/settings/whatsapp/test', [\App\Http\Controllers\WhatsAppSettingsController::class, 'test'])->name('settings.whatsapp.test');
     });
 });

@@ -20,7 +20,7 @@
         @can('assignment_letter.manage')
             <form action="{{ route('projects.assignmentStaff.destroy', [$project, $staff]) }}" method="POST"
                   class="assignment-staff-remove-form"
-                  onsubmit="return confirm('Hapus {{ $staff->user->name ?? 'petugas ini' }} dari daftar petugas?')">
+                  data-confirm="Hapus {{ $staff->user->name ?? 'petugas ini' }} dari daftar petugas?">
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="text-xs text-red-500 hover:text-red-700">Hapus</button>
@@ -34,9 +34,12 @@
 @can('assignment_letter.manage')
     @php $availableStaffUsers = $activeUsers->whereNotIn('id', $project->assignmentStaff->pluck('user_id')); @endphp
     @if ($availableStaffUsers->count())
-        <form action="{{ route('projects.assignmentStaff.store', $project) }}" method="POST" class="flex gap-2 mt-3" id="assignmentStaffAddForm">
+        {{-- min-w-0 + flex-wrap: nama petugas yang panjang membuat <select> selebar
+             teks terpanjang dan melebarkan halaman di HP, sehingga bar tombol bawah
+             tidak pas dengan halaman (2026-09-14, feedback user). --}}
+        <form action="{{ route('projects.assignmentStaff.store', $project) }}" method="POST" class="flex flex-wrap gap-2 mt-3" id="assignmentStaffAddForm">
             @csrf
-            <select name="user_id" required class="flex-1 rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
+            <select name="user_id" required class="min-w-0 flex-1 basis-48 rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
                 <option value="">-- Pilih petugas --</option>
                 @foreach ($availableStaffUsers as $u)
                     <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->jabatan ?: 'jabatan belum diisi' }})</option>

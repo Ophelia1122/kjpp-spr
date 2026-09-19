@@ -34,7 +34,7 @@
             </span>
             @if ($overriddenList->isNotEmpty())
                 <form action="{{ route('proposals.texts.resetAll', $project) }}" method="POST"
-                      onsubmit="return confirm('Kembalikan SEMUA {{ $overriddenList->count() }} bab yang diedit ke teks baku? Tindakan ini tidak bisa dibatalkan.')">
+                      data-confirm="Kembalikan SEMUA {{ $overriddenList->count() }} bab yang diedit ke teks baku? Tindakan ini tidak bisa dibatalkan.">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="text-red-600 hover:text-red-800 font-medium dark:text-red-400 dark:hover:text-red-300">
@@ -96,7 +96,7 @@
                     @if ($section['overridden'])
                         <div class="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-4 dark:border-gray-800">
                             <form action="{{ route('proposals.texts.reset', [$project, $section['key']]) }}" method="POST"
-                                  onsubmit="return confirm('Kembalikan bab &quot;{{ $section['title'] }}&quot; ke teks baku? Teks hasil edit akan hilang.')">
+                                  data-confirm="Kembalikan bab &quot;{{ $section['title'] }}&quot; ke teks baku? Teks hasil edit akan hilang.">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="text-sm text-red-600 hover:text-red-800 font-medium dark:text-red-400 dark:hover:text-red-300">

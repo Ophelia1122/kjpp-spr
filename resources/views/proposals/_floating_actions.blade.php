@@ -39,21 +39,34 @@
 
     $isActiveProject = !$project->isCancelled() && $project->status !== \App\Models\Project::STATUS_SELESAI;
 
+    // ---------- CETAK / UNDUH PROPOSAL ----------
+    // Tersedia di SEMUA status, termasuk Selesai & Batal (2026-09-14,
+    // feedback user) — proposal tetap perlu dicetak ulang untuk arsip.
+    if (auth()->user()->can('proposals.view')) {
+        $fabActions[] = [
+            'type' => 'link', 'icon' => 'printer', 'tone' => 'neutral',
+            'label' => 'Cetak PDF', 'tip' => 'Cetak proposal sebagai PDF',
+            'url' => route('proposals.exportPdf', $project),
+        ];
+        $fabActions[] = [
+            'type' => 'link', 'icon' => 'download', 'tone' => 'blue',
+            'label' => 'Unduh Word', 'tip' => 'Unduh proposal sebagai dokumen Word',
+            'url' => route('proposals.exportWord', $project),
+        ];
+    }
+
     if ($isActiveProject) {
         // ---------- DRAFT / MENUNGGU PERSETUJUAN ----------
+        // Draft -> Menunggu Persetujuan Klien (2026-09-15, feedback user).
+        if ($project->status === \App\Models\Project::STATUS_DRAFT && auth()->user()->can('proposals.manage')) {
+            $fabActions[] = [
+                'type' => 'form', 'icon' => 'send', 'tone' => 'blue',
+                'label' => 'Kirim ke Klien', 'tip' => 'Tandai proposal sudah dikirim ke klien — menunggu persetujuan',
+                'url' => route('proposals.markSentToClient', $project),
+                'confirm' => 'Tandai proposal ' . $project->proposal_number . ' sudah dikirim ke klien?',
+            ];
+        }
         if (in_array($project->status, [\App\Models\Project::STATUS_DRAFT, \App\Models\Project::STATUS_WAITING_APPROVAL])) {
-            if (auth()->user()->can('proposals.view')) {
-                $fabActions[] = [
-                    'type' => 'link', 'icon' => 'printer', 'tone' => 'neutral',
-                    'label' => 'Cetak PDF', 'tip' => 'Cetak proposal sebagai PDF',
-                    'url' => route('proposals.exportPdf', $project),
-                ];
-                $fabActions[] = [
-                    'type' => 'link', 'icon' => 'download', 'tone' => 'blue',
-                    'label' => 'Unduh Word', 'tip' => 'Unduh proposal sebagai dokumen Word',
-                    'url' => route('proposals.exportWord', $project),
-                ];
-            }
             if (auth()->user()->can('proposals.manage') && $project->isPaymentDeferred()) {
                 $fabActions[] = [
                     'type' => 'form', 'icon' => 'rocket', 'tone' => 'indigo',
@@ -64,54 +77,40 @@
             }
         }
 
-        // ---------- IN-PROGRESS / SCHEDULED ----------
-        if ($project->status === \App\Models\Project::STATUS_IN_PROGRESS
-            && $project->assigned_appraiser && $project->survey_date) {
+        // ---------- IN-PROGRESS: ALUR PRODUKSI LAPORAN (2026-09-15) ----------
+        // Tombol dibangun dari Project::WORKFLOW_STEPS — hanya langkah yang
+        // tahapnya cocok & boleh dilakukan pengguna ini. Semuanya lewat modal:
+        // catatan opsional untuk langkah maju, alasan wajib untuk pengembalian.
+        $fabIcons['book'] = 'M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25';
+        $stepUi = [
+            'submit_value'          => ['icon' => 'send',      'tone' => 'indigo'],
+            'approve_value'         => ['icon' => 'badge',     'tone' => 'emerald'],
+            'return_value'          => ['icon' => 'uturn',     'tone' => 'rose'],
+            'submit_draft'          => ['icon' => 'doc-check', 'tone' => 'indigo'],
+            'confirm_draft'         => ['icon' => 'check',     'tone' => 'emerald'],
+            'return_draft_admin'    => ['icon' => 'uturn',     'tone' => 'rose'],
+            'review_draft'          => ['icon' => 'badge',     'tone' => 'emerald'],
+            'return_draft_reviewer' => ['icon' => 'uturn',     'tone' => 'rose'],
+            'mark_printed'          => ['icon' => 'book',      'tone' => 'emerald'],
+        ];
 
-            if (auth()->user()->can('invoices.manage') && $project->isReviewApproved()) {
-                $fabActions[] = [
-                    'type' => 'form', 'icon' => 'doc-check', 'tone' => 'orange',
-                    'label' => 'Draf Selesai', 'tip' => 'Tandai draf laporan selesai — status pindah ke Pelunasan',
-                    'url' => route('projects.markDraftComplete', $project),
-                    'confirm' => 'Tandai draf laporan proyek ' . $project->proposal_number . ' sudah selesai? Status akan berpindah ke Pelunasan.',
-                ];
+        foreach ($project->availableWorkflowSteps(auth()->user()) as $stepKey => $step) {
+            $isReturn = $step['note'] === 'required';
+            $hint = $step['hint'] ?? null;
+            if ($stepKey === 'mark_printed' && ! $project->final_report_number) {
+                $hint = 'Nomor Laporan Final belum diisi — isi dulu di kartu "Nomor Laporan Final".';
             }
 
-            if (is_null($project->review_status)) {
-                if (auth()->user()->can('survey.manage')) {
-                    $fabActions[] = [
-                        'type' => 'form', 'icon' => 'send', 'tone' => 'indigo',
-                        'label' => 'Submit Review', 'tip' => 'Ajukan hasil pekerjaan untuk direview',
-                        'url' => route('projects.review.submit', $project),
-                        'confirm' => 'Ajukan hasil pekerjaan proyek ' . $project->proposal_number . ' untuk direview?',
-                    ];
-                }
-            } elseif ($project->review_status === \App\Models\Project::REVIEW_SUBMITTED && auth()->user()->canActAsReviewer()) {
-                $fabActions[] = [
-                    'type' => 'form', 'icon' => 'badge', 'tone' => 'emerald',
-                    'label' => 'Sudah Direview', 'tip' => 'Tandai hasil pekerjaan sudah selesai direview',
-                    'url' => route('projects.review.approve', $project),
-                ];
-                $fabActions[] = [
-                    'type' => 'modal', 'icon' => 'uturn', 'tone' => 'rose',
-                    'label' => 'Ke Surveyor', 'tip' => 'Kembalikan pekerjaan ke Surveyor beserta catatan revisi',
-                    'url' => route('projects.review.rejectToSurveyor', $project),
-                    'modal_title' => 'Kembalikan ke Surveyor',
-                ];
-            } elseif ($project->review_status === \App\Models\Project::REVIEW_REVIEWED && auth()->user()->can('proposals.manage')) {
-                $fabActions[] = [
-                    'type' => 'form', 'icon' => 'check', 'tone' => 'emerald',
-                    'label' => 'Konfirmasi', 'tip' => 'Konfirmasi pekerjaan disetujui — SLA Laporan Final mulai dihitung',
-                    'url' => route('projects.review.confirm', $project),
-                    'confirm' => 'Konfirmasi pekerjaan proyek ' . $project->proposal_number . ' sudah disetujui? SLA Laporan Final akan mulai dihitung.',
-                ];
-                $fabActions[] = [
-                    'type' => 'modal', 'icon' => 'uturn', 'tone' => 'rose',
-                    'label' => 'Ke Reviewer', 'tip' => 'Kembalikan pekerjaan ke Reviewer beserta catatan revisi',
-                    'url' => route('projects.review.rejectToReviewer', $project),
-                    'modal_title' => 'Kembalikan ke Reviewer',
-                ];
-            }
+            $fabActions[] = [
+                'type' => 'modal', 'icon' => $stepUi[$stepKey]['icon'], 'tone' => $stepUi[$stepKey]['tone'],
+                'label' => $step['button'], 'tip' => $step['tip'],
+                'url' => route('projects.workflow', [$project, $stepKey]),
+                'modal_title' => $step['title'],
+                'modal_opts' => $isReturn
+                    ? ['label' => 'Alasan pengembalian', 'button' => 'Kembalikan', 'tone' => 'rose']
+                    : ['optional' => true, 'label' => 'Catatan (opsional)', 'button' => $step['button'],
+                       'tone' => $stepUi[$stepKey]['tone'], 'hint' => $hint],
+            ];
         }
     }
 @endphp
@@ -141,7 +140,7 @@
                         </a>
                     @elseif ($action['type'] === 'modal')
                         <button type="button"
-                                onclick="openReviewRejectModal('{{ $action['url'] }}', '{{ $action['modal_title'] }}')"
+                                onclick="openReviewRejectModal('{{ $action['url'] }}', '{{ $action['modal_title'] }}', {{ \Illuminate\Support\Js::from($action['modal_opts'] ?? (object) []) }})"
                                 class="{{ $btnClass }}">
                             <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $fabIcons[$action['icon']] }}"/>
@@ -150,7 +149,7 @@
                         </button>
                     @else
                         <form action="{{ $action['url'] }}" method="POST"
-                              @if (!empty($action['confirm'])) onsubmit="return confirm('{{ $action['confirm'] }}')" @endif>
+                              @if (!empty($action['confirm'])) data-confirm="{{ $action['confirm'] }}" @endif>
                             @csrf
                             <button type="submit" class="{{ $btnClass }}">
                                 <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">

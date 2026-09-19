@@ -18,21 +18,31 @@ class UserController extends Controller
                 ->where('action', 'auth.login')
                 ->latest()
                 ->limit(1)])
-            ->withCasts(['last_login_at' => 'datetime'])
-            ->orderBy('name');
+            ->withCasts(['last_login_at' => 'datetime']);
+
+        // Urutan & jumlah per halaman seragam dengan List Project (2026-09-15).
+        $currentSort = in_array($request->get('sort'), ['name', 'role', 'last_login_at'], true) ? $request->get('sort') : 'name';
+        $currentDir  = $request->get('dir') === 'desc' ? 'desc' : 'asc';
+        if ($currentSort === 'role') {
+            $query->orderBy(Role::select('name')->whereColumn('roles.id', 'users.role_id'), $currentDir);
+        } else {
+            $query->orderBy($currentSort, $currentDir);
+        }
+        $query->orderBy('name');
 
         if ($request->filled('q')) {
             $query->where('name', 'like', '%' . $request->q . '%')
                   ->orWhere('email', 'like', '%' . $request->q . '%');
         }
 
-        $users = $query->paginate(20)->withQueryString();
+        $perPage = in_array((int) $request->get('per_page'), [15, 25], true) ? (int) $request->get('per_page') : 15;
+        $users = $query->paginate($perPage)->withQueryString();
 
         if ($request->ajax()) {
-            return view('users._results', compact('users'));
+            return view('users._results', compact('users', 'currentSort', 'currentDir'));
         }
 
-        return view('users.index', compact('users'));
+        return view('users.index', compact('users', 'currentSort', 'currentDir'));
     }
 
     public function create()
@@ -48,9 +58,11 @@ class UserController extends Controller
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
             'role_id'  => 'required|exists:roles,id',
-        ] + $this->biodataRules());
+        ] + $this->biodataRules(), User::$avatarMessages);
 
-        $user = User::create($validated); // password otomatis ter-hash lewat cast 'hashed' di Model
+        $user = new User(\Illuminate\Support\Arr::except($validated, ['avatar', 'remove_avatar']));
+        $user->applyAvatarUpload($request);
+        $user->save(); // password otomatis ter-hash lewat cast 'hashed' di Model
         \App\Helpers\AuditLogger::record('user.created', "Menambahkan pengguna baru \"{$user->name}\" dengan role {$user->role?->name}", $user);
         return redirect()
             ->route('users.index')
@@ -71,7 +83,7 @@ class UserController extends Controller
             'password' => 'nullable|string|min:8',
             'role_id'  => 'required|exists:roles,id',
             'is_active' => 'nullable|boolean',
-        ] + $this->biodataRules());
+        ] + $this->biodataRules(), User::$avatarMessages);
 
         // GUARD: user tidak boleh menonaktifkan akunnya sendiri (bisa
         // bikin dia ter-logout paksa di tengah sesi kerja sendiri tanpa
@@ -96,7 +108,10 @@ class UserController extends Controller
             'sk_menkeu_date'  => $validated['sk_menkeu_date'] ?? null,
             'sttd_ojk_date'   => $validated['sttd_ojk_date'] ?? null,
             'klasifikasi'     => $validated['klasifikasi'] ?? null,
+            'whatsapp_number' => $validated['whatsapp_number'] ?? null,
         ]);
+
+        $user->applyAvatarUpload($request);
 
         if (!empty($validated['password'])) {
             $user->password = $validated['password']; // ter-hash otomatis
@@ -151,6 +166,9 @@ class UserController extends Controller
             'sk_menkeu_date'  => 'nullable|date',
             'sttd_ojk_date'   => 'nullable|date',
             'klasifikasi'     => 'nullable|string|max:255',
+            'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s]+$/'],
+            'avatar'          => User::AVATAR_RULES,
+            'remove_avatar'   => 'nullable|boolean',
         ];
     }
 }

@@ -11,36 +11,62 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class ProjectController extends Controller
 {
     /**
-     * Isi ATAU edit ulang Penilai Lapangan & Tanggal Survei (kartu
-     * tersendiri di halaman proposal, sebelum kartu Surat Tugas — sama
-     * seperti Faktur Pajak/Surat Tugas, bisa diisi/diedit di status
-     * apa pun selama proyek belum Selesai/Batal). Dulu hanya bisa diisi
-     * (SEKALI, tidak bisa diedit) selama status masih In-Progress persis —
-     * sekarang dilonggarkan supaya kesalahan input bisa dikoreksi kapan
-     * saja sebelum proyek benar-benar tuntas.
+     * Penilai lapangan, tanggal survei & Surat Tugas (2026-09-15, feedback user):
+     * hanya selama In-Progress — DP di awal setelah DP dibayar, Bayar Nanti
+     * setelah "Mulai Tanpa DP". Lihat Project::canPrepareFieldwork().
      */
+    private function ensureFieldworkOpen(Project $project): void
+    {
+        abort_unless(
+            $project->canPrepareFieldwork(),
+            403,
+            match (true) {
+                in_array($project->status, [Project::STATUS_SELESAI, Project::STATUS_BATAL], true)
+                    => 'Proyek sudah Selesai/Batal — data penilai & Surat Tugas tidak dapat diubah.',
+                $project->isPaymentDeferred()
+                    => 'Penilai lapangan & Surat Tugas baru bisa diisi setelah tombol "Mulai Tanpa DP" ditekan.',
+                default
+                    => 'Penilai lapangan & Surat Tugas baru bisa diisi setelah invoice DP ditandai Dibayar.',
+            }
+        );
+    }
+
+    /** Isi ATAU edit ulang Penilai Lapangan & Tanggal Survei. */
     public function inputSurveyData(Request $request, Project $project)
     {
-        if ($project->status === Project::STATUS_SELESAI || $project->isCancelled()) {
-            abort(403, 'Data penilai lapangan & tanggal survei tidak dapat diubah lagi setelah proyek berstatus Selesai atau Batal.');
-        }
+        $this->ensureFieldworkOpen($project);
 
+        // 1-3 penilai lapangan setara (2026-09-15, feedback user).
+        $request->merge(['appraiser_ids' => array_values(array_filter((array) $request->input('appraiser_ids', [])))]);
         $validated = $request->validate([
-            'assigned_appraiser_id' => 'required|exists:users,id',
-            'survey_date'           => 'required|date',
+            'appraiser_ids'   => 'required|array|min:1|max:' . Project::MAX_APPRAISERS,
+            'appraiser_ids.*' => 'distinct|exists:users,id',
+            'survey_date'     => 'required|date',
+        ], [
+            'appraiser_ids.required' => 'Pilih minimal satu penilai lapangan.',
+            'appraiser_ids.max'      => 'Maksimal ' . Project::MAX_APPRAISERS . ' penilai lapangan.',
+            'appraiser_ids.*.distinct' => 'Penilai lapangan tidak boleh dipilih dua kali.',
         ]);
 
-        $appraiser = \App\Models\User::findOrFail($validated['assigned_appraiser_id']);
+        $ids        = array_map('intval', $validated['appraiser_ids']);
+        $users      = \App\Models\User::whereIn('id', $ids)->get()->keyBy('id');
+        $appraisers = collect($ids)->map(fn ($id) => $users[$id]);
+        $names      = $appraisers->pluck('name')->implode(', ');
 
-        $project->update([
-            'assigned_appraiser_id' => $appraiser->id,
-            'assigned_appraiser'    => $appraiser->name, // denormalized untuk PDF Surat Tugas
-            'survey_date'           => $validated['survey_date'],
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($project, $ids, $appraisers, $names, $validated) {
+            $project->appraisers()->sync(
+                collect($ids)->mapWithKeys(fn ($id, $i) => [$id => ['sort_order' => $i]])->all()
+            );
+            $project->update([
+                'assigned_appraiser_id' => $appraisers->first()->id,
+                'assigned_appraiser'    => $names, // ringkasan teks untuk tabel/export/PDF
+                'survey_date'           => $validated['survey_date'],
+            ]);
+        });
 
         \App\Helpers\AuditLogger::record(
             'survey.input',
-            "Menetapkan {$appraiser->name} sebagai penilai lapangan untuk proyek {$project->proposal_number}, tanggal survei {$validated['survey_date']}",
+            "Menetapkan {$names} sebagai penilai lapangan untuk proyek {$project->proposal_number}, tanggal survei {$validated['survey_date']}",
             $project
         );
 
@@ -79,199 +105,75 @@ class ProjectController extends Controller
     }
 
     /**
-     * Tandai draf laporan selesai -> status proyek maju ke 'Pelunasan'.
-     * SENGAJA TIDAK LAGI otomatis menerbitkan invoice (dulu digabung ke
-     * InvoiceController@generateFinal) — sekarang penerbitan invoice
-     * sepenuhnya lewat InvoiceController@store yang fleksibel (staf bisa
-     * menagih sisa tagihan kapan saja / berapa kali pun lewat kartu
-     * "Buat Invoice" di halaman proyek).
-     *
-     * GUARD (2026-09-12, feedback user): dulu bisa ditekan kapan saja
-     * selama status In-Progress, TANPA peduli apakah nilai hasil
-     * penilaian sudah benar-benar disetujui lewat alur review SLA Final
-     * (Surveyor -> Reviewer -> Admin Produksi). Sekarang WAJIB
-     * isReviewApproved() dulu (Admin Produksi sudah konfirmasi) — DP
-     * sudah Paid otomatis terpenuhi karena syarat masuk status
-     * In-Progress itu sendiri.
-     *
-     * BUG FIX (2026-09-13, feedback user): kalau proyek KEBETULAN sudah
-     * lunas 100% SEBELUM draf ditandai selesai (mis. klien bayar lunas
-     * di muka — lihat catatan is_fully_paid di InvoiceController), status
-     * dulu SELALU dilempar ke Pelunasan — padahal tidak akan pernah ada
-     * pembayaran BARU lagi yang bisa memicu transisi Pelunasan->Selesai
-     * (itu hanya terjadi di dalam markAsPaid()), jadi proyek TERJEBAK
-     * selamanya di Pelunasan walau kartu tagihan sudah menunjukkan
-     * "Lunas" dan tombol input Nomor Laporan Resmi tetap terkunci.
-     * Sekarang: kalau sudah lunas penuh, langsung ke Selesai (tidak ada
-     * lagi yang perlu ditagih), baru kalau belum lunas mampir ke
-     * Pelunasan seperti biasa.
-     */
-    public function markDraftComplete(Project $project)
-    {
-        if ($project->status !== Project::STATUS_IN_PROGRESS) {
-            abort(403, 'Draf hanya bisa ditandai selesai selama proyek berstatus In-Progress.');
-        }
-        if (!$project->isReviewApproved()) {
-            abort(403, 'Draf hanya bisa ditandai selesai setelah hasil penilaian dikonfirmasi disetujui oleh Admin Produksi.');
-        }
-
-        $nextStatus = $project->is_fully_paid ? Project::STATUS_SELESAI : Project::STATUS_PELUNASAN;
-        $project->update(['status' => $nextStatus]);
-
-        \App\Helpers\AuditLogger::record(
-            'project.draft_completed',
-            "Menandai draf laporan selesai untuk proyek {$project->proposal_number}"
-                . ($nextStatus === Project::STATUS_SELESAI ? ' (sudah lunas penuh, langsung Selesai)' : ''),
-            $project
-        );
-
-        $message = $nextStatus === Project::STATUS_SELESAI
-            ? 'Draf laporan ditandai selesai. Tagihan sudah lunas penuh — proyek langsung berstatus Selesai.'
-            : 'Draf laporan ditandai selesai. Terbitkan invoice untuk sisa tagihan bila diperlukan.';
-
-        return back()->with('success', $message);
-    }
-
-    /**
      * =========================================================================
-     * ALUR REVIEW SLA FINAL — Surveyor "Submit untuk Review" -> Reviewer
-     * (jabatan = Reviewer, LINTAS ROLE) setuju/kembalikan -> Admin Produksi
-     * konfirmasi (memulai SLA Laporan Final) / kembalikan ke Reviewer.
-     *
-     * SENGAJA independen dari status proyek utama & dari tombol "Tandai
-     * Draf Selesai (Buat Invoice Pelunasan)" — proses ini murni menentukan
-     * kapan SLA Laporan Final mulai dihitung, tidak menahan invoicing.
+     * ALUR PRODUKSI LAPORAN (2026-09-15, feedback user) — satu pintu untuk
+     * semua tombol perpindahan peran. Tahap (review_status):
+     *   null             Surveyor survei & menilai      -> Submit Review Nilai
+     *   submitted        Reviewer / Admin Produksi      -> Nilai Disetujui (SLA Final mulai) / kembalikan
+     *   approved         Surveyor menyusun draft laporan -> Draft Laporan Sudah Dibuat
+     *   draft_submitted  Admin Produksi                 -> Konfirmasi Draft / kembalikan
+     *   draft_confirmed  Reviewer                       -> Draft Laporan Telah Direview / kembalikan
+     *   draft_reviewed   Admin Produksi (proses cetak)  -> Buku Selesai Dicetak (proyek Selesai)
+     * Definisi tiap langkah: Project::WORKFLOW_STEPS. Pembayaran tidak
+     * memengaruhi alur ini — proyek bisa Selesai walau tagihan belum lunas.
      * =========================================================================
      */
-
-    /** Tahap 1 (Surveyor/Admin Produksi, izin survey.manage): ajukan review. */
-    public function submitForReview(Project $project)
+    public function advanceWorkflow(Request $request, Project $project, string $step)
     {
-        if ($project->status !== Project::STATUS_IN_PROGRESS || ! $project->survey_date) {
-            abort(403, 'Ajukan review hanya bisa dilakukan setelah tanggal survei diisi.');
-        }
-        if ($project->review_status !== null) {
-            abort(403, 'Proyek ini sudah pernah diajukan untuk review.');
-        }
+        $def = Project::WORKFLOW_STEPS[$step] ?? abort(404);
 
-        $project->update([
-            'review_status'               => Project::REVIEW_SUBMITTED,
-            'review_submitted_at'         => now(),
-            'review_submitted_by_user_id' => auth()->id(),
-        ]);
-
-        \App\Helpers\AuditLogger::record(
-            'review.submitted',
-            "Mengajukan hasil pekerjaan proyek {$project->proposal_number} untuk direview",
-            $project
+        abort_unless(
+            $project->status === Project::STATUS_IN_PROGRESS && $project->assigned_appraiser && $project->survey_date,
+            403,
+            'Alur produksi hanya berjalan untuk proyek In-Progress yang sudah memiliki penilai lapangan & tanggal survei.'
         );
+        abort_unless($project->review_status === $def['from'], 403, 'Tahap proyek sudah berubah. Muat ulang halaman.');
+        abort_unless(Project::userCanActAs(auth()->user(), $def['actor']), 403, 'Anda tidak memiliki akses untuk langkah ini.');
 
-        return back()->with('success', 'Proyek diajukan untuk direview.');
-    }
+        $isReturn = $def['note'] === 'required';
+        $note = $request->validate(
+            ['note' => ($isReturn ? 'required' : 'nullable') . '|string|max:1000'],
+            ['note.required' => 'Alasan pengembalian wajib diisi.']
+        )['note'] ?? null;
 
-    /** Tahap 2 (Reviewer, jabatan): setujui hasil review, teruskan ke Admin Produksi. */
-    public function approveReview(Project $project)
-    {
-        abort_unless(auth()->user()->canActAsReviewer(), 403, 'Hanya pengguna berjabatan Reviewer atau Administrator yang dapat melakukan aksi ini.');
-
-        if ($project->review_status !== Project::REVIEW_SUBMITTED) {
-            abort(403, 'Proyek ini tidak sedang menunggu review.');
+        if ($step === 'mark_printed' && ! $project->final_report_number) {
+            return back()->with('error', 'Isi Nomor Laporan Final terlebih dahulu sebelum mengonfirmasi buku selesai dicetak.');
         }
 
-        $project->update([
-            'review_status'        => Project::REVIEW_REVIEWED,
-            'reviewed_at'          => now(),
-            'reviewed_by_user_id'  => auth()->id(),
-        ]);
+        $now = now();
+        $uid = auth()->id();
 
-        \App\Helpers\AuditLogger::record(
-            'review.approved_by_reviewer',
-            "Menyetujui hasil review proyek {$project->proposal_number}, diteruskan ke Admin Produksi",
-            $project
-        );
+        // Catatan pengembalian terakhir tampil sebagai peringatan sampai ada langkah maju.
+        $changes = ['review_status' => $def['to']] + ($isReturn
+            ? ['review_rejected_at' => $now, 'review_rejected_by_user_id' => $uid, 'review_rejection_note' => $note]
+            : ['review_rejected_at' => null, 'review_rejected_by_user_id' => null, 'review_rejection_note' => null]);
 
-        return back()->with('success', 'Hasil pekerjaan disetujui, menunggu konfirmasi Admin Produksi.');
-    }
+        $changes += match ($step) {
+            'submit_value'  => ['review_submitted_at' => $now, 'review_submitted_by_user_id' => $uid],
+            'approve_value' => ['reviewed_at' => $now, 'reviewed_by_user_id' => $uid,
+                                'review_approved_at' => $now, 'review_approved_by_user_id' => $uid],
+            'submit_draft'  => ['draft_submitted_at' => $now],
+            'confirm_draft' => ['draft_confirmed_at' => $now],
+            'review_draft'  => ['draft_reviewed_at' => $now],
+            'mark_printed'  => ['printed_at' => $now, 'status' => Project::STATUS_SELESAI],
+            default         => [],
+        };
 
-    /** Tahap 2 (Reviewer, jabatan): kembalikan ke Surveyor untuk revisi. */
-    public function rejectReviewToSurveyor(Request $request, Project $project)
-    {
-        abort_unless(auth()->user()->canActAsReviewer(), 403, 'Hanya pengguna berjabatan Reviewer atau Administrator yang dapat melakukan aksi ini.');
+        $project->update($changes);
 
-        if ($project->review_status !== Project::REVIEW_SUBMITTED) {
-            abort(403, 'Proyek ini tidak sedang menunggu review.');
+        \App\Helpers\AuditLogger::record($def['action'], "{$def['desc']} — proyek {$project->proposal_number}", $project, $note);
+
+        // Notifikasi WhatsApp dikirim setelah respons — tidak memperlambat tombol.
+        $actor = auth()->user();
+        if (in_array($step, ['submit_value', 'confirm_draft'], true)) {
+            $title = $step === 'submit_value' ? 'Pengajuan Review Nilai' : 'Review Draft Laporan';
+            dispatch(fn () => \App\Services\WhatsAppNotifier::reviewSubmitted($project, $actor, $note, $title))->afterResponse();
+        } elseif ($isReturn) {
+            $title = $def['title'];
+            dispatch(fn () => \App\Services\WhatsAppNotifier::reviewReturned($project, $actor, (string) $note, $title))->afterResponse();
         }
 
-        $validated = $request->validate(['reason' => 'required|string|max:1000']);
-
-        $project->update([
-            'review_status'               => null,
-            'review_rejected_at'          => now(),
-            'review_rejected_by_user_id'  => auth()->id(),
-            'review_rejection_note'       => $validated['reason'],
-        ]);
-
-        \App\Helpers\AuditLogger::record(
-            'review.rejected_to_surveyor',
-            "Mengembalikan proyek {$project->proposal_number} ke Surveyor untuk revisi. Alasan: {$validated['reason']}",
-            $project
-        );
-
-        return back()->with('warning', 'Proyek dikembalikan ke Surveyor untuk revisi.');
-    }
-
-    /** Tahap 3 (Admin Produksi, izin proposals.manage): konfirmasi -> mulai SLA Final. */
-    public function confirmReviewApproval(Project $project)
-    {
-        if ($project->review_status !== Project::REVIEW_REVIEWED) {
-            abort(403, 'Proyek ini belum disetujui Reviewer.');
-        }
-
-        $project->update([
-            'review_status'               => Project::REVIEW_APPROVED,
-            'review_approved_at'          => now(),
-            'review_approved_by_user_id'  => auth()->id(),
-            // Jejak penolakan lama sudah tidak relevan setelah disetujui penuh.
-            'review_rejected_at'          => null,
-            'review_rejected_by_user_id'  => null,
-            'review_rejection_note'       => null,
-        ]);
-
-        \App\Helpers\AuditLogger::record(
-            'review.confirmed',
-            "Mengonfirmasi persetujuan pekerjaan proyek {$project->proposal_number}. SLA Laporan Final mulai dihitung.",
-            $project
-        );
-
-        return back()->with('success', 'Pekerjaan dikonfirmasi disetujui. SLA Laporan Final mulai dihitung.');
-    }
-
-    /** Tahap 3 (Admin Produksi, izin proposals.manage): kembalikan ke Reviewer. */
-    public function rejectReviewToReviewer(Request $request, Project $project)
-    {
-        if ($project->review_status !== Project::REVIEW_REVIEWED) {
-            abort(403, 'Proyek ini belum disetujui Reviewer.');
-        }
-
-        $validated = $request->validate(['reason' => 'required|string|max:1000']);
-
-        $project->update([
-            'review_status'               => Project::REVIEW_SUBMITTED,
-            'review_rejected_at'          => now(),
-            'review_rejected_by_user_id'  => auth()->id(),
-            'review_rejection_note'       => $validated['reason'],
-            // Perlu direview ulang -- batalkan persetujuan Reviewer sebelumnya.
-            'reviewed_at'                 => null,
-            'reviewed_by_user_id'         => null,
-        ]);
-
-        \App\Helpers\AuditLogger::record(
-            'review.rejected_to_reviewer',
-            "Mengembalikan proyek {$project->proposal_number} ke Reviewer untuk ditinjau ulang. Alasan: {$validated['reason']}",
-            $project
-        );
-
-        return back()->with('warning', 'Proyek dikembalikan ke Reviewer untuk ditinjau ulang.');
+        return back()->with($isReturn ? 'warning' : 'success', $def['flash']);
     }
 
     /**
@@ -294,6 +196,24 @@ class ProjectController extends Controller
     }
 
     /**
+     * Unduh Surat Tugas sebagai .docx (2026-09-14, feedback user) — syarat
+     * sama dengan PDF: penilai lapangan & tanggal survei sudah diisi.
+     */
+    public function exportSuratTugasWord(Project $project)
+    {
+        if (!$project->assigned_appraiser || !$project->survey_date) {
+            abort(422, 'Surat Tugas belum bisa diunduh: penilai/tanggal survei belum diisi.');
+        }
+
+        $path = (new \App\Services\SuratTugasDocxBuilder($project))->save();
+
+        $safeFilename = str_replace(['/', '\\'], '-', $project->proposal_number);
+        return response()
+            ->download($path, "Surat-Tugas-{$safeFilename}.docx")
+            ->deleteFileAfterSend(true);
+    }
+
+    /**
      * Isi Nomor/Tanggal Surat Tugas (izin assignment_letter.manage —
      * Administrator & Admin Keuangan). Dikunci di UI begitu terisi (lihat
      * proposals/show.blade.php), tapi tetap boleh diedit ulang lewat
@@ -313,14 +233,23 @@ class ProjectController extends Controller
      */
     public function updateAssignmentLetter(Request $request, Project $project)
     {
+        $this->ensureFieldworkOpen($project);
+
         $validated = $request->validate([
             'assignment_letter_number' => 'nullable|string|max:255',
             'assignment_letter_date'   => 'nullable|date',
+            // "Penilaian Aset atas nama" — hanya pihak terkait proyek ini (2026-09-14).
+            'assignment_letter_recipient_client_id' => ['nullable', \Illuminate\Validation\Rule::in($project->receivedFromOptions()->pluck('id')->all())],
+            'assignment_letter_on_behalf_client_id' => ['nullable', \Illuminate\Validation\Rule::in($project->receivedFromOptions()->pluck('id')->all())],
+            'assignment_letter_request_basis'       => 'nullable|string|max:1000',
         ]);
 
         $project->update([
             'assignment_letter_number' => $validated['assignment_letter_number'] ?: null,
             'assignment_letter_date'   => $validated['assignment_letter_date'] ?: null,
+            'assignment_letter_recipient_client_id' => $validated['assignment_letter_recipient_client_id'] ?? null,
+            'assignment_letter_on_behalf_client_id' => $validated['assignment_letter_on_behalf_client_id'] ?? null,
+            'assignment_letter_request_basis'       => trim((string) ($validated['assignment_letter_request_basis'] ?? '')) ?: null,
         ]);
 
         \App\Helpers\AuditLogger::record(
@@ -342,14 +271,18 @@ class ProjectController extends Controller
      */
     public function uploadAssignmentLetterBarcode(Request $request, Project $project)
     {
+        $this->ensureFieldworkOpen($project);
+
         $request->validate([
             'assignment_letter_barcode' => [
-                'required', 'image', 'mimes:png', 'max:5', 'dimensions:width=370,height=370',
+                // PNG atau JPG/JPEG (2026-09-14, feedback user; sebelumnya PNG saja).
+                // Maks. 100 KB (2026-09-14, feedback user; sebelumnya 5 KB).
+                'required', 'image', 'mimes:png,jpg,jpeg', 'max:100', 'dimensions:width=370,height=370',
             ],
         ], [
             'assignment_letter_barcode.required'   => 'Pilih file barcode terlebih dahulu.',
-            'assignment_letter_barcode.mimes'      => 'Barcode harus berformat PNG.',
-            'assignment_letter_barcode.max'        => 'Ukuran file barcode maksimal 5 KB.',
+            'assignment_letter_barcode.mimes'      => 'Barcode harus berformat PNG atau JPG/JPEG.',
+            'assignment_letter_barcode.max'        => 'Ukuran file barcode maksimal 100 KB.',
             'assignment_letter_barcode.dimensions' => 'Dimensi gambar barcode harus tepat 370x370 piksel.',
         ]);
 
@@ -376,6 +309,8 @@ class ProjectController extends Controller
     /** Hapus barcode Surat Tugas (izin assignment_letter.manage). */
     public function deleteAssignmentLetterBarcode(Request $request, Project $project)
     {
+        $this->ensureFieldworkOpen($project);
+
         if ($project->assignment_letter_barcode) {
             Storage::disk('public')->delete($project->assignment_letter_barcode);
             $project->update(['assignment_letter_barcode' => null]);
@@ -401,6 +336,8 @@ class ProjectController extends Controller
      */
     public function addAssignmentStaff(Request $request, Project $project)
     {
+        $this->ensureFieldworkOpen($project);
+
         $validated = $request->validate([
             'user_id' => [
                 'required',
@@ -436,6 +373,8 @@ class ProjectController extends Controller
      */
     public function removeAssignmentStaff(Request $request, Project $project, \App\Models\ProjectAssignmentStaff $staff)
     {
+        $this->ensureFieldworkOpen($project);
+
         abort_unless($staff->project_id === $project->id, 404);
 
         $name = $staff->user->name ?? '(user terhapus)';
@@ -472,11 +411,9 @@ class ProjectController extends Controller
     }
 
     /**
-     * Input/edit Nomor Laporan Resmi, Tanggal Final & Keterangan. Boleh
-     * diisi mulai status Pelunasan (2026-09-14, feedback user: kadang
-     * nomor laporan sudah bisa diambil sebelum tagihan lunas penuh —
-     * status Pelunasan sendiri sudah menjamin draf/pekerjaan disetujui,
-     * lihat ProjectController::markDraftComplete()) sampai Selesai. Pola
+     * Input/edit Nomor Laporan Final, Tanggal Final & Keterangan. Boleh
+     * diisi mulai draft laporan telah direview (tahap proses cetak) sampai
+     * Selesai — wajib sebelum "Buku Selesai Dicetak". Pola
      * kunci/edit-nya sama seperti Faktur Pajak/Penilai Lapangan: sekali
      * final_report_number terisi, field terkunci di kartu — hanya bisa
      * diubah lagi lewat ikon Edit (bukan lewat guard status di sini).
@@ -484,9 +421,9 @@ class ProjectController extends Controller
     public function inputFinalReportNumber(Request $request, Project $project)
     {
         abort_unless(
-            in_array($project->status, [Project::STATUS_PELUNASAN, Project::STATUS_SELESAI], true),
+            $project->isFinalReportStage(),
             403,
-            'Nomor Laporan Resmi hanya bisa diisi mulai status Pelunasan (draf sudah disetujui).'
+            'Nomor Laporan Final bisa diisi setelah draft laporan telah direview.'
         );
 
         $validated = $request->validate([
@@ -502,18 +439,18 @@ class ProjectController extends Controller
         ]);
         \App\Helpers\AuditLogger::record(
             'project.final_report_number_set',
-            "Menginput Nomor Laporan Resmi \"{$validated['final_report_number']}\" untuk proyek {$project->proposal_number}"
+            "Menginput Nomor Laporan Final \"{$validated['final_report_number']}\" untuk proyek {$project->proposal_number}"
                 . (!empty($validated['final_report_date']) ? ", tanggal final {$validated['final_report_date']}" : ''),
             $project
         );
-        return back()->with('success', 'Nomor Laporan Resmi berhasil disimpan.');
+        return back()->with('success', 'Nomor Laporan Final berhasil disimpan.');
     }
 
         public function show(Project $project)
     {
         $project->load(
             'instructingClient', 'intendedUsers', 'invoices', 'valuationObjects', 'signedBy', 'bank',
-            'reviewSubmittedBy', 'reviewedBy', 'reviewApprovedBy', 'reviewRejectedBy'
+            'reviewRejectedBy'
         )->loadCount('sectionTexts');
 
         // role di-eager-load: daftar petugas difilter per role (lihat blade),
@@ -523,6 +460,26 @@ class ProjectController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('proposals.show', compact('project', 'activeUsers'));
+        // Riwayat alur proyek (2026-09-14, feedback user) — dari log aktivitas
+        // proyek ini & invoice-nya, urut kronologis. Hanya langkah alur kerja /
+        // perpindahan peran; aksi yang sifatnya edit (ubah proposal, ubah
+        // invoice, surat tugas, barcode, personil, faktur, teks) tidak ditampilkan.
+        $invoiceIds   = $project->invoices->pluck('id');
+        $activityLogs = \App\Models\AuditLog::with('user')
+            ->where(function ($q) use ($project, $invoiceIds) {
+                $q->where(fn ($s) => $s->where('subject_type', Project::class)->where('subject_id', $project->id))
+                  ->orWhere(fn ($s) => $s->where('subject_type', \App\Models\Invoice::class)->whereIn('subject_id', $invoiceIds));
+            })
+            ->whereNotIn('action', [
+                'proposal.updated', 'proposal.text_edited', 'proposal.text_reset', 'proposal.text_reset_all',
+                'proposal.tax_invoice_set', 'invoice.updated',
+                'project.assignment_letter_set', 'project.assignment_letter_barcode_uploaded',
+                'project.assignment_letter_barcode_deleted', 'project.assignment_staff_added', 'project.assignment_staff_removed',
+            ])
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        return view('proposals.show', compact('project', 'activeUsers', 'activityLogs'));
     }
 }
