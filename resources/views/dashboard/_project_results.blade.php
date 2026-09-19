@@ -47,7 +47,7 @@
          diringkas, sehingga tabel muat di layar laptop tanpa geser samping. --}}
     {{-- Font dinaikkan 11 -> 12px (2026-09-13, feedback user, uji coba). --}}
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
-            <p class="text-xs text-gray-500 dark:text-gray-400" id="resultsCount">{{ $projects->total() }} proyek ditemukan</p>
+            <p class="text-xs font-semibold text-gray-700 dark:text-gray-200" id="resultsCount">{{ $projects->total() }} proyek ditemukan</p>
             <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                 <span>Tampilkan</span>
                 @foreach ([15, 25] as $size)
@@ -196,7 +196,7 @@
      kartu daripada digeser ke samping terus (2026-09-14, feedback user). --}}
 <div class="lg:hidden space-y-3">
     <div class="flex items-center justify-between gap-2 px-1 text-xs text-gray-500 dark:text-gray-400">
-        <span>{{ $projects->total() }} proyek ditemukan</span>
+        <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $projects->total() }} proyek ditemukan</span>
         <span class="flex items-center gap-1.5">
             Tampilkan
             @foreach ([15, 25] as $size)
