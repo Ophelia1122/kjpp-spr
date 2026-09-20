@@ -20,14 +20,23 @@ class Terbilang
         $number = (int) round($number);
 
         if ($number < 0) {
-            return 'Minus ' . self::convert(abs($number)) . ' Rupiah';
+            return 'Minus ' . self::rapikan(self::convert(abs($number))) . ' Rupiah';
         }
 
         if ($number === 0) {
             return 'Nol Rupiah';
         }
 
-        return trim(self::convert($number)) . ' Rupiah';
+        return self::rapikan(self::convert($number)) . ' Rupiah';
+    }
+
+    /**
+     * Rapikan spasi ganda hasil penggabungan satuan (2026-09-21): tanpa ini
+     * dokumen resmi tercetak "Lima Puluh  Juta Rupiah" dengan dua spasi.
+     */
+    private static function rapikan(string $text): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', $text));
     }
 
     /**

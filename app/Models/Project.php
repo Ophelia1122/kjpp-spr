@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
 {
-    use HasFactory;
+    use HasFactory, \Illuminate\Database\Eloquent\SoftDeletes;
 
     /**
      * Konstanta status workflow. Dipakai di controller supaya tidak ada

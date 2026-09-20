@@ -23,8 +23,16 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!-- Tes memakai MySQL, bukan sqlite (2026-09-20): aplikasi memakai SQL
+             khusus MySQL (DATE_ADD/WEEKDAY untuk SLA hari kerja, ALTER MODIFY
+             di migrasi), jadi sqlite tidak bisa menjalankannya. Buat dulu:
+             CREATE DATABASE spr_db_test; -->
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="spr_db_test"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="3306"/>
+        <env name="DB_USERNAME" value="root"/>
+        <env name="DB_PASSWORD" value=""/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

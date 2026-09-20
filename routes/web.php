@@ -8,6 +8,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SurveyReportController;
+use App\Http\Controllers\TrashController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -70,6 +71,15 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:clients.manage')->post('/clients/store-ajax', [ClientController::class, 'storeAjax'])->name('clients.storeAjax');
 
     // --- Klien: manajemen data ---
+    // Sampah: proyek & klien yang dihapus, bisa dipulihkan 30 hari (2026-09-20).
+    Route::middleware('permission:proposals.manage')->group(function () {
+        Route::get('/sampah', [TrashController::class, 'index'])->name('trash.index');
+        Route::post('/sampah/proyek/{id}/pulihkan', [TrashController::class, 'restoreProject'])->whereNumber('id')->name('trash.projects.restore');
+        Route::delete('/sampah/proyek/{id}', [TrashController::class, 'forceDeleteProject'])->whereNumber('id')->name('trash.projects.forceDelete');
+        Route::post('/sampah/klien/{id}/pulihkan', [TrashController::class, 'restoreClient'])->whereNumber('id')->name('trash.clients.restore');
+        Route::delete('/sampah/klien/{id}', [TrashController::class, 'forceDeleteClient'])->whereNumber('id')->name('trash.clients.forceDelete');
+    });
+
     // SPJ Surveyor — rekap survei per penilai (2026-09-19, feedback user).
     Route::middleware('permission:survey.view')->get('/spj-surveyor', [SurveyReportController::class, 'index'])->name('spj.index');
 

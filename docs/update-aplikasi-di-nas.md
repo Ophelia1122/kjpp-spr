@@ -83,6 +83,18 @@ Tunggu sampai muncul `nginx entered RUNNING state`, lalu tekan `Ctrl + C`.
 
 Saat start, container otomatis menjalankan `storage:link`, `migrate --force`, dan `optimize`.
 
+### 4b. Nyalakan pekerja antrean & penjadwal (sekali saja)
+
+Sejak 21 September 2026 ada dua container tambahan: `queue` (job latar) dan
+`scheduler` (pembersih Sampah harian & pemangkas Log Aktivitas bulanan).
+
+```bash
+cd /volume2/docker/kjpp-app && sudo docker compose up -d queue scheduler && sudo docker compose ps
+```
+
+Keduanya memakai image yang sama dengan `app`, jadi tidak menambah waktu build.
+Pada update berikutnya keduanya ikut terbarui lewat `docker compose up -d --build`.
+
 ### 5. Pastikan migrasi berhasil
 
 ```bash
@@ -112,6 +124,7 @@ Semua bersifat **menambah**. Tidak ada kolom yang dihapus, tidak ada data yang d
 | `000011_add_avatar_path_to_users` | Kolom foto profil | Kosong untuk user lama |
 | `000012_add_payment_terms_to_projects` | Kolom persentase termin | Kosong = ikut bawaan skema (50/50 atau 100%) |
 | `000013_add_performance_indexes` | Indeks pada kolom filter & urutan | Hanya mempercepat; isi tabel tidak berubah |
+| `000014_add_soft_deletes_to_projects_and_clients` | Kolom `deleted_at` (Sampah) | Kosong untuk data lama; tidak ada yang terhapus |
 
 Kalau NAS sudah pernah menjalankan 000010–000012 (terlihat `Ran` di langkah 5),
 update ini hanya menambahkan 000013.

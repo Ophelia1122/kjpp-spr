@@ -42,6 +42,48 @@ services:
     networks:
       - kjpp-network
 
+  # --- Pekerja antrean (2026-09-20) ---
+  # Menjalankan job latar: notifikasi WhatsApp dan pekerjaan berat lain.
+  # Memakai image yang sama dengan app, jadi tidak menambah waktu build.
+  queue:
+    image: kjpp-app:latest
+    container_name: kjpp-queue
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --timeout=600
+    entrypoint: []
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - ./storage-data:/var/www/html/storage
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+    mem_limit: 512m
+    networks:
+      - kjpp-network
+
+  # --- Penjadwal (2026-09-20) ---
+  # Memanggil "schedule:run" tiap menit: pembersih Sampah (harian) dan
+  # pemangkas Log Aktivitas (bulanan). Lihat routes/console.php.
+  scheduler:
+    image: kjpp-app:latest
+    container_name: kjpp-scheduler
+    restart: unless-stopped
+    entrypoint: []
+    command: sh -c "while true; do php artisan schedule:run >> /dev/null 2>&1; sleep 60; done"
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - ./storage-data:/var/www/html/storage
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+    mem_limit: 256m
+    networks:
+      - kjpp-network
+
   # --- Bot notifikasi WhatsApp (Evolution API) — lihat docs/bot-whatsapp.md ---
   # Aplikasi memanggilnya lewat http://kjpp-wa:8080 (jaringan internal).
   # Port 8081 dibuka untuk dashboard scan QR: http://IP-NAS:8081/manager

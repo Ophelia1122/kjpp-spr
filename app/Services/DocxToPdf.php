@@ -16,12 +16,44 @@ use Symfony\Component\Process\Process;
  */
 class DocxToPdf
 {
+    /**
+     * Berapa konversi LibreOffice boleh berjalan bersamaan. Tiap konversi
+     * memakan ratusan MB RAM; NAS DXP2800 hanya 8 GB dan dibagi dengan
+     * MySQL, PHP-FPM, serta UGOS (2026-09-20, hasil audit skala).
+     */
+    private const MAX_CONCURRENT = 2;
+
+    /** Lama menunggu giliran sebelum menyerah (detik). */
+    private const LOCK_WAIT = 120;
+
     /** @return string path file .pdf hasil konversi (folder yang sama). */
     public static function convert(string $docxPath): string
     {
         if (!is_file($docxPath)) {
             throw new RuntimeException("File .docx tidak ditemukan: {$docxPath}");
         }
+
+        // Antre giliran: maksimal MAX_CONCURRENT konversi berjalan bersamaan.
+        // Tanpa ini, beberapa orang menekan "Cetak PDF" bersamaan bisa
+        // menghabiskan RAM NAS dan mematikan container.
+        for ($slot = 1; $slot <= self::MAX_CONCURRENT; $slot++) {
+            $lock = \Illuminate\Support\Facades\Cache::lock("libreoffice-slot-{$slot}", 300);
+            if ($lock->get()) {
+                try {
+                    return self::runConversion($docxPath);
+                } finally {
+                    optional($lock)->release();
+                }
+            }
+        }
+
+        // Semua slot sibuk: tunggu slot pertama sampai LOCK_WAIT detik.
+        return \Illuminate\Support\Facades\Cache::lock('libreoffice-slot-1', 300)
+            ->block(self::LOCK_WAIT, fn () => self::runConversion($docxPath));
+    }
+
+    private static function runConversion(string $docxPath): string
+    {
 
         $bin    = self::resolveBin(config('kjpp.libreoffice_bin', 'soffice'));
         $outDir = dirname($docxPath);
