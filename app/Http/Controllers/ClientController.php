@@ -48,7 +48,8 @@ class ClientController extends Controller
                                        ->orWhere('address', 'like', $keyword));
         }
 
-        $perPage = in_array((int) $request->get('per_page'), [15, 25], true) ? (int) $request->get('per_page') : 15;
+        // Jumlah baris dikunci 15 (2026-09-20, feedback user).
+        $perPage = 15;
         $clients = $query->paginate($perPage)->withQueryString();
 
         if ($request->ajax()) {

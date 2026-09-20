@@ -35,7 +35,9 @@ class UserController extends Controller
                   ->orWhere('email', 'like', '%' . $request->q . '%');
         }
 
-        $perPage = in_array((int) $request->get('per_page'), [15, 25], true) ? (int) $request->get('per_page') : 15;
+        // Jumlah baris dikunci 15 (2026-09-20, feedback user) — pilihan 15/25
+        // dihapus karena daftar pengguna & klien pendek.
+        $perPage = 15;
         $users = $query->paginate($perPage)->withQueryString();
 
         if ($request->ajax()) {

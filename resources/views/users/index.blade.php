@@ -5,9 +5,9 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-8 space-y-6">
  
-    <x-page-header title="Kelola Pengguna" subtitle="Akun, role, dan biodata profesi yang dipakai di proposal &amp; Surat Tugas.">
+    <x-page-header title="Kelola Pengguna" subtitle="{{ $users->total() }} pengguna terdaftar — akun, role, dan biodata profesi yang dipakai di proposal &amp; Surat Tugas.">
         <a href="{{ route('users.create') }}" title="Tambah pengguna" aria-label="Tambah pengguna"
-           class="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
+           class="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-3 text-xs font-medium text-white transition hover:border-blue-700 hover:bg-blue-700">
             <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
             </svg>

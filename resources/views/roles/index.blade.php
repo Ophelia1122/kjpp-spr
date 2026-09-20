@@ -62,7 +62,7 @@
         </div>
 
         <div class="mt-4">
-            <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">
+            <button type="submit" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-4 text-sm font-medium text-white transition hover:border-blue-700 hover:bg-blue-700">
                 Simpan Perubahan Hak Akses
             </button>
         </div>

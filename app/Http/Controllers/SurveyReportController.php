@@ -29,13 +29,19 @@ class SurveyReportController extends Controller
         $from = $request->filled('from') ? $request->date('from') : now()->startOfMonth();
         $to   = $request->filled('to') ? $request->date('to') : now()->endOfMonth();
 
-        $projects = Project::query()
+        // Rentang bawaan = bulan berjalan, jadi biasanya pendek. Paginasi
+        // dipasang sebagai jaga-jaga bila staf memilih rentang panjang
+        // (2026-09-20, feedback user).
+        $paginator = Project::query()
             ->with(['appraisers', 'assignedAppraiser', 'valuationObjects', 'instructingClient', 'namedClient'])
             ->where('status', '!=', Project::STATUS_BATAL)
             ->whereNotNull('survey_date')
             ->whereBetween('survey_date', [$from->toDateString(), $to->toDateString()])
             ->orderBy('survey_date')
-            ->get();
+            ->paginate(50)
+            ->withQueryString();
+
+        $projects = $paginator->getCollection();
 
         // Kelompokkan per penilai. Proyek tanpa relasi appraisers (data lama)
         // memakai kolom ringkasan assigned_appraiser_id.
@@ -64,6 +70,7 @@ class SurveyReportController extends Controller
             ->values();
 
         return view('reports.spj-surveyor', [
+            'paginator'        => $paginator,
             'from'             => $from,
             'to'               => $to,
             'rows'             => $rows,

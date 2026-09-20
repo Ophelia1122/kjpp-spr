@@ -397,7 +397,7 @@
                 </div>
             </div>
             <div class="mt-5 flex justify-end gap-2">
-                <button type="button" id="confirmCancel" class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+                <button type="button" id="confirmCancel" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
                 <button type="button" id="confirmOk" class="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">Ya, lanjutkan</button>
             </div>
         </div>
@@ -502,13 +502,26 @@
             let debounceTimer = null;
 
             function runSearch(url) {
+                // Tandai sedang memuat (2026-09-20, hasil audit UI): tanpa ini
+                // jeda 1 detik terasa seperti aplikasi diam.
+                results.style.opacity = '.45';
+                results.setAttribute('aria-busy', 'true');
+                results.style.pointerEvents = 'none';
+
+                const done = () => {
+                    results.style.opacity = '';
+                    results.style.pointerEvents = '';
+                    results.removeAttribute('aria-busy');
+                };
+
                 fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(r => r.text())
                     .then(html => {
                         results.innerHTML = html;
                         history.pushState(null, '', url);
+                        done();
                     })
-                    .catch(() => { window.location = url; });
+                    .catch(() => { done(); window.location = url; });
             }
 
             function buildUrl() {

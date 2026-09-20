@@ -33,7 +33,7 @@
             <input type="date" name="date_to" value="{{ request('date_to') }}" lang="id" class="rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
         </div>
         @if (request()->anyFilled(['user_id', 'action', 'date_from', 'date_to']))
-            <a href="{{ route('audit.index') }}" class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Reset</a>
+            <a href="{{ route('audit.index') }}" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Reset</a>
         @endif
     </form>
 
@@ -74,7 +74,12 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-4 py-10 text-center text-gray-500 dark:text-gray-400">Belum ada aktivitas tercatat.</td></tr>
+                    <tr>
+                        <td colspan="4" class="px-4 py-12 text-center">
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Tidak ada aktivitas yang cocok</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Longgarkan filter pengguna, jenis aksi, atau rentang tanggal.</p>
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>

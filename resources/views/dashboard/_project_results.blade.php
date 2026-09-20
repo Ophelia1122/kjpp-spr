@@ -184,7 +184,11 @@
             @empty
                 <tr>
                     <td colspan="9" class="px-4 py-10 text-center text-gray-500 dark:text-gray-400">
-                        Belum ada proyek yang cocok. Coba longgarkan filter, atau klik "Buat Proposal Baru".
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada proyek yang cocok</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Longgarkan filter atau pencarian, atau buat proposal baru.</p>
+                        @can('proposals.manage')
+                            <x-btn :href="route('proposals.create')" class="mt-4">Buat Proposal Baru</x-btn>
+                        @endcan
                     </td>
                 </tr>
             @endforelse
@@ -274,7 +278,11 @@
         </div>
     @empty
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
-            Belum ada proyek yang cocok. Coba longgarkan filter, atau klik "Buat Proposal Baru".
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada proyek yang cocok</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Longgarkan filter atau pencarian, atau buat proposal baru.</p>
+            @can('proposals.manage')
+                <x-btn :href="route('proposals.create')" class="mt-4">Buat Proposal Baru</x-btn>
+            @endcan
         </div>
     @endforelse
 </div>

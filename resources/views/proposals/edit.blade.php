@@ -672,7 +672,7 @@
             @include('partials.client-duplicate-check')
         </div>
         <div class="mt-5 flex justify-end gap-2">
-            <button type="button" onclick="closeClientModal()" class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+            <button type="button" onclick="closeClientModal()" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
             <button type="button" onclick="submitNewClient()" class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Simpan</button>
         </div>
     </div>

@@ -8,7 +8,7 @@
     <x-page-header title="Kelola Rekening Bank"
         subtitle='{{ $banks->count() }} rekening terdaftar — dipilih per proposal, dipakai di Invoice &amp; blok "Rekening Bank" proposal.'>
         <a href="{{ route('banks.create') }}"
-           class="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
+           class="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-3 text-xs font-medium text-white transition hover:border-blue-700 hover:bg-blue-700">
             <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
             </svg>
@@ -80,7 +80,12 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-10 text-center text-gray-500 dark:text-gray-400">Belum ada rekening bank.</td>
+                        <td colspan="6" class="px-4 py-12 text-center">
+                            <svg aria-hidden="true" class="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>
+                            <p class="mt-3 text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada rekening bank</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Rekening dipakai di Invoice &amp; blok "Rekening Bank" proposal.</p>
+                            <x-btn :href="route('banks.create')" class="mt-4">Tambah Rekening</x-btn>
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
@@ -131,7 +136,12 @@
                 </p>
             </div>
         @empty
-            <p class="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">Belum ada rekening bank.</p>
+            <div class="rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <svg aria-hidden="true" class="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>
+                <p class="mt-3 text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada rekening bank</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Rekening dipakai di Invoice &amp; blok "Rekening Bank" proposal.</p>
+                <x-btn :href="route('banks.create')" class="mt-4">Tambah Rekening</x-btn>
+            </div>
         @endforelse
     </div>
 

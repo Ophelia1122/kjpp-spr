@@ -37,9 +37,9 @@
                 <label class="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Sampai</label>
                 <input type="date" name="to" value="{{ request('to') }}" lang="id" class="{{ $dateInput }}">
             </div>
-            <button type="submit" class="px-4 py-2 text-sm rounded-md bg-gray-800 text-white hover:bg-gray-900">Terapkan</button>
+            <button type="submit" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-4 text-sm font-medium text-white transition hover:border-blue-700 hover:bg-blue-700">Terapkan</button>
             <a href="{{ route('dashboard.pembayaran', ['from' => now()->startOfMonth()->toDateString(), 'to' => now()->endOfMonth()->toDateString()]) }}"
-               class="px-3 py-2 text-sm rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Bulan ini</a>
+               class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Bulan ini</a>
             @if ($periodActive)
                 <a href="{{ route('dashboard.pembayaran') }}" class="px-3 py-2 text-sm text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200">Semua waktu</a>
             @endif
@@ -237,7 +237,7 @@
             </select>
         </div>
         @if (request('q') || request('status'))
-            <a href="{{ route('dashboard.pembayaran', array_filter(['from' => request('from'), 'to' => request('to')])) }}" class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">
+            <a href="{{ route('dashboard.pembayaran', array_filter(['from' => request('from'), 'to' => request('to')])) }}" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
                 Reset
             </a>
         @endif
@@ -268,7 +268,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeMarkPaidModal()"
-                        class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+                        class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
                 <button type="submit" class="px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700">Konfirmasi Dibayar</button>
             </div>
         </form>
@@ -309,7 +309,7 @@
             @endforeach
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeNumberingModal()"
-                        class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+                        class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
                 <button type="submit" class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Simpan</button>
             </div>
         </form>

@@ -1,8 +1,3 @@
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-gray-500 dark:text-gray-500">{{ $users->total() }} pengguna terdaftar</p>
-        @include('partials.per-page', ['paginator' => $users])
-    </div>
-
     {{-- Tabel untuk layar lebar; layar sempit memakai kartu di bawah
          (2026-09-20, hasil audit UI). --}}
     <div class="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm md:block dark:border-gray-700 dark:bg-gray-800">
@@ -73,7 +68,13 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="px-4 py-10 text-center text-gray-500 dark:text-gray-400">Belum ada pengguna.</td></tr>
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center">
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Tidak ada pengguna yang cocok</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Coba kata kunci lain, atau tambahkan pengguna baru.</p>
+                            <x-btn :href="route('users.create')" class="mt-4">Tambah Pengguna</x-btn>
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -138,7 +139,11 @@
                 </div>
             </div>
         @empty
-            <p class="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">Belum ada pengguna.</p>
+            <div class="rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Tidak ada pengguna yang cocok</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Coba kata kunci lain, atau tambahkan pengguna baru.</p>
+                <x-btn :href="route('users.create')" class="mt-4">Tambah Pengguna</x-btn>
+            </div>
         @endforelse
     </div>
 

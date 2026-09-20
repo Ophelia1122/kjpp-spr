@@ -1,8 +1,3 @@
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-gray-500 dark:text-gray-500">{{ $clients->total() }} klien terdaftar</p>
-        @include('partials.per-page', ['paginator' => $clients])
-    </div>
-
     <div class="hidden md:block bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto dark:bg-gray-800 dark:border-gray-700">
         <table class="w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">

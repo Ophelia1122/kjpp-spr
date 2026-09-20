@@ -1282,7 +1282,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeInvoiceModal()"
-                        class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+                        class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
                 <button type="submit"
                         class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Terbitkan Invoice</button>
             </div>
@@ -1336,7 +1336,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeEditInvoiceModal()"
-                        class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+                        class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
                 <button type="submit"
                         class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Simpan Perubahan</button>
             </div>
@@ -1361,7 +1361,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeVerifyPaidModal()"
-                        class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+                        class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
                 <button type="submit"
                         class="px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700">Konfirmasi Dibayar</button>
             </div>
@@ -1389,7 +1389,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeReviewRejectModal()"
-                        class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
+                        class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
                 <button type="submit" id="reviewSubmitBtn"
                         class="px-4 py-2 text-sm rounded-md bg-rose-600 text-white hover:bg-rose-700">Kembalikan</button>
             </div>
