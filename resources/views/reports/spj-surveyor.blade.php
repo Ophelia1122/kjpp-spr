@@ -21,7 +21,7 @@
 
     {{-- Kartu filter selebar isinya saja & rata kanan (2026-09-20, feedback user). --}}
     <form method="GET" action="{{ route('spj.index') }}"
-          class="flex w-full flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:ml-auto sm:w-fit sm:max-w-full dark:border-gray-700 dark:bg-gray-800">
+          class="flex w-full flex-wrap items-end gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:ml-auto sm:w-fit sm:max-w-full dark:border-gray-700 dark:bg-gray-800">
         <div class="min-w-[150px] flex-1 sm:flex-none">
             <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-500">Dari tanggal</label>
             <input type="date" name="from" lang="id" value="{{ $from->toDateString() }}"
@@ -41,12 +41,10 @@
                 @endforeach
             </select>
         </div>
-        <button type="submit" class="rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700">
-            Tampilkan
-        </button>
-        <a href="{{ route('spj.index') }}" class="rounded-md border border-gray-300 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
-            Bulan ini
-        </a>
+        {{-- Contoh komponen tombol (A2, 2026-09-20) — menunggu persetujuan
+             sebelum dipakai di seluruh aplikasi. --}}
+        <x-btn>Tampilkan</x-btn>
+        <x-btn variant="outline" :href="route('spj.index')">Bulan ini</x-btn>
     </form>
 
     @forelse ($rows as $row)
