@@ -207,11 +207,12 @@
     </div>
 
     {{-- ===================== PROYEK TERBARU ===================== --}}
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto lift dark:bg-gray-800 dark:border-gray-700">
-        @include('partials.scroll-hint')
+    <div class="rounded-lg border border-gray-200 bg-white shadow-sm lift dark:border-gray-700 dark:bg-gray-800">
         <div class="px-6 pt-6">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Proyek Terbaru</h2>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Proyek Terbaru</h2>
         </div>
+        {{-- Tabel di layar lebar, kartu di HP (2026-09-20, hasil audit UI). --}}
+        <div class="hidden overflow-x-auto md:block">
         <table class="min-w-[640px] w-full text-sm mt-3">
             <thead class="bg-gray-50 border-y border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
@@ -240,18 +241,33 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
+
+        <div class="divide-y divide-gray-100 md:hidden dark:divide-gray-700">
+            @foreach ($recent as $p)
+                <a href="{{ route('proposals.show', $p) }}"
+                   class="flex items-start justify-between gap-3 px-4 py-3 {{ $p->status === Project::STATUS_BATAL ? 'opacity-60' : '' }}">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $p->proposal_number_short }}</p>
+                        <p class="truncate text-xs text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</p>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ $p->proposal_purpose }} &middot; {{ $p->created_at->translatedFormat('d M Y') }}</p>
+                    </div>
+                    <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $p->status_badge_classes }}">{{ $p->status_short }}</span>
+                </a>
+            @endforeach
+        </div>
     </div>
 
     {{-- ===================== PERLU DITINDAKLANJUTI (DRAFT & DP INVOICING) ===================== --}}
     @if ($followUps->isNotEmpty())
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto lift dark:bg-gray-800 dark:border-gray-700">
-        @include('partials.scroll-hint')
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm lift dark:border-gray-700 dark:bg-gray-800">
             <div class="px-6 pt-6">
                 <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Perlu Ditindaklanjuti</h2>
                 <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                     Proposal berstatus Draft Proposal / DP Invoicing &mdash; reminder sudah berapa hari sejak dibuat.
                 </p>
             </div>
+            <div class="hidden overflow-x-auto md:block">
             <table class="min-w-[640px] w-full text-sm mt-3">
                 <thead class="bg-gray-50 border-y border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                     <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
@@ -290,6 +306,23 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
+
+            <div class="divide-y divide-gray-100 md:hidden dark:divide-gray-700">
+                @foreach ($followUps as $p)
+                    @php $hari = (int) $p->created_at->diffInDays(now()); @endphp
+                    <a href="{{ route('proposals.show', $p) }}" class="flex items-start justify-between gap-3 px-4 py-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $p->proposal_number_short }}</p>
+                            <p class="truncate text-xs text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</p>
+                            <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $p->status_badge_classes }}">{{ $p->status_short }}</span>
+                        </div>
+                        <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $hari >= 7 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : ($hari >= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300') }}">
+                            {{ $hari }} hari
+                        </span>
+                    </a>
+                @endforeach
+            </div>
         </div>
     @endif
 

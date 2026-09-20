@@ -24,7 +24,10 @@
             <table class="min-w-[720px] w-full text-sm">
                 <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-500">Izin</th>
+                        {{-- Kolom Izin menempel di kiri saat tabel digeser di HP
+                             (2026-09-20, hasil audit UI) — tanpa ini nama izin
+                             hilang begitu kolom role digeser. --}}
+                        <th class="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:bg-gray-900 dark:text-gray-400">Izin</th>
                         @foreach ($roles as $role)
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap dark:text-gray-500">
                                 {{ $role->name }}
@@ -35,19 +38,19 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     @foreach ($permissionsByGroup as $groupName => $permissions)
                         <tr class="bg-gray-50 dark:bg-gray-900">
-                            <td colspan="{{ $roles->count() + 1 }}" class="px-4 py-2 text-xs font-bold text-gray-600 uppercase tracking-wide dark:text-gray-500">
+                            <td colspan="{{ $roles->count() + 1 }}" class="sticky left-0 bg-gray-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-600 dark:bg-gray-900 dark:text-gray-400">
                                 {{ $groupName }}
                             </td>
                         </tr>
                         @foreach ($permissions as $permission)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/60">
-                                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $permission->label }}</td>
+                            <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/60">
+                                <td class="sticky left-0 z-10 min-w-[210px] bg-white px-4 py-3 text-gray-700 group-hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300">{{ $permission->label }}</td>
                                 @foreach ($roles as $role)
                                     <td class="px-4 py-3 text-center">
                                         <input type="checkbox"
                                                name="permissions[{{ $role->id }}][]"
                                                value="{{ $permission->id }}"
-                                               class="rounded border-gray-300 w-4 h-4 dark:border-gray-600"
+                                               class="h-5 w-5 rounded border-gray-300 sm:h-4 sm:w-4 dark:border-gray-600"
                                                @checked($role->permissions->contains('id', $permission->id))>
                                     </td>
                                 @endforeach

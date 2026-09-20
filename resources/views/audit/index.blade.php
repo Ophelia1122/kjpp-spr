@@ -41,8 +41,8 @@
         @include('partials.per-page', ['paginator' => $logs])
     </div>
 
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto dark:bg-gray-800 dark:border-gray-700">
-        @include('partials.scroll-hint')
+    {{-- Tabel untuk layar lebar; layar sempit memakai kartu (2026-09-20). --}}
+    <div class="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm md:block dark:border-gray-700 dark:bg-gray-800">
         <table class="min-w-[640px] w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
@@ -78,6 +78,25 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    {{-- ---------- KARTU (HP) ---------- --}}
+    <div class="space-y-2 md:hidden">
+        @forelse ($logs as $log)
+            <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $log->user->name ?? 'Sistem' }}</p>
+                    <span class="shrink-0 text-[11px] text-gray-500 dark:text-gray-400">{{ $log->created_at->translatedFormat('d M Y, H:i') }}</span>
+                </div>
+                <span class="mt-1 inline-block rounded-full bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-600 dark:bg-gray-900 dark:text-gray-300">{{ $log->action }}</span>
+                <p class="mt-1 text-xs text-gray-700 dark:text-gray-300">{{ $log->description }}</p>
+                @if ($log->note)
+                    <p class="mt-0.5 text-xs italic text-gray-500 dark:text-gray-400">Catatan: {{ $log->note }}</p>
+                @endif
+            </div>
+        @empty
+            <p class="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">Belum ada aktivitas tercatat.</p>
+        @endforelse
     </div>
 
     <div>{{ $logs->links() }}</div>

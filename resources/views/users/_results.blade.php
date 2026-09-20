@@ -3,8 +3,9 @@
         @include('partials.per-page', ['paginator' => $users])
     </div>
 
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto dark:bg-gray-800 dark:border-gray-700">
-        @include('partials.scroll-hint')
+    {{-- Tabel untuk layar lebar; layar sempit memakai kartu di bawah
+         (2026-09-20, hasil audit UI). --}}
+    <div class="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm md:block dark:border-gray-700 dark:bg-gray-800">
         <table class="min-w-[640px] w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
@@ -76,6 +77,69 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    {{-- ---------- KARTU (HP) ---------- --}}
+    <div class="space-y-3 md:hidden">
+        @forelse ($users as $user)
+            <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-start gap-3">
+                    @include('partials.user-avatar', ['avatarUser' => $user, 'avatarClass' => 'h-10 w-10 bg-blue-600 text-sm'])
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-start justify-between gap-2">
+                            <p class="min-w-0 truncate font-semibold text-gray-900 dark:text-gray-100">
+                                {{ $user->name }}
+                                @if ($user->id === auth()->id())
+                                    <span class="text-xs font-normal text-gray-500 dark:text-gray-400">(Anda)</span>
+                                @endif
+                            </p>
+                            @if ($user->is_active)
+                                <span class="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 dark:bg-green-900/30 dark:text-green-400">Aktif</span>
+                            @else
+                                <span class="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">Nonaktif</span>
+                            @endif
+                        </div>
+                        <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $user->email }}</p>
+
+                        <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                            <div>
+                                <dt class="text-gray-500 dark:text-gray-400">Role</dt>
+                                <dd class="font-medium text-gray-700 dark:text-gray-300">{{ $user->role->name ?? '-' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-gray-500 dark:text-gray-400">Jabatan</dt>
+                                <dd class="font-medium text-gray-700 dark:text-gray-300">{{ $user->jabatan ?: '-' }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="mt-2 flex items-center justify-between gap-2">
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400">
+                                Login {{ $user->last_login_at ? $user->last_login_at->locale('id')->diffForHumans() : 'belum pernah' }}
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <a href="{{ route('users.edit', $user) }}" title="Edit pengguna" aria-label="Edit pengguna"
+                                   class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-100">
+                                    @include('partials.icon-pencil')
+                                </a>
+                                @if ($user->id !== auth()->id())
+                                    <form action="{{ route('users.destroy', $user) }}" method="POST"
+                                          data-confirm="Yakin hapus pengguna {{ $user->name }}?">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" title="Hapus pengguna" aria-label="Hapus pengguna"
+                                                class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300">
+                                            @include('partials.icon-trash')
+                                        </button>
+                                    </form>
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <p class="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">Belum ada pengguna.</p>
+        @endforelse
     </div>
 
     <div>{{ $users->links() }}</div>

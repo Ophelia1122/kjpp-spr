@@ -16,8 +16,8 @@
         </a>
     </x-page-header>
 
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto dark:bg-gray-800 dark:border-gray-700">
-        @include('partials.scroll-hint')
+    {{-- Tabel untuk layar lebar; layar sempit memakai kartu (2026-09-20). --}}
+    <div class="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm md:block dark:border-gray-700 dark:bg-gray-800">
         <table class="min-w-[640px] w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
@@ -85,6 +85,54 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    {{-- ---------- KARTU (HP) ---------- --}}
+    <div class="space-y-3 md:hidden">
+        @forelse ($banks as $bank)
+            <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="font-semibold text-gray-900 dark:text-gray-100">
+                            {{ $bank->bank_name }}
+                            @if ($bank->is_default)
+                                <span class="ml-1 rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Default</span>
+                            @endif
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $bank->branch ?: 'Tanpa cabang' }}</p>
+                    </div>
+                    <span class="flex shrink-0 items-center gap-1">
+                        <a href="{{ route('banks.edit', $bank) }}" title="Edit rekening" aria-label="Edit rekening"
+                           class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-100">
+                            @include('partials.icon-pencil')
+                        </a>
+                        @if ($bank->projects_count === 0)
+                            <form action="{{ route('banks.destroy', $bank) }}" method="POST"
+                                  data-confirm="Hapus rekening &quot;{{ $bank->bank_name }} - {{ $bank->account_number }}&quot;?">
+                                @csrf @method('DELETE')
+                                <button type="submit" title="Hapus rekening" aria-label="Hapus rekening"
+                                        class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300">
+                                    @include('partials.icon-trash')
+                                </button>
+                            </form>
+                        @endif
+                    </span>
+                </div>
+
+                <p class="mt-2 font-mono text-sm tabular-nums text-gray-800 dark:text-gray-200">{{ $bank->account_number }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">a.n. {{ $bank->account_name }}</p>
+
+                <p class="mt-2 text-[11px]">
+                    @if ($bank->projects_count > 0)
+                        <span class="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">{{ $bank->projects_count }} proposal</span>
+                    @else
+                        <span class="text-gray-500 dark:text-gray-400">Belum dipakai</span>
+                    @endif
+                </p>
+            </div>
+        @empty
+            <p class="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">Belum ada rekening bank.</p>
+        @endforelse
     </div>
 
     <p class="text-xs text-gray-500 dark:text-gray-400">
