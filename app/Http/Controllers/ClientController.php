@@ -80,6 +80,7 @@ class ClientController extends Controller
                 ->orWhereHas('invoices', fn ($s) => $s->where('received_from_client_id', $id)->orWhere('on_behalf_of_client_id', $id)))
             ->orderByDesc('proposal_date')
             ->orderByDesc('id')
+            ->limit(100)   // klien besar bisa punya ratusan proyek (2026-09-20)
             ->get()
             ->map(function ($p) use ($id) {
                 $roles = array_keys(array_filter([
@@ -218,7 +219,21 @@ class ClientController extends Controller
             return response()->json([]);
         }
 
-        $matches = Client::get(['id', 'client_name', 'client_type', 'address'])
+        // Saring dulu di SQL (2026-09-20, hasil audit skala): sebelumnya SELURUH
+        // tabel klien ditarik lalu dihitung kemiripannya di PHP pada tiap
+        // ketikan. Kini hanya kandidat yang memuat salah satu kata pertama
+        // (atau awalan nama) yang dihitung, dibatasi 300 baris.
+        $words = array_slice(array_filter(explode(' ', $name), fn ($w) => mb_strlen($w) >= 3), 0, 3);
+
+        $matches = Client::query()
+            ->where(function ($q) use ($words, $name) {
+                $q->where('client_name', 'like', mb_substr($name, 0, 4) . '%');
+                foreach ($words as $word) {
+                    $q->orWhere('client_name', 'like', '%' . $word . '%');
+                }
+            })
+            ->limit(300)
+            ->get(['id', 'client_name', 'client_type', 'address'])
             ->map(function (Client $c) use ($name, $address) {
                 $cName     = Client::normalizeName($c->client_name);
                 $nameScore = Client::similarity($name, $cName);

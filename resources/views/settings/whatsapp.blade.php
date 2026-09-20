@@ -16,7 +16,7 @@
     </x-page-header>
 
 
-    <form action="{{ route('settings.whatsapp.update') }}" method="POST" class="max-w-lg space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <form action="{{ route('settings.whatsapp.update') }}" method="POST" class="mx-auto max-w-lg space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         @csrf
         @method('PUT')
 

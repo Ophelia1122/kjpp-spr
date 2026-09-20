@@ -123,26 +123,47 @@ class PaymentDashboardController extends Controller
             ->whereRaw(self::INVOICE_DATE_SQL . ' < ?', [now()->subDays(self::OVERDUE_DAYS)->toDateString()])
             ->count();
 
-        // Nilai kontrak & bagian yang BELUM PERNAH ditagihkan — dari proyek
-        // yang sudah jalan (bukan Draft/Batal). Posisi saat ini, tanpa periode.
-        $projects = Project::query()
-            ->with('instructingClient', 'namedClient', 'invoices')
+        // Nilai kontrak & bagian yang BELUM PERNAH ditagihkan.
+        //
+        // Dihitung di SQL (2026-09-20, hasil audit skala): sebelumnya seluruh
+        // proyek beserta relasi invoice ditarik ke memori lalu dijumlahkan di
+        // PHP — aman untuk belasan proyek, tapi berat begitu datanya ribuan.
+        // Rumus total_fee diulang di SQL; jaga tetap sama dengan
+        // Project::getTotalFeeAttribute().
+        $rate    = (float) config('kjpp.ppn_rate', 0.11);
+        $taxable = '(service_fee + CASE WHEN transport_reimbursed = 1 THEN 0 ELSE COALESCE(transport_cost, 0) END)';
+        $totalFeeSql = "(CASE WHEN fee_ppn_included = 1 THEN {$taxable} ELSE {$taxable} * (1 + ?) END)";
+
+        $scope = fn () => Project::query()
             ->whereNotIn('status', [Project::STATUS_DRAFT, Project::STATUS_BATAL])
             ->whereDate('created_at', '>=', $summaryFrom)
-            ->when($summaryTo, fn ($q) => $q->whereDate('created_at', '<=', $summaryTo))
-            ->get();
+            ->when($summaryTo, fn ($q) => $q->whereDate('created_at', '<=', $summaryTo));
 
-        $totalContract  = (float) $projects->sum(fn ($p) => $p->total_fee);
-        $totalNotBilled = (float) $projects->sum(fn ($p) => max(0, $p->total_fee - (float) $p->invoices->sum('amount')));
+        $billedSub = 'COALESCE((select sum(amount) from invoices where invoices.project_id = projects.id), 0)';
+
+        $totals = $scope()
+            ->selectRaw("SUM({$totalFeeSql}) as kontrak", [$rate])
+            ->selectRaw("SUM(GREATEST({$totalFeeSql} - {$billedSub}, 0)) as belum_ditagih", [$rate])
+            ->first();
+
+        $totalContract  = (float) ($totals->kontrak ?? 0);
+        $totalNotBilled = (float) ($totals->belum_ditagih ?? 0);
 
         // Proyek yang masih punya sisa tagihan, sisa terbesar dulu. Hanya skema
         // DP di Awal (2026-09-14, feedback user) — proyek Bayar Nanti memang
         // ditagih di akhir, jadi belum layak dianggap sisa tagihan.
-        $outstandingProjects = $projects
-            ->filter(fn ($p) => $p->payment_scheme !== Project::PAYMENT_SCHEME_LATER)
-            ->filter(fn ($p) => $p->remaining_balance > 0)
-            ->sortByDesc('remaining_balance')
-            ->values();
+        // Dibatasi 50 baris teratas (2026-09-20) supaya kartu ini tidak ikut
+        // membesar seiring jumlah proyek.
+        $paidSub = "COALESCE((select sum(amount) from invoices where invoices.project_id = projects.id and invoices.status = '" . Invoice::STATUS_PAID . "'), 0)";
+
+        $outstandingProjects = $scope()
+            ->with('instructingClient', 'namedClient', 'invoices')
+            ->where('payment_scheme', '!=', Project::PAYMENT_SCHEME_LATER)
+            ->selectRaw("projects.*, ({$totalFeeSql} - {$paidSub}) as sisa_tagihan", [$rate])
+            ->havingRaw('sisa_tagihan > 0')
+            ->orderByDesc('sisa_tagihan')
+            ->limit(50)
+            ->get();
 
         return view('dashboard.pembayaran', $tableData + [
             'totalContract'       => $totalContract,

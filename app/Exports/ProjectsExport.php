@@ -3,14 +3,15 @@
 namespace App\Exports;
 
 use App\Models\Project;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ProjectsExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
+class ProjectsExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithChunkReading
 {
     /**
      * @param array $filters Dari modal Export Excel di List Project (2026-09-14):
@@ -21,7 +22,17 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
     {
     }
 
-    public function collection()
+    /**
+     * Dibaca per potongan 500 baris (2026-09-20, hasil audit skala): sebelumnya
+     * seluruh hasil ditarik ke memori sekaligus, sehingga export rentang
+     * bertahun-tahun bisa menghabiskan memori PHP di NAS.
+     */
+    public function chunkSize(): int
+    {
+        return 500;
+    }
+
+    public function query()
     {
         $f     = $this->filters;
         $query = Project::with(['instructingClient', 'namedClient', 'intendedUsers', 'invoices']);
@@ -60,7 +71,7 @@ class ProjectsExport implements FromCollection, WithHeadings, WithMapping, Shoul
             });
         }
 
-        return $query->orderBy($dateField)->orderBy('id')->get();
+        return $query->orderBy($dateField)->orderBy('id');
     }
 
     public function headings(): array

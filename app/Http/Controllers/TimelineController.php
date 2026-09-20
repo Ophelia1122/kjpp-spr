@@ -73,16 +73,22 @@ class TimelineController extends Controller
         $scoped = fn () => Project::with('instructingClient', 'namedClient')
             ->when($mine, fn ($q) => $q->forAppraiser(auth()->id()));
 
+        // Dibatasi 150 proyek terjadwal terbaru (2026-09-20, hasil audit skala):
+        // batang Gantt digambar satu per proyek, jadi tanpa batas halaman ini
+        // ikut membesar terus seiring jumlah proyek aktif.
         $plottable = $scoped()
             ->active()
             ->whereNotNull('survey_date')
             ->whereNotNull('sla_draft_days')
+            ->orderByDesc('survey_date')
+            ->limit(150)
             ->get()
             ->filter(fn ($p) => $p->estimated_completion_date !== null)
             ->sortBy(fn ($p) => $p->survey_date->timestamp)
             ->values();
 
         $unscheduled = $scoped()
+            ->limit(100)
             ->where('status', Project::STATUS_IN_PROGRESS)
             ->where(function ($q) {
                 $q->whereNull('survey_date')->orWhereNull('sla_draft_days');

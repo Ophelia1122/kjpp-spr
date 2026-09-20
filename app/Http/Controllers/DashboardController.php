@@ -43,7 +43,14 @@ class DashboardController extends Controller
         $mode = isset($modes[$requested]) ? $requested : array_key_first($modes);
 
         $data = ['modes' => $modes, 'mode' => $mode, 'canFinance' => false, 'notes' => collect()];
-        $data['profile'] = $this->miniProfile($user, $mode);
+        // Hasil di-cache 3 jam per pengguna+mode (2026-09-20, hasil audit skala):
+        // perhitungan skor SLA membaca proyek setahun terakhir, tidak perlu
+        // diulang tiap kali Beranda dibuka.
+        $data['profile'] = \Illuminate\Support\Facades\Cache::remember(
+            "mini-profile:{$user->id}:{$mode}:" . now()->format('Y-m-d-H'),
+            now()->addHours(3),
+            fn () => $this->miniProfile($user, $mode)
+        );
         $with = ['instructingClient', 'namedClient'];
 
         if ($mode === 'penilai') {
@@ -111,16 +118,23 @@ class DashboardController extends Controller
             if ($user->hasPermission('invoices.manage')) {
                 $data['canFinance'] = true;
 
+                // Dibatasi 200 invoice tertunggak terlama (2026-09-20, audit skala).
                 $overdue = Invoice::with('project.instructingClient', 'project.namedClient')
                     ->where('status', Invoice::STATUS_UNPAID)
+                    ->orderBy('invoice_date')
+                    ->limit(200)
                     ->get()
                     ->filter(fn ($inv) => $inv->project && ! $inv->project->isCancelled()
                         && $inv->age_days > PaymentDashboardController::OVERDUE_DAYS)
                     ->sortByDesc('age_days')
                     ->values();
 
+                // Dibatasi 200 pekerjaan selesai terbaru (2026-09-20, audit skala):
+                // daftar ini hanya pengingat tagih, bukan arsip lengkap.
                 $unpaidDone = Project::with([...$with, 'invoices'])
                     ->where('status', Project::STATUS_SELESAI)
+                    ->orderByDesc('printed_at')
+                    ->limit(200)
                     ->get()
                     ->reject(fn ($p) => $p->is_fully_paid)
                     ->map(function ($p) {
