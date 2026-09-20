@@ -21,18 +21,9 @@
         ];
     @endphp
     <div class="bg-white rounded-b-lg border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-        {{-- Jumlah hasil + jumlah per halaman (15/25), seperti List Project. --}}
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-            <p class="text-sm text-gray-500 dark:text-gray-500">{{ $invoices->total() }} invoice ditemukan</p>
-            <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
-                <span>Tampilkan</span>
-                @foreach ([15, 25] as $size)
-                    <a href="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => null]) }}"
-                       class="px-2 py-1 rounded-md font-medium {{ $invoices->perPage() === $size ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700' }}">
-                        {{ $size }}
-                    </a>
-                @endforeach
-            </div>
+        {{-- Jumlah hasil. Baris per halaman dikunci 15 (2026-09-20, feedback user). --}}
+        <div class="border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $invoices->total() }} invoice ditemukan</p>
         </div>
 
         <div class="hidden md:block overflow-x-auto">

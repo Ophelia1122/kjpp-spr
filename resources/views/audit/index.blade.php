@@ -48,10 +48,6 @@
         @endif
     </form>
 
-    <div class="flex justify-end">
-        @include('partials.per-page', ['paginator' => $logs])
-    </div>
-
     {{-- Tabel untuk layar lebar; layar sempit memakai kartu (2026-09-20). --}}
     <div class="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm md:block dark:border-gray-700 dark:bg-gray-800">
         <table class="min-w-[640px] w-full text-sm">

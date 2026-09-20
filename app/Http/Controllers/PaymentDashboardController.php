@@ -82,7 +82,8 @@ class PaymentDashboardController extends Controller
         $query->orderByDesc('id'); // urutan sekunder yang stabil antar halaman
 
         // Cukup 15 & 25 per halaman (2026-09-14, feedback user) — 50/100 berat dimuat.
-        $perPage = (int) $request->get('per_page', 15);
+        // Dikunci 15 baris (2026-09-20, feedback user).
+        $perPage = 15;
         if (! in_array($perPage, [15, 25], true)) {
             $perPage = 15;
         }

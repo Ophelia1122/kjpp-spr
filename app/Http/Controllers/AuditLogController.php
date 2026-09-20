@@ -30,7 +30,8 @@ class AuditLogController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $perPage = in_array((int) $request->get('per_page'), [15, 25], true) ? (int) $request->get('per_page') : 25;
+        // Dikunci 25 baris (2026-09-20, feedback user) — pilihan 15/25 dihapus.
+        $perPage = 25;
         $logs = $query->paginate($perPage)->withQueryString();
         $users = User::orderBy('name')->get(['id', 'name']);
 
