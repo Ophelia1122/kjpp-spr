@@ -67,22 +67,19 @@
 <div class="max-w-5xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
-    <div class="flex flex-wrap items-start justify-between gap-4">
-        <div class="min-w-0">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 break-words">Edit Proposal</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ $project->proposal_number }}</p>
-            <p class="mt-2 inline-flex items-start gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                <svg aria-hidden="true" class="mt-px h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-                </svg>
-                Perubahan di sini akan menimpa data objek penilaian sebelumnya.
-            </p>
-        </div>
+    <x-page-header title="Edit Proposal" subtitle="{{ $project->proposal_number }}">
         <a href="{{ route('proposals.show', $project) }}"
            class="shrink-0 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
             &larr; Kembali ke Detail Proyek
         </a>
-    </div>
+    </x-page-header>
+
+    <p class="inline-flex items-start gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+        <svg aria-hidden="true" class="mt-px h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+        </svg>
+        Perubahan di sini akan menimpa data objek penilaian sebelumnya.
+    </p>
 
     {{-- ===================== NAVIGASI CEPAT ===================== --}}
     <div class="sticky top-14 lg:top-3 z-20 flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1.5 shadow-sm dark:bg-gray-800 dark:border-gray-700">

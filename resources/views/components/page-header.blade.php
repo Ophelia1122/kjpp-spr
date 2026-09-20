@@ -19,6 +19,10 @@
             @if ($subtitle)
                 <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{!! $subtitle !!}</p>
             @endif
+            {{-- Slot "meta": baris tambahan di bawah judul (tanggal, catatan). --}}
+            @isset($meta)
+                <div class="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{{ $meta }}</div>
+            @endisset
         </div>
 
         @if (trim($slot) !== '')

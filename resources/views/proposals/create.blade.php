@@ -32,18 +32,13 @@
 <div class="max-w-5xl mx-auto py-8 space-y-6">
 
     {{-- ===================== HEADER ===================== --}}
-    <div class="flex flex-wrap items-start justify-between gap-4">
-        <div class="min-w-0">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Buat Proposal Penawaran Baru</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Lengkapi seluruh bagian di bawah, lalu simpan untuk men-generate dokumen proposal.
-            </p>
-        </div>
+    <x-page-header title="Buat Proposal Penawaran Baru"
+        subtitle="Lengkapi seluruh bagian di bawah, lalu simpan untuk men-generate dokumen proposal.">
         <a href="{{ route('dashboard') }}"
            class="shrink-0 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
             &larr; Kembali ke List Project
         </a>
-    </div>
+    </x-page-header>
 
     {{-- ===================== NAVIGASI CEPAT ===================== --}}
     <div class="sticky top-14 lg:top-3 z-20 flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1.5 shadow-sm dark:bg-gray-800 dark:border-gray-700">

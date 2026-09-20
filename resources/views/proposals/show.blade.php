@@ -27,9 +27,8 @@
             'none'     => 'bg-gray-100 text-gray-500 border-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600',
         ];
     @endphp
-    <div class="flex flex-wrap items-start justify-between gap-4">
-        <div class="min-w-0">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 break-words">{{ $project->proposal_number }}</h1>
+    <x-page-header :title="$project->proposal_number">
+        <x-slot:meta>
             <p class="text-sm text-gray-500 dark:text-gray-400">
                 Tanggal proposal: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $project->effective_proposal_date->translatedFormat('d F Y') }}</span>
                 <span class="text-gray-400 dark:text-gray-500">&middot; input {{ $project->created_at->translatedFormat('d F Y') }}</span>
@@ -51,7 +50,8 @@
                     @endif
                 </p>
             @endif
-        </div>
+        </x-slot:meta>
+
         <div class="flex items-center gap-2">
             <span class="px-3 py-1.5 rounded-full text-sm font-semibold {{ $project->status_badge_classes }}">
                 {{ $project->status }}
@@ -89,7 +89,7 @@
                 @endif
             @endcan
         </div>
-    </div>
+    </x-page-header>
 
     {{-- ===================== NAVIGASI CEPAT (QUICK NAV) =====================
          Pill tab bar sticky (2026-09-14, feedback user — Opsi A dari 2
