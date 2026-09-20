@@ -59,7 +59,8 @@
                 @endforeach
             </div>
         </div>
-    <table class="min-w-[1040px] w-full text-[12px]">
+    {{-- Isi tabel 13px (2026-09-20, hasil audit UI) — 12px terasa kecil di laptop. --}}
+    <table class="min-w-[1040px] w-full text-[13px]">
         <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
             <tr class="text-center text-[12px] font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
                 @php

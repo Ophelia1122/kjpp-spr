@@ -15,18 +15,18 @@
                 Klien Baru
             </a>
         @endcan
+        <form id="searchForm" method="GET" action="{{ route('clients.index') }}" class="flex w-full items-center gap-2 sm:w-80">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau alamat klien..."
+                   class="h-[34px] w-full rounded-md border-gray-300 py-0 text-sm shadow-sm dark:border-gray-600">
+            <input type="hidden" name="sort" value="{{ request('sort') }}">
+            <input type="hidden" name="dir" value="{{ request('dir') }}">
+            @if (request('q'))
+                <a href="{{ route('clients.index') }}"
+                   class="inline-flex h-[34px] shrink-0 items-center rounded-md border border-gray-300 px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Reset</a>
+            @endif
+        </form>
     </x-page-header>
 
-    <form id="searchForm" method="GET" action="{{ route('clients.index') }}" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 flex gap-3 dark:bg-gray-800 dark:border-gray-700">
-        <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau alamat klien..."
-               class="flex-1 rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
-        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
-        <input type="hidden" name="sort" value="{{ request('sort') }}">
-        <input type="hidden" name="dir" value="{{ request('dir') }}">
-        @if (request('q'))
-            <a href="{{ route('clients.index') }}" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Reset</a>
-        @endif
-    </form>
 
     <div id="searchResults" class="space-y-6">
         @include('clients._results')

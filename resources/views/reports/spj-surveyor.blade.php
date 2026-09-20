@@ -66,7 +66,7 @@
             {{-- Tabel untuk layar lebar; layar sempit memakai kartu di bawah
                  (2026-09-20, feedback user) supaya tak perlu digeser samping. --}}
             <div class="hidden overflow-x-auto lg:block">
-                <table class="w-full min-w-[720px] text-[12px]">
+                <table class="w-full min-w-[720px] text-[13px]">
                     <thead class="border-b border-gray-200 bg-gray-50 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-500">
                         <tr>
                             <th class="px-4 py-2 w-[110px]">Tgl. Survei</th>

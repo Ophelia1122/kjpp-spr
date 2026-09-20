@@ -13,15 +13,14 @@
             </svg>
             Tambah Pengguna
         </a>
+        {{-- Kotak cari ikut kartu header (2026-09-20) — halaman ini pendek,
+             tiga blok bertumpuk terasa boros. --}}
+        <form id="searchForm" method="GET" action="{{ route('users.index') }}" class="w-full sm:w-72">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau email..."
+                   class="h-[34px] w-full rounded-md border-gray-300 py-0 text-sm shadow-sm dark:border-gray-600">
+        </form>
     </x-page-header>
 
-    <form id="searchForm" method="GET" action="{{ route('users.index') }}" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 flex gap-3 dark:bg-gray-800 dark:border-gray-700">
-        <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau email..."
-               class="flex-1 rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
-        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
-        <input type="hidden" name="sort" value="{{ request('sort') }}">
-        <input type="hidden" name="dir" value="{{ request('dir') }}">
-    </form>
 
     <div id="searchResults" class="space-y-6">
         @include('users._results')

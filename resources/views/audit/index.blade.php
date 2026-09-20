@@ -32,6 +32,17 @@
             <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-500">Sampai Tanggal</label>
             <input type="date" name="date_to" value="{{ request('date_to') }}" lang="id" class="rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
         </div>
+        {{-- Rentang aktif ditulis ulang dalam bahasa Indonesia (2026-09-20,
+             hasil audit UI) — urutan hari/bulan pada kolom tanggal mengikuti
+             pengaturan browser, jadi mudah tertukar. --}}
+        @if (request('date_from') || request('date_to'))
+            <p class="basis-full text-xs text-gray-500 dark:text-gray-400">
+                Menampilkan
+                {{ request('date_from') ? \Illuminate\Support\Carbon::parse(request('date_from'))->translatedFormat('d F Y') : 'awal data' }}
+                &ndash;
+                {{ request('date_to') ? \Illuminate\Support\Carbon::parse(request('date_to'))->translatedFormat('d F Y') : 'hari ini' }}
+            </p>
+        @endif
         @if (request()->anyFilled(['user_id', 'action', 'date_from', 'date_to']))
             <a href="{{ route('audit.index') }}" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Reset</a>
         @endif
