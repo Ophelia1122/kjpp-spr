@@ -68,7 +68,7 @@
                         {{-- Tooltip instan (bukan label teks, 2026-09-14 feedback user). --}}
                         <button type="submit" aria-label="Aktifkan Kembali"
                                 class="group relative grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
-                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>
                             </svg>
                             <span class="pointer-events-none absolute right-0 top-full z-20 mt-1 hidden whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg group-hover:block">Aktifkan kembali proyek</span>
@@ -80,7 +80,7 @@
                         @csrf
                         <button type="submit" aria-label="Batalkan Project"
                                 class="group relative grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-900/30 dark:hover:text-rose-300">
-                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 1 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
                             </svg>
                             <span class="pointer-events-none absolute right-0 top-full z-20 mt-1 hidden whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg group-hover:block">Batalkan proyek (data tetap tersimpan)</span>
@@ -176,7 +176,7 @@
             <div class="flex items-center gap-1">
                 @can('proposals.manage')
                     @if ($project->status !== \App\Models\Project::STATUS_SELESAI)
-                        <a href="{{ route('proposals.edit', $project) }}" title="Edit Proposal"
+                        <a href="{{ route('proposals.edit', $project) }}" title="Edit Proposal" aria-label="Edit Proposal"
                            class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                             @include('partials.icon-pencil')
                         </a>
@@ -186,9 +186,9 @@
                          edit konten proposal, lebih pas dikelompokkan
                          dengan ikon Edit Proposal daripada berdiri sendiri
                          di banner atas. --}}
-                    <a href="{{ route('proposals.texts', $project) }}" title="Edit Bab Proposal{{ ($project->section_texts_count ?? 0) > 0 ? ' (' . $project->section_texts_count . ' bab diedit)' : '' }}"
+                    <a href="{{ route('proposals.texts', $project) }}" title="Edit Bab Proposal{{ ($project->section_texts_count ?? 0) > 0 ? ' (' . $project->section_texts_count . ' bab diedit)' : '' }}" aria-label="Edit Bab Proposal{{ ($project->section_texts_count ?? 0) > 0 ? ' (' . $project->section_texts_count . ' bab diedit)' : '' }}"
                        class="relative grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
-                        <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                        <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
                         </svg>
                         @if (($project->section_texts_count ?? 0) > 0)
@@ -196,13 +196,13 @@
                         @endif
                     </a>
                 @endcan
-                <button type="button" id="infoProjectToggle" title="Sembunyikan/Tampilkan Informasi Proyek"
+                <button type="button" id="infoProjectToggle" title="Sembunyikan/Tampilkan Informasi Proyek" aria-label="Sembunyikan/Tampilkan Informasi Proyek"
                         class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
-                    <svg id="infoProjectEyeIcon" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                    <svg aria-hidden="true" id="infoProjectEyeIcon" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
                     </svg>
-                    <svg id="infoProjectEyeSlashIcon" hidden class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                    <svg aria-hidden="true" id="infoProjectEyeSlashIcon" hidden class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/>
                     </svg>
                 </button>
@@ -367,16 +367,16 @@
                 @can('survey.manage')
                     <div class="flex items-center gap-1" @unless ($surveyOpen) hidden @endunless>
                         @if ($hasSurvey)
-                            <button type="button" id="surveyEditBtn" title="Edit"
+                            <button type="button" id="surveyEditBtn" title="Edit" aria-label="Edit"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                                 @include('partials.icon-pencil')
                             </button>
-                            <button type="submit" form="surveyForm" id="surveySaveBtn" hidden title="Simpan"
+                            <button type="submit" form="surveyForm" id="surveySaveBtn" hidden title="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
                         @else
-                            <button type="submit" form="surveyForm" title="Simpan Jadwal Survei"
+                            <button type="submit" form="surveyForm" title="Simpan Jadwal Survei" aria-label="Simpan Jadwal Survei"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
@@ -413,7 +413,7 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Nama Penilai Lapangan <span class="font-normal text-gray-400">(1–{{ \App\Models\Project::MAX_APPRAISERS }} orang)</span>
                                 <span class="inline-block align-text-bottom text-gray-400 dark:text-gray-500" title="Daftar ini menampilkan semua pengguna aktif, pilih akun Surveyor yang benar-benar turun lapangan karena mengikat pada Timeline Proyek.">
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                    <svg aria-hidden="true" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/>
                                     </svg>
                                 </span>
@@ -439,7 +439,7 @@
                                             @endforeach
                                         </select>
                                         @if ($slot > 0)
-                                            <button type="button" class="survey-appraiser-remove grid h-8 w-8 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30" title="Hapus penilai ini" @if ($hasSurvey) hidden @endif>&times;</button>
+                                            <button type="button" class="survey-appraiser-remove grid h-8 w-8 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30" title="Hapus penilai ini" aria-label="Hapus penilai ini" @if ($hasSurvey) hidden @endif>&times;</button>
                                         @endif
                                     </div>
                                 @endfor
@@ -539,16 +539,16 @@
                 @can('assignment_letter.manage')
                     <div class="flex items-center gap-1" @unless ($suratOpen) hidden @endunless>
                         @if ($hasSurat)
-                            <button type="button" id="suratEditBtn" title="Edit"
+                            <button type="button" id="suratEditBtn" title="Edit" aria-label="Edit"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                                 @include('partials.icon-pencil')
                             </button>
-                            <button type="submit" form="suratTugasForm" id="suratSaveBtn" hidden title="Simpan"
+                            <button type="submit" form="suratTugasForm" id="suratSaveBtn" hidden title="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
                         @else
-                            <button type="submit" form="suratTugasForm" title="Simpan"
+                            <button type="submit" form="suratTugasForm" title="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
@@ -834,16 +834,16 @@
                                 @endcan
                                 @can('invoices.manage')
                                     @if ($inv->status !== 'Paid')
-                                        <button type="button" onclick="openVerifyPaidModal('{{ route('invoices.markAsPaid', $inv) }}')" title="Tandai Dibayar"
+                                        <button type="button" onclick="openVerifyPaidModal('{{ route('invoices.markAsPaid', $inv) }}')" title="Tandai Dibayar" aria-label="Tandai Dibayar"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 dark:text-gray-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
-                                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
                                             </svg>
                                         </button>
                                     @endif
 
                                     <div class="relative" data-dropdown>
-                                        <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false" title="Aksi lain"
+                                        <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false" title="Aksi lain" aria-label="Aksi lain"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
                                             <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.9" stroke="currentColor" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
@@ -912,16 +912,16 @@
                 @can('tax_invoice.manage')
                     <div class="flex items-center gap-1">
                         @if ($hasFaktur)
-                            <button type="button" id="fakturEditBtn" title="Edit"
+                            <button type="button" id="fakturEditBtn" title="Edit" aria-label="Edit"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                                 @include('partials.icon-pencil')
                             </button>
-                            <button type="submit" form="fakturForm" id="fakturSaveBtn" hidden title="Simpan"
+                            <button type="submit" form="fakturForm" id="fakturSaveBtn" hidden title="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
                         @else
-                            <button type="submit" form="fakturForm" title="Simpan"
+                            <button type="submit" form="fakturForm" title="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
@@ -1020,16 +1020,16 @@
                         @can('final_report.manage')
                             <div class="flex items-center gap-1">
                                 @if ($hasFinalReport)
-                                    <button type="button" id="finalReportEditBtn" title="Edit"
+                                    <button type="button" id="finalReportEditBtn" title="Edit" aria-label="Edit"
                                             class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                                         @include('partials.icon-pencil')
                                     </button>
-                                    <button type="submit" form="finalReportForm" id="finalReportSaveBtn" hidden title="Simpan"
+                                    <button type="submit" form="finalReportForm" id="finalReportSaveBtn" hidden title="Simpan" aria-label="Simpan"
                                             class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                         @include('partials.icon-check')
                                     </button>
                                 @else
-                                    <button type="submit" form="finalReportForm" title="Simpan"
+                                    <button type="submit" form="finalReportForm" title="Simpan" aria-label="Simpan"
                                             class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                         @include('partials.icon-check')
                                     </button>

@@ -72,7 +72,7 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 break-words">Edit Proposal</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ $project->proposal_number }}</p>
             <p class="mt-2 inline-flex items-start gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                <svg class="mt-px h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                <svg aria-hidden="true" class="mt-px h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
                 </svg>
                 Perubahan di sini akan menimpa data objek penilaian sebelumnya.
@@ -132,7 +132,7 @@
                                    class="w-full rounded-md shadow-sm pr-10 {{ $errCls('proposal_date') }}">
                             <button type="button" id="proposal_date_pick" tabindex="-1" aria-label="Pilih dari kalender"
                                     class="absolute inset-y-0 right-0 grid w-10 place-items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">
-                                <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0V11.25A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
                                 </svg>
                             </button>
@@ -181,9 +181,9 @@
                             <div id="named_client_results"
                                  class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"></div>
                         </div>
-                        <button type="button" onclick="openClientModal('named')" title="Tambah klien baru"
+                        <button type="button" onclick="openClientModal('named')" title="Tambah klien baru" aria-label="Tambah klien baru"
                                 class="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
-                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                             </svg>
                             Klien Baru
@@ -213,9 +213,9 @@
                             <div id="instructing_client_results"
                                  class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"></div>
                         </div>
-                        <button type="button" onclick="openClientModal('instructing')" title="Tambah klien baru"
+                        <button type="button" onclick="openClientModal('instructing')" title="Tambah klien baru" aria-label="Tambah klien baru"
                                 class="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
-                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                             </svg>
                             Klien Baru
@@ -243,9 +243,9 @@
                             <div id="intended_user_results"
                                  class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"></div>
                         </div>
-                        <button type="button" onclick="openClientModal('intended')" title="Tambah klien baru"
+                        <button type="button" onclick="openClientModal('intended')" title="Tambah klien baru" aria-label="Tambah klien baru"
                                 class="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
-                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                             </svg>
                             Klien Baru
@@ -294,9 +294,9 @@
                             <div id="approver_client_results"
                                  class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"></div>
                         </div>
-                        <button type="button" onclick="openClientModal('approver')" title="Tambah klien baru"
+                        <button type="button" onclick="openClientModal('approver')" title="Tambah klien baru" aria-label="Tambah klien baru"
                                 class="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">
-                            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                             </svg>
                             Klien Baru
@@ -553,7 +553,7 @@
                 </h2>
                 <button type="button" onclick="addObjectRow()"
                         class="inline-flex shrink-0 items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
-                    <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                    <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                     </svg>
                     Tambah Objek
@@ -580,13 +580,13 @@
             <button type="button" class="object-toggle flex min-w-0 flex-1 items-center gap-2 text-left">
                 <span class="object-row-number shrink-0 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-full w-6 h-6 flex items-center justify-center dark:text-gray-300 dark:bg-gray-800 dark:border-gray-600">1</span>
                 <span class="object-summary min-w-0 flex-1 truncate text-sm text-gray-500 dark:text-gray-400">Objek baru — belum diisi</span>
-                <svg class="object-chevron h-4 w-4 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <svg aria-hidden="true" class="object-chevron h-4 w-4 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/>
                 </svg>
             </button>
-            <button type="button" title="Hapus Objek"
+            <button type="button" title="Hapus Objek" aria-label="Hapus Objek"
                     class="remove-object-btn grid h-7 w-7 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-900/30 dark:hover:text-rose-300">
-                <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
                 </svg>
             </button>

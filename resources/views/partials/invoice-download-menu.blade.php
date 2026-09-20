@@ -8,7 +8,7 @@
     $fmtBadge = 'rounded border px-1.5 text-[10px] font-semibold leading-4';
 @endphp
 <div class="relative" data-dropdown>
-    <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false" title="Unduh invoice / kwitansi"
+    <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false" title="Unduh invoice / kwitansi" aria-label="Unduh invoice / kwitansi"
             class="inline-flex h-8 items-center gap-0.5 rounded-md px-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
         <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>

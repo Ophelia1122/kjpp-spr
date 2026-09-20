@@ -133,7 +133,7 @@
 
                     @if ($action['type'] === 'link')
                         <a href="{{ $action['url'] }}" class="{{ $btnClass }}">
-                            <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $fabIcons[$action['icon']] }}"/>
                             </svg>
                             <span class="lg:hidden">{{ $action['label'] }}</span>
@@ -142,7 +142,7 @@
                         <button type="button"
                                 onclick="openReviewRejectModal('{{ $action['url'] }}', '{{ $action['modal_title'] }}', {{ \Illuminate\Support\Js::from($action['modal_opts'] ?? (object) []) }})"
                                 class="{{ $btnClass }}">
-                            <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $fabIcons[$action['icon']] }}"/>
                             </svg>
                             <span class="lg:hidden">{{ $action['label'] }}</span>
@@ -152,7 +152,7 @@
                               @if (!empty($action['confirm'])) data-confirm="{{ $action['confirm'] }}" @endif>
                             @csrf
                             <button type="submit" class="{{ $btnClass }}">
-                                <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="{{ $fabIcons[$action['icon']] }}"/>
                                 </svg>
                                 <span class="lg:hidden">{{ $action['label'] }}</span>

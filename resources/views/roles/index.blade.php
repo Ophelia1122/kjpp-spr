@@ -24,9 +24,9 @@
             <table class="min-w-[720px] w-full text-sm">
                 <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">Izin</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-500">Izin</th>
                         @foreach ($roles as $role)
-                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap dark:text-gray-400">
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap dark:text-gray-500">
                                 {{ $role->name }}
                             </th>
                         @endforeach
@@ -35,7 +35,7 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     @foreach ($permissionsByGroup as $groupName => $permissions)
                         <tr class="bg-gray-50 dark:bg-gray-900">
-                            <td colspan="{{ $roles->count() + 1 }}" class="px-4 py-2 text-xs font-bold text-gray-600 uppercase tracking-wide dark:text-gray-400">
+                            <td colspan="{{ $roles->count() + 1 }}" class="px-4 py-2 text-xs font-bold text-gray-600 uppercase tracking-wide dark:text-gray-500">
                                 {{ $groupName }}
                             </td>
                         </tr>

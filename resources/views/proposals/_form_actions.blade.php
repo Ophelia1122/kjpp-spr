@@ -33,7 +33,7 @@
             <span class="{{ $formActionTip }}">{{ $saveTip }}</span>
             <button type="submit" form="proposalForm" id="submitProposalBtn"
                     class="{{ $formActionBtn }} {{ $formActionTones[$saveTone] ?? $formActionTones['emerald'] }}">
-                <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
                 <span class="lg:hidden">{{ $saveLabel }}</span>
@@ -45,7 +45,7 @@
             <span class="{{ $formActionTip }}">{{ $cancelTip }}</span>
             <a href="{{ $cancelUrl }}" id="cancelProposalLink"
                class="{{ $formActionBtn }} text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
-                <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
                 </svg>
                 <span class="lg:hidden">Batal</span>

@@ -77,28 +77,32 @@
                 </select>
             </div>
             {{-- Ikon saja (2026-09-19, feedback user); nama aksi pindah ke tooltip. --}}
+            {{-- Ikon saja mulai sm; di HP ikon + label karena tooltip tidak
+                 muncul di layar sentuh (2026-09-20, hasil audit UI). --}}
             <button type="button" id="toggleAdvanced" title="Filter Lanjutan" aria-label="Filter Lanjutan"
-                    class="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
-                <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                    class="inline-flex h-[38px] shrink-0 items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 sm:w-[38px] sm:px-0 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
+                <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
                 </svg>
+                <span class="sm:hidden">Filter</span>
             </button>
 
             {{-- Export & Proposal Baru pindah ke dalam kartu filter (2026-09-19,
                  feedback user) — satu border dengan Cari, header jadi lega. --}}
             <div class="ml-auto flex items-center gap-2">
                 @can('reports.export')
-                    <button type="button" onclick="openExportModal()" title="Export ke Excel"
-                       class="grid h-[38px] w-[38px] place-items-center rounded-md border border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-300 dark:hover:bg-emerald-900/30">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <button type="button" onclick="openExportModal()" title="Export ke Excel" aria-label="Export ke Excel"
+                       class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-emerald-600 px-3 text-xs font-medium text-emerald-700 hover:bg-emerald-50 sm:w-[38px] sm:px-0 dark:border-emerald-500 dark:text-emerald-300 dark:hover:bg-emerald-900/30">
+                        <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                         </svg>
+                        <span class="sm:hidden">Excel</span>
                     </button>
                 @endcan
                 @can('proposals.manage')
-                    <a href="{{ route('proposals.create') }}" title="Buat Proposal Baru"
+                    <a href="{{ route('proposals.create') }}" title="Buat Proposal Baru" aria-label="Buat Proposal Baru"
                        class="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-3 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                         </svg>
                         Proposal Baru
@@ -155,7 +159,7 @@
                     <a href="{{ route('dashboard', array_merge(request()->except([$filter['key'], 'page']), ['mine' => $mine ? 1 : 0])) }}"
                        class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
                         {{ $filter['label'] }}
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <svg aria-hidden="true" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
                         </svg>
                     </a>
@@ -258,7 +262,7 @@
                     class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/60">Batal</button>
             <button type="submit"
                     class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
-                <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                 </svg>
                 Download Excel

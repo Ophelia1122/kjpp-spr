@@ -60,6 +60,20 @@
         @keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         main > * { animation: appear .32s var(--ease) both; }
 
+        /* Fokus keyboard terlihat jelas di seluruh aplikasi (2026-09-20, hasil
+           audit UI). Hanya :focus-visible, jadi klik mouse tidak memunculkan
+           cincin. Warna indigo sama dengan aksen header. */
+        :focus-visible {
+            outline: 2px solid #6366F1;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        html.dark :focus-visible { outline-color: #A5B4FC; }
+        /* Input & select sudah punya ring bawaan Tailwind Forms; samakan warnanya. */
+        input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline-offset: 0;
+        }
+
         /* Elemen interaktif: transisi warna/bayangan/skala yang konsisten. */
         a, button, summary, [role="button"],
         input, select, textarea,

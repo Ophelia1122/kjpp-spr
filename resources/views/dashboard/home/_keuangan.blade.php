@@ -44,7 +44,7 @@
                             <td class="px-4 py-3 text-xs text-gray-700 whitespace-nowrap dark:text-gray-300">{{ $row['doneAt']->translatedFormat('d M Y') }}</td>
                             <td class="px-4 py-3 text-right font-semibold tabular-nums whitespace-nowrap text-gray-900 dark:text-gray-100">{{ $rp($p->remaining_balance) }}</td>
                             <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap {{ $row['notBilled'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500' }}">
-                                {{ $row['notBilled'] > 0 ? $rp($row['notBilled']) : '—' }}
+                                <span class="tabular-nums">{{ $row['notBilled'] > 0 ? $rp($row['notBilled']) : '—' }}</span>
                             </td>
                             <td class="px-5 py-3 whitespace-nowrap">
                                 <p class="text-xs font-medium {{ $dueTone($row['dueDays']) }}">{{ $dueText($row['dueDays']) }}</p>
@@ -74,7 +74,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
                         <span class="text-gray-500 dark:text-gray-400">Selesai {{ $row['doneAt']->translatedFormat('d M Y') }}
                             @if ($row['notBilled'] > 0)
-                                &middot; <span class="text-amber-600 dark:text-amber-400">belum ditagih {{ $rp($row['notBilled']) }}</span>
+                                &middot; <span class="text-amber-600 dark:text-amber-400 tabular-nums">belum ditagih {{ $rp($row['notBilled']) }}</span>
                             @endif
                         </span>
                         <span class="font-medium {{ $dueTone($row['dueDays']) }}">Tagih: {{ $dueText($row['dueDays']) }}</span>
