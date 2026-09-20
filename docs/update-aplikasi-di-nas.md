@@ -127,7 +127,7 @@ Semua bersifat **menambah**. Tidak ada kolom yang dihapus, tidak ada data yang d
 | `000014_add_soft_deletes_to_projects_and_clients` | Kolom `deleted_at` (Sampah) | Kosong untuk data lama; tidak ada yang terhapus |
 
 Kalau NAS sudah pernah menjalankan 000010–000012 (terlihat `Ran` di langkah 5),
-update ini hanya menambahkan 000013.
+update ini hanya menambahkan 000013 dan 000014.
 
 ---
 
@@ -145,8 +145,12 @@ Hapus `--dry-run` untuk benar-benar menghapus. Untuk otomatis tiap bulan, pasang
 (sudo crontab -l 2>/dev/null; echo '* * * * * docker exec kjpp-app php artisan schedule:run >/dev/null 2>&1') | sudo crontab -
 ```
 
-**Antrean untuk cetak PDF.** Konversi LibreOffice berat di RAM. Bila nanti sering
-dipakai bersamaan, jalankan worker antrean sebagai service terpisah.
+**Sampah.** Proyek & klien yang dihapus masuk `/sampah` dan bisa dipulihkan 30 hari.
+Isinya dibersihkan otomatis oleh container `scheduler`. Untuk memeriksa manual:
+
+```bash
+sudo docker exec kjpp-app php artisan trash:purge --dry-run
+```
 
 ---
 
