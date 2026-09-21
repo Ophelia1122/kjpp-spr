@@ -245,6 +245,64 @@ class AlurProyekTest extends TestCase
         ]);
     }
 
+    public function test_draft_resume_dirilis_banding_lalu_disetujui(): void
+    {
+        $proyek = $this->buatProyek([
+            'status'                => Project::STATUS_IN_PROGRESS,
+            'survey_date'           => now()->subDays(3)->toDateString(),
+            'assigned_appraiser_id' => $this->admin->id,
+            'assigned_appraiser'    => $this->admin->name,
+            'review_status'         => Project::REVIEW_SUBMITTED,
+        ]);
+
+        $this->actingAs($this->admin)->post(route('projects.workflow', [$proyek, 'release_resume']))->assertRedirect();
+        $this->assertSame(Project::REVIEW_RELEASED, $proyek->fresh()->review_status);
+
+        // Banding: catatan wajib, tahap tidak berubah, tercatat di riwayat.
+        $this->actingAs($this->admin)
+            ->post(route('projects.workflow', [$proyek, 'appeal_resume']), ['note' => ''])
+            ->assertSessionHasErrors('note');
+        $this->actingAs($this->admin)
+            ->post(route('projects.workflow', [$proyek, 'appeal_resume']), ['note' => 'Klien minta nilai pembanding lain.'])
+            ->assertRedirect();
+        $this->assertSame(Project::REVIEW_RELEASED, $proyek->fresh()->review_status);
+        $this->assertNull($proyek->fresh()->review_approved_at);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'review.resume_appealed', 'note' => 'Klien minta nilai pembanding lain.']);
+
+        // Disetujui: SLA Final mulai berjalan.
+        $this->actingAs($this->admin)->post(route('projects.workflow', [$proyek, 'approve_value']))->assertRedirect();
+        $proyek->refresh();
+        $this->assertSame(Project::REVIEW_APPROVED, $proyek->review_status);
+        $this->assertNotNull($proyek->review_approved_at);
+    }
+
+    public function test_admin_produksi_hanya_bisa_menyetujui_draft_resume(): void
+    {
+        $adminProduksi = User::create([
+            'name'      => 'Admin Produksi Uji',
+            'email'     => 'produksi.uji@example.test',
+            'password'  => 'rahasia123',
+            'role_id'   => Role::where('slug', Role::ADMIN_PRODUKSI)->value('id'),
+            'is_active' => true,
+        ]);
+        $proyek = $this->buatProyek([
+            'status'                => Project::STATUS_IN_PROGRESS,
+            'survey_date'           => now()->subDays(3)->toDateString(),
+            'assigned_appraiser_id' => $this->admin->id,
+            'assigned_appraiser'    => $this->admin->name,
+            'review_status'         => Project::REVIEW_SUBMITTED,
+        ]);
+
+        $this->actingAs($adminProduksi)->post(route('projects.workflow', [$proyek, 'release_resume']))->assertForbidden();
+
+        $proyek->update(['review_status' => Project::REVIEW_RELEASED]);
+        $this->actingAs($adminProduksi)
+            ->post(route('projects.workflow', [$proyek, 'appeal_resume']), ['note' => 'Banding.'])
+            ->assertForbidden();
+        $this->actingAs($adminProduksi)->post(route('projects.workflow', [$proyek, 'approve_value']))->assertRedirect();
+        $this->assertSame(Project::REVIEW_APPROVED, $proyek->fresh()->review_status);
+    }
+
     public function test_menandai_buku_dicetak_menyelesaikan_proyek(): void
     {
         $proyek = $this->buatProyek([

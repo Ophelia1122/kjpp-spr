@@ -2,7 +2,8 @@
 @php
     $d = $produksi;
     $actionLabel = [
-        \App\Models\Project::REVIEW_SUBMITTED      => 'Setujui / kembalikan nilai',
+        \App\Models\Project::REVIEW_SUBMITTED      => 'Release Draft Resume / kembalikan nilai',
+        \App\Models\Project::REVIEW_RELEASED       => 'Draft Resume disetujui / banding',
         \App\Models\Project::STAGE_DRAFT_SUBMITTED => 'Konfirmasi draft laporan',
         \App\Models\Project::STAGE_DRAFT_REVIEWED  => 'Cetak buku & konfirmasi',
     ];
@@ -89,7 +90,7 @@
 <div class="{{ $panel }}">
     <div class="px-5 pt-5 pb-3">
         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Proyek dalam SLA Laporan Final</h2>
-        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Sejak nilai disetujui sampai buku selesai dicetak. Urut dari tenggat terdekat.</p>
+        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Sejak Draft Resume disetujui sampai buku selesai dicetak. Urut dari tenggat terdekat.</p>
     </div>
     @if ($d['finalSla']->isEmpty())
         <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">Belum ada proyek dalam SLA Laporan Final.</div>
@@ -100,7 +101,7 @@
                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         <th class="px-5 py-2.5">Proyek</th>
                         <th class="px-4 py-2.5">Tahap Sekarang</th>
-                        <th class="px-4 py-2.5">Nilai Disetujui</th>
+                        <th class="px-4 py-2.5">Resume Disetujui</th>
                         <th class="px-5 py-2.5">Tenggat SLA Final</th>
                     </tr>
                 </thead>
@@ -145,7 +146,7 @@
                         </div>
                     </div>
                     <div>@include('dashboard.home._stage', ['project' => $p])</div>
-                    <p class="text-[11px] text-gray-400 dark:text-gray-500">Nilai disetujui {{ $p->review_approved_at?->translatedFormat('d M Y') ?? '—' }}</p>
+                    <p class="text-[11px] text-gray-400 dark:text-gray-500">Resume disetujui {{ $p->review_approved_at?->translatedFormat('d M Y') ?? '—' }}</p>
                 </a>
             @endforeach
         </div>

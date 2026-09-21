@@ -139,6 +139,7 @@ class Project extends Model
      * (2026-09-15, feedback user). null = Surveyor masih survei & menilai.
      */
     public const REVIEW_SUBMITTED      = 'submitted';        // menunggu review nilai
+    public const REVIEW_RELEASED       = 'resume_released';  // Draft Resume dirilis, menunggu disetujui / banding (2026-09-21)
     public const REVIEW_APPROVED       = 'approved';         // nilai disetujui (SLA Final mulai), Surveyor menyusun draft
     public const STAGE_DRAFT_SUBMITTED = 'draft_submitted';  // menunggu konfirmasi Admin Produksi
     public const STAGE_DRAFT_CONFIRMED = 'draft_confirmed';  // menunggu Reviewer me-review draft laporan
@@ -159,12 +160,31 @@ class Project extends Model
             'action' => 'review.submitted', 'desc' => 'Mengajukan nilai hasil penilaian untuk direview',
             'flash' => 'Nilai diajukan untuk direview.',
         ],
+        // Draft Resume (2026-09-21, feedback user): Reviewer merilis Draft
+        // Resume, lalu mencatat hasilnya — disetujui (SLA Final berjalan)
+        // atau banding. Banding hanya dicatat di riwayat (catatan wajib);
+        // tahap tetap "Draft Resume dirilis" sampai akhirnya disetujui.
+        // Release & banding hanya Reviewer (dan Administrator); Admin Produksi
+        // hanya boleh menekan "Resume Disetujui".
+        'release_resume' => [
+            'from' => self::REVIEW_SUBMITTED, 'to' => self::REVIEW_RELEASED, 'actor' => 'reviewer', 'note' => 'optional',
+            'title' => 'Release Draft Resume', 'button' => 'Release Resume', 'tip' => 'Rilis Draft Resume hasil review nilai',
+            'action' => 'review.resume_released', 'desc' => 'Merilis Draft Resume hasil review nilai',
+            'flash' => 'Draft Resume dirilis. Catat hasilnya: disetujui atau banding.',
+        ],
         'approve_value' => [
-            'from' => self::REVIEW_SUBMITTED, 'to' => self::REVIEW_APPROVED, 'actor' => 'reviewer_or_admin', 'note' => 'optional',
-            'title' => 'Nilai Disetujui', 'button' => 'Nilai Disetujui', 'tip' => 'Setujui nilai — SLA Laporan Final mulai dihitung',
-            'hint' => 'SLA Laporan Final mulai dihitung sejak nilai disetujui.',
-            'action' => 'review.value_approved', 'desc' => 'Menyetujui nilai hasil penilaian. SLA Laporan Final mulai dihitung',
-            'flash' => 'Nilai disetujui. SLA Laporan Final mulai dihitung.',
+            'from' => self::REVIEW_RELEASED, 'to' => self::REVIEW_APPROVED, 'actor' => 'reviewer_or_admin', 'note' => 'optional',
+            'title' => 'Draft Resume Disetujui', 'button' => 'Resume Disetujui', 'tip' => 'Draft Resume disetujui — SLA Laporan Final berjalan',
+            'hint' => 'SLA Laporan Final mulai dihitung sejak Draft Resume disetujui.',
+            'action' => 'review.value_approved', 'desc' => 'Draft Resume disetujui. SLA Laporan Final mulai dihitung',
+            'flash' => 'Draft Resume disetujui. SLA Laporan Final berjalan.',
+        ],
+        'appeal_resume' => [
+            'from' => self::REVIEW_RELEASED, 'to' => self::REVIEW_RELEASED, 'actor' => 'reviewer', 'note' => 'required',
+            'stay' => true,
+            'title' => 'Draft Resume Banding', 'button' => 'Resume Banding', 'tip' => 'Catat banding atas Draft Resume beserta catatannya',
+            'action' => 'review.resume_appealed', 'desc' => 'Mencatat banding atas Draft Resume',
+            'flash' => 'Banding Draft Resume dicatat di riwayat proyek.',
         ],
         'return_value' => [
             'from' => self::REVIEW_SUBMITTED, 'to' => null, 'actor' => 'reviewer_or_admin', 'note' => 'required',
@@ -627,11 +647,11 @@ class Project extends Model
         return $this->belongsTo(User::class, 'assigned_appraiser_id');
     }
 
-    /** Maksimal penilai lapangan per proyek (2026-09-15, feedback user). */
-    public const MAX_APPRAISERS = 3;
+    /** Maksimal penilai lapangan per proyek (5 sejak 2026-09-21; dulu 3). */
+    public const MAX_APPRAISERS = 5;
 
     /**
-     * Semua penilai lapangan proyek (1-3 orang, tanggung jawab SETARA).
+     * Semua penilai lapangan proyek (1-5 orang, tanggung jawab SETARA).
      * assigned_appraiser_id/assigned_appraiser hanyalah ringkasan (urutan
      * pertama & gabungan nama) — kepemilikan proyek memakai relasi ini.
      */
@@ -917,6 +937,7 @@ class Project extends Model
             ! $this->assigned_appraiser || ! $this->survey_date => $stage('Menunggu jadwal survei', 'Admin Produksi'),
             default => match ($this->review_status) {
                 self::REVIEW_SUBMITTED      => $stage('Review nilai', 'Reviewer / Admin Produksi'),
+                self::REVIEW_RELEASED       => $stage('Draft Resume dirilis — menunggu disetujui', 'Reviewer / Admin Produksi'),
                 self::REVIEW_APPROVED       => $stage('Penyusunan draft laporan', 'Surveyor'),
                 self::STAGE_DRAFT_SUBMITTED => $stage('Konfirmasi draft laporan', 'Admin Produksi'),
                 self::STAGE_DRAFT_CONFIRMED => $stage('Review draft laporan', 'Reviewer'),
@@ -931,6 +952,7 @@ class Project extends Model
     {
         return match ($this->review_status) {
             self::REVIEW_SUBMITTED      => $this->review_submitted_at,
+            self::REVIEW_RELEASED       => $this->reviewed_at,
             self::REVIEW_APPROVED       => $this->review_rejected_at ?? $this->review_approved_at,
             self::STAGE_DRAFT_SUBMITTED => $this->draft_submitted_at,
             self::STAGE_DRAFT_CONFIRMED => $this->draft_confirmed_at,

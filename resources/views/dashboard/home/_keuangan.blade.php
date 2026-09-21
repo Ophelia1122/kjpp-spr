@@ -13,6 +13,65 @@
         'sub' => $rp($d['unpaidDoneSum']), 'hint' => 'Sisa pelunasan pekerjaan yang sudah selesai'])
 </div>
 
+@include('dashboard.home._follow_ups')
+
+{{-- ---------- Invoice tertunggak ---------- --}}
+<div class="{{ $panel }}">
+    <div class="px-5 pt-5 pb-3 flex items-start justify-between gap-3">
+        <div>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Invoice tertunggak</h2>
+            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Belum dibayar lebih dari {{ $d['overdueDays'] }} hari sejak terbit.</p>
+        </div>
+        <a href="{{ route('dashboard.pembayaran') }}" class="text-xs font-medium text-blue-600 whitespace-nowrap hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Dashboard Pembayaran →</a>
+    </div>
+    @if ($d['overdue']->isEmpty())
+        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">🎉 Tidak ada invoice tertunggak.</div>
+    @else
+        <div class="hidden md:block">
+            <table class="w-full text-sm">
+                <thead class="border-y border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th class="px-5 py-2.5">Invoice</th>
+                        <th class="px-4 py-2.5">Proyek</th>
+                        <th class="px-4 py-2.5 text-right">Nominal</th>
+                        <th class="px-5 py-2.5">Terbit</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    @foreach ($d['overdue'] as $inv)
+                        <tr class="cursor-pointer align-top hover:bg-blue-50/40 dark:hover:bg-blue-900/20" onclick="location.href='{{ route('proposals.show', $inv->project) }}'">
+                            <td class="px-5 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-gray-100">{{ $inv->invoice_number }}</td>
+                            <td class="px-4 py-3">
+                                <p class="text-gray-900 dark:text-gray-100" title="{{ $inv->project->proposal_number }}">{{ $inv->project->proposal_number_short }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $clientOf($inv->project) }}</p>
+                            </td>
+                            <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap text-gray-900 dark:text-gray-100">{{ $rp($inv->amount) }}</td>
+                            <td class="px-5 py-3 whitespace-nowrap">
+                                <p class="text-xs text-gray-700 dark:text-gray-300">{{ $inv->display_date->translatedFormat('d M Y') }}</p>
+                                <p class="text-[11px] font-medium text-rose-600 dark:text-rose-400">{{ $inv->age_days }} hari</p>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="divide-y divide-gray-100 border-t border-gray-100 md:hidden dark:divide-gray-700 dark:border-gray-700">
+            @foreach ($d['overdue'] as $inv)
+                <a href="{{ route('proposals.show', $inv->project) }}" class="block space-y-1 px-4 py-3 hover:bg-blue-50/40 dark:hover:bg-blue-900/20">
+                    <div class="flex items-start justify-between gap-3">
+                        <p class="min-w-0 break-all font-medium text-gray-900 dark:text-gray-100">{{ $inv->invoice_number }}</p>
+                        <p class="shrink-0 font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $rp($inv->amount) }}</p>
+                    </div>
+                    <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $inv->project->proposal_number_short }} &middot; {{ $clientOf($inv->project) }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Terbit {{ $inv->display_date->translatedFormat('d M Y') }} &middot; <span class="font-medium text-rose-600 dark:text-rose-400">{{ $inv->age_days }} hari</span></p>
+                </a>
+            @endforeach
+        </div>
+    @endif
+</div>
+
+{{-- Dipindah ke bawah Invoice tertunggak (2026-09-21, feedback user). --}}
 {{-- ---------- Pekerjaan selesai, belum lunas ---------- --}}
 <div class="{{ $panel }}">
     <div class="px-5 pt-5 pb-3">
@@ -79,62 +138,6 @@
                         </span>
                         <span class="font-medium {{ $dueTone($row['dueDays']) }}">Tagih: {{ $dueText($row['dueDays']) }}</span>
                     </div>
-                </a>
-            @endforeach
-        </div>
-    @endif
-</div>
-
-{{-- ---------- Invoice tertunggak ---------- --}}
-<div class="{{ $panel }}">
-    <div class="px-5 pt-5 pb-3 flex items-start justify-between gap-3">
-        <div>
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Invoice tertunggak</h2>
-            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Belum dibayar lebih dari {{ $d['overdueDays'] }} hari sejak terbit.</p>
-        </div>
-        <a href="{{ route('dashboard.pembayaran') }}" class="text-xs font-medium text-blue-600 whitespace-nowrap hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Dashboard Pembayaran →</a>
-    </div>
-    @if ($d['overdue']->isEmpty())
-        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">🎉 Tidak ada invoice tertunggak.</div>
-    @else
-        <div class="hidden md:block">
-            <table class="w-full text-sm">
-                <thead class="border-y border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
-                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        <th class="px-5 py-2.5">Invoice</th>
-                        <th class="px-4 py-2.5">Proyek</th>
-                        <th class="px-4 py-2.5 text-right">Nominal</th>
-                        <th class="px-5 py-2.5">Terbit</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @foreach ($d['overdue'] as $inv)
-                        <tr class="cursor-pointer align-top hover:bg-blue-50/40 dark:hover:bg-blue-900/20" onclick="location.href='{{ route('proposals.show', $inv->project) }}'">
-                            <td class="px-5 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-gray-100">{{ $inv->invoice_number }}</td>
-                            <td class="px-4 py-3">
-                                <p class="text-gray-900 dark:text-gray-100" title="{{ $inv->project->proposal_number }}">{{ $inv->project->proposal_number_short }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $clientOf($inv->project) }}</p>
-                            </td>
-                            <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap text-gray-900 dark:text-gray-100">{{ $rp($inv->amount) }}</td>
-                            <td class="px-5 py-3 whitespace-nowrap">
-                                <p class="text-xs text-gray-700 dark:text-gray-300">{{ $inv->display_date->translatedFormat('d M Y') }}</p>
-                                <p class="text-[11px] font-medium text-rose-600 dark:text-rose-400">{{ $inv->age_days }} hari</p>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-
-        <div class="divide-y divide-gray-100 border-t border-gray-100 md:hidden dark:divide-gray-700 dark:border-gray-700">
-            @foreach ($d['overdue'] as $inv)
-                <a href="{{ route('proposals.show', $inv->project) }}" class="block space-y-1 px-4 py-3 hover:bg-blue-50/40 dark:hover:bg-blue-900/20">
-                    <div class="flex items-start justify-between gap-3">
-                        <p class="min-w-0 break-all font-medium text-gray-900 dark:text-gray-100">{{ $inv->invoice_number }}</p>
-                        <p class="shrink-0 font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $rp($inv->amount) }}</p>
-                    </div>
-                    <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $inv->project->proposal_number_short }} &middot; {{ $clientOf($inv->project) }}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Terbit {{ $inv->display_date->translatedFormat('d M Y') }} &middot; <span class="font-medium text-rose-600 dark:text-rose-400">{{ $inv->age_days }} hari</span></p>
                 </a>
             @endforeach
         </div>

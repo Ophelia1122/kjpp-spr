@@ -18,12 +18,6 @@
     $maxMonthly = max(1, $monthly->max('count') ?: 0);
     $maxPurpose = max(1, $purposeCounts->max() ?: 0);
 
-    $pipelineTotal = $pendingCount + $dealCount + $cancelledCount;
-    $pct = fn ($n) => $pipelineTotal ? round($n / $pipelineTotal * 100, 2) : 0;
-    $pPend  = $pct($pendingCount);
-    $pDeal  = $pct($dealCount);
-    $pBatal = $pct($cancelledCount);
-
     $rp = fn ($n) => 'Rp ' . number_format((float) $n, 0, ',', '.');
 @endphp
 
@@ -123,49 +117,108 @@
             </div>
         </div>
 
-        {{-- Komposisi Pipeline (donut) --}}
+        {{-- Top 5 Bank Pemberi Tugas — pie 3D, menggantikan Komposisi Pipeline
+             (2026-09-21, feedback user). --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-500">Komposisi Pipeline</h2>
-            {{-- flex-wrap di HP supaya donut + legenda tidak melebar (2026-09-15). --}}
-            <div class="flex flex-wrap items-center gap-6 sm:flex-nowrap">
-                <div class="relative h-40 w-40 shrink-0">
-                    <svg aria-hidden="true" viewBox="0 0 36 36" class="h-40 w-40 -rotate-90">
-                        <circle cx="18" cy="18" r="15.9155" fill="none" class="stroke-gray-100 dark:stroke-gray-700" stroke-width="3.8"/>
-                        @if ($pipelineTotal)
-                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#f59e0b" stroke-width="3.8"
-                                    stroke-dasharray="{{ $pPend }} {{ 100 - $pPend }}" stroke-dashoffset="25"/>
-                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#10b981" stroke-width="3.8"
-                                    stroke-dasharray="{{ $pDeal }} {{ 100 - $pDeal }}" stroke-dashoffset="{{ 25 - $pPend }}"/>
-                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#f43f5e" stroke-width="3.8"
-                                    stroke-dasharray="{{ $pBatal }} {{ 100 - $pBatal }}" stroke-dashoffset="{{ 25 - $pPend - $pDeal }}"/>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-500"
+                title="Jumlah proyek per bank (tanpa proyek batal). Nama bank yang sama digabung walau alamatnya beda.">Top 5 Bank Pemberi Tugas</h2>
+            @if (empty($topBanks['slices']))
+                <p class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">Belum ada proyek dari klien bank.</p>
+            @else
+                {{-- Tinggi pie 160px, setara kartu Proyek per Status; legenda di samping
+                     (turun ke bawah di HP). --}}
+                <div class="flex flex-wrap items-center gap-6 sm:flex-nowrap">
+                    <div class="shrink-0">@include('dashboard._pie3d', ['slices' => $topBanks['slices']])</div>
+                    <div class="min-w-0 flex-1">
+                        <ul class="space-y-2 text-sm">
+                            @foreach ($topBanks['slices'] as $s)
+                                <li class="flex items-start gap-2">
+                                    <span class="mt-1 h-3 w-3 shrink-0 rounded-sm" style="background: {{ $s['color'] }}"></span>
+                                    <span class="min-w-0 leading-tight text-gray-600 dark:text-gray-400">{{ $s['label'] }}</span>
+                                    <span class="ml-auto font-semibold text-gray-800 tabular-nums dark:text-gray-200">{{ $s['value'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                        @if ($topBanks['nonBank'] > 0)
+                            <p class="mt-3 text-[11px] text-gray-400 dark:text-gray-500">Di luar grafik: {{ $topBanks['nonBank'] }} proyek dari Pemberi Tugas non-bank.</p>
                         @endif
-                    </svg>
-                    <div class="absolute inset-0 grid place-items-center text-center">
-                        <div>
-                            <div class="text-2xl font-bold text-gray-900 tabular-nums leading-none dark:text-gray-100">{{ $totalProposals }}</div>
-                            <div class="text-[11px] text-gray-500 dark:text-gray-400">proyek</div>
-                        </div>
                     </div>
                 </div>
-                <ul class="space-y-2 text-sm">
-                    <li class="flex items-center gap-2">
-                        <span class="h-3 w-3 rounded-sm" style="background:#f59e0b"></span>
-                        <span class="text-gray-600 dark:text-gray-500">Belum Ada Pembayaran</span>
-                        <span class="ml-auto font-semibold text-gray-800 tabular-nums dark:text-gray-200">{{ $pendingCount }} <span class="text-gray-500 font-normal dark:text-gray-500">({{ $pPend }}%)</span></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="h-3 w-3 rounded-sm" style="background:#10b981"></span>
-                        <span class="text-gray-600 dark:text-gray-500">Sudah Ada Pembayaran</span>
-                        <span class="ml-auto font-semibold text-gray-800 tabular-nums dark:text-gray-200">{{ $dealCount }} <span class="text-gray-500 font-normal dark:text-gray-500">({{ $pDeal }}%)</span></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="h-3 w-3 rounded-sm" style="background:#f43f5e"></span>
-                        <span class="text-gray-600 dark:text-gray-500">Batal</span>
-                        <span class="ml-auto font-semibold text-gray-800 tabular-nums dark:text-gray-200">{{ $cancelledCount }} <span class="text-gray-500 font-normal dark:text-gray-500">({{ $pBatal }}%)</span></span>
-                    </li>
-                </ul>
-            </div>
+            @endif
         </div>
+    </div>
+
+    {{-- ===================== PROGRESS STATUS PENILAI (2026-09-21, feedback user) =====================
+         Proyek In-Progress yang sedang dipegang tiap penilai, supaya terlihat
+         siapa yang penuh dan siapa yang kosong. --}}
+    <div class="rounded-lg border border-gray-200 bg-white shadow-sm lift dark:border-gray-700 dark:bg-gray-800">
+        <div class="px-6 pt-6">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Progress Status Penilai</h2>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Proyek In-Progress yang sedang dipegang, urut dari yang paling banyak. Satu proyek bisa dipegang beberapa penilai.</p>
+        </div>
+        @if ($workload->isEmpty())
+            <p class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">Belum ada akun penilai aktif.</p>
+        @else
+            <div class="hidden overflow-x-auto md:block">
+                <table class="mt-3 w-full min-w-[720px] text-sm">
+                    <thead class="border-y border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-500">
+                            <th class="px-6 py-3">Penilai</th>
+                            <th class="px-4 py-3 text-right" title="Tanggal survei di masa depan">Akan Survei</th>
+                            <th class="px-4 py-3 text-right" title="Sudah/sedang survei, nilai belum diajukan">Survei &amp; Penilaian</th>
+                            <th class="px-4 py-3 text-right" title="Nilai diajukan / Draft Resume dirilis">Review Nilai</th>
+                            <th class="px-4 py-3 text-right" title="Draft laporan sampai proses cetak buku">Draft Laporan</th>
+                            <th class="px-4 py-3 text-right">Total Aktif</th>
+                            <th class="px-6 py-3 text-right">Selesai Bulan Ini</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach ($workload as $w)
+                            <tr class="{{ $w['total'] === 0 ? 'bg-gray-50/60 dark:bg-gray-900/30' : '' }}">
+                                <td class="px-6 py-3">
+                                    <p class="font-medium text-gray-900 dark:text-gray-100">{{ $w['user']->name }}</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ $w['user']->jabatan ?: '-' }}</p>
+                                </td>
+                                @foreach (['upcoming', 'surveying', 'review', 'draft'] as $k)
+                                    <td class="px-4 py-3 text-right tabular-nums {{ $w[$k] ? 'text-gray-800 dark:text-gray-200' : 'text-gray-300 dark:text-gray-600' }}">{{ $w[$k] }}</td>
+                                @endforeach
+                                <td class="px-4 py-3 text-right">
+                                    @if ($w['total'] === 0)
+                                        <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-400">Kosong</span>
+                                    @else
+                                        <span class="text-base font-bold tabular-nums text-gray-900 dark:text-gray-100">{{ $w['total'] }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{{ $w['doneMonth'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            {{-- Ponsel: kartu per penilai. --}}
+            <div class="mt-3 divide-y divide-gray-100 border-t border-gray-100 md:hidden dark:divide-gray-700 dark:border-gray-700">
+                @foreach ($workload as $w)
+                    <div class="px-4 py-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="truncate font-medium text-gray-900 dark:text-gray-100">{{ $w['user']->name }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ $w['user']->jabatan ?: '-' }}</p>
+                            </div>
+                            @if ($w['total'] === 0)
+                                <span class="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-400">Kosong</span>
+                            @else
+                                <span class="shrink-0 text-right"><span class="text-lg font-bold tabular-nums text-gray-900 dark:text-gray-100">{{ $w['total'] }}</span> <span class="text-xs text-gray-400">aktif</span></span>
+                            @endif
+                        </div>
+                        <div class="mt-2 grid grid-cols-5 gap-1 text-center text-[10px] text-gray-400 dark:text-gray-500">
+                            @foreach (['upcoming' => 'Akan survei', 'surveying' => 'Survei', 'review' => 'Review', 'draft' => 'Draft', 'doneMonth' => 'Selesai'] as $k => $lbl)
+                                <div><p class="text-sm font-semibold tabular-nums {{ $w[$k] ? 'text-gray-800 dark:text-gray-200' : 'text-gray-300 dark:text-gray-600' }}">{{ $w[$k] }}</p>{{ $lbl }}</div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
     </div>
 
     {{-- ===================== MONTHLY + PURPOSE ===================== --}}
@@ -257,75 +310,6 @@
             @endforeach
         </div>
     </div>
-
-    {{-- ===================== PERLU DITINDAKLANJUTI (DRAFT & DP INVOICING) ===================== --}}
-    @if ($followUps->isNotEmpty())
-        <div class="rounded-lg border border-gray-200 bg-white shadow-sm lift dark:border-gray-700 dark:bg-gray-800">
-            <div class="px-6 pt-6">
-                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Perlu Ditindaklanjuti</h2>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    Proposal berstatus Draft Proposal / DP Invoicing &mdash; reminder sudah berapa hari sejak dibuat.
-                </p>
-            </div>
-            <div class="hidden overflow-x-auto md:block">
-            <table class="min-w-[640px] w-full text-sm mt-3">
-                <thead class="bg-gray-50 border-y border-gray-200 dark:bg-gray-900 dark:border-gray-700">
-                    <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
-                        <th class="px-6 py-3">No. Proposal</th>
-                        <th class="px-6 py-3">Nama Klien</th>
-                        <th class="px-6 py-3 w-52">Status</th>
-                        <th class="px-6 py-3 text-right whitespace-nowrap">Reminder</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @foreach ($followUps as $p)
-                        @php
-                            $daysSinceCreated = (int) $p->created_at->diffInDays(now());
-                            $reminderTone = match (true) {
-                                $daysSinceCreated >= 7 => 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
-                                $daysSinceCreated >= 3 => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                                default                => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-500',
-                            };
-                        @endphp
-                        <tr class="hover:bg-blue-50/40 dark:hover:bg-blue-900/20">
-                            <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">
-                                <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" title="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
-                            </td>
-                            <td class="px-6 py-3 text-gray-600 dark:text-gray-500">{{ $p->effective_client_name ?: '-' }}</td>
-                            <td class="px-6 py-3">
-                                <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
-                                    {{ $p->status_short }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-3 text-right whitespace-nowrap">
-                                <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold {{ $reminderTone }}">
-                                    {{ $daysSinceCreated }} hari
-                                </span>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            </div>
-
-            <div class="divide-y divide-gray-100 md:hidden dark:divide-gray-700">
-                @foreach ($followUps as $p)
-                    @php $hari = (int) $p->created_at->diffInDays(now()); @endphp
-                    <a href="{{ route('proposals.show', $p) }}" class="flex items-start justify-between gap-3 px-4 py-3">
-                        <div class="min-w-0">
-                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $p->proposal_number_short }}</p>
-                            <p class="truncate text-xs text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</p>
-                            <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $p->status_badge_classes }}">{{ $p->status_short }}</span>
-                        </div>
-                        <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $hari >= 7 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : ($hari >= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300') }}">
-                            {{ $hari }} hari
-                        </span>
-                    </a>
-                @endforeach
-            </div>
-        </div>
-    @endif
-
     @endif
 </div>
 @endsection

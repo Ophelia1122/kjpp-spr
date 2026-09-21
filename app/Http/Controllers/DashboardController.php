@@ -73,14 +73,14 @@ class DashboardController extends Controller
         if ($mode === 'reviewer') {
             $queue = Project::with([...$with, 'reviewSubmittedBy'])
                 ->where('status', Project::STATUS_IN_PROGRESS)
-                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::STAGE_DRAFT_CONFIRMED])
+                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED, Project::STAGE_DRAFT_CONFIRMED])
                 ->get()
                 ->sortBy(fn ($p) => $p->stage_since?->timestamp ?? 0)
                 ->values();
 
             $data['reviewer'] = [
                 'queue'              => $queue,
-                'valueCount'         => $queue->where('review_status', Project::REVIEW_SUBMITTED)->count(),
+                'valueCount'         => $queue->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED])->count(),
                 'draftCount'         => $queue->where('review_status', Project::STAGE_DRAFT_CONFIRMED)->count(),
                 'reviewedMonthCount' => \App\Models\AuditLog::where('user_id', $user->id)
                     ->whereIn('action', ['review.value_approved', 'draft.reviewed', 'review.approved_by_reviewer'])
@@ -97,7 +97,7 @@ class DashboardController extends Controller
                 ->get();
 
             $actions = $inProgress
-                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::STAGE_DRAFT_SUBMITTED, Project::STAGE_DRAFT_REVIEWED])
+                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED, Project::STAGE_DRAFT_SUBMITTED, Project::STAGE_DRAFT_REVIEWED])
                 ->sortBy(fn ($p) => $p->stage_since?->timestamp ?? 0)
                 ->values();
             $finalSla = $inProgress
@@ -108,7 +108,7 @@ class DashboardController extends Controller
             $data['produksi'] = [
                 'actions'           => $actions,
                 'finalSla'          => $finalSla,
-                'valueCount'        => $inProgress->where('review_status', Project::REVIEW_SUBMITTED)->count(),
+                'valueCount'        => $inProgress->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED])->count(),
                 'confirmCount'      => $inProgress->where('review_status', Project::STAGE_DRAFT_SUBMITTED)->count(),
                 'printCount'        => $inProgress->where('review_status', Project::STAGE_DRAFT_REVIEWED)->count(),
                 'finalOverdueCount' => $finalSla->filter(fn ($p) => ($p->final_sla_days_remaining ?? 0) < 0)->count(),
@@ -152,6 +152,16 @@ class DashboardController extends Controller
                     ->sortBy(fn ($row) => $row['due']->timestamp)
                     ->values();
 
+                // Proposal yang masih di tahap awal (Draft / DP Invoicing) — reminder
+                // sudah berapa hari sejak DIBUAT (created_at, bukan proposal_date
+                // manual), supaya tidak "hilang" tanpa tindak lanjut. Yang paling
+                // lama menunggu ditaruh paling atas.
+                $followUps = Project::with('instructingClient', 'namedClient')
+                    ->whereIn('status', [Project::STATUS_DRAFT, Project::STATUS_DP_INVOICING])
+                    ->get(['id', 'proposal_number', 'instructing_client_id', 'status', 'created_at'])
+                    ->sortByDesc(fn ($p) => $p->created_at->diffInDays(now()))
+                    ->values();
+
                 $data['keuangan'] = [
                     'overdue'       => $overdue,
                     'overdueSum'    => $overdue->sum('amount'),
@@ -160,6 +170,7 @@ class DashboardController extends Controller
                     'overdueDays'   => PaymentDashboardController::OVERDUE_DAYS,
                     'dueDays'       => self::BILLING_DUE_DAYS,
                 ];
+                $data['followUps'] = $followUps;
             }
         }
 
@@ -269,7 +280,7 @@ class DashboardController extends Controller
 
         if ($mode === 'reviewer') {
             $profile['review_queue'] = Project::where('status', Project::STATUS_IN_PROGRESS)
-                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::STAGE_DRAFT_CONFIRMED])
+                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED, Project::STAGE_DRAFT_CONFIRMED])
                 ->count();
             $profile['review_done'] = Project::where('review_approved_by_user_id', $user->id)
                 ->whereBetween('review_approved_at', [$monthStart, $monthEnd])
@@ -543,17 +554,9 @@ class DashboardController extends Controller
             ->limit(6)
             ->get(['id', 'proposal_number', 'instructing_client_id', 'proposal_purpose', 'status', 'created_at']);
 
-        // Proposal yang masih di tahap awal (Draft / DP Invoicing) — reminder
-        // sudah berapa hari sejak DIBUAT (created_at, bukan proposal_date
-        // manual), supaya tidak "hilang" tanpa tindak lanjut. Yang paling
-        // lama menunggu ditaruh paling atas.
-        $followUps = Project::with('instructingClient', 'namedClient')
-            ->whereIn('status', [Project::STATUS_DRAFT, Project::STATUS_DP_INVOICING])
-            ->get(['id', 'proposal_number', 'instructing_client_id', 'status', 'created_at'])
-            ->sortByDesc(fn ($p) => $p->created_at->diffInDays(now()))
-            ->values();
-
         return view('dashboard.overview', [
+            'workload'           => $this->appraiserWorkload(),
+            'topBanks'           => $this->topBanks(),
             'totalProposals'     => $projects->count(),
             'pendingCount'       => $pending->count(),
             'dealCount'          => $deal->count(),
@@ -564,8 +567,102 @@ class DashboardController extends Controller
             'purposeCounts'      => $purposeCounts,
             'monthly'            => $monthly,
             'recent'             => $recent,
-            'followUps'          => $followUps,
         ]);
+    }
+
+    /**
+     * Beban kerja per penilai lapangan (2026-09-21, feedback user): jumlah
+     * proyek In-Progress yang sedang dipegang, dipecah per tahap, supaya
+     * terlihat siapa yang penuh dan siapa yang kosong. Semua user aktif
+     * berjabatan Pelaksana Inspeksi, Penilai, atau Reviewer ikut tampil walau
+     * tidak memegang proyek.
+     */
+    private function appraiserWorkload(): \Illuminate\Support\Collection
+    {
+        $today = now()->startOfDay();
+        $active = Project::with('appraisers:id')
+            ->where('status', Project::STATUS_IN_PROGRESS)
+            ->get(['id', 'survey_date', 'review_status', 'assigned_appraiser_id']);
+        $doneMonth = Project::with('appraisers:id')
+            ->whereBetween('printed_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->get(['id', 'assigned_appraiser_id']);
+
+        $ids = fn ($p) => $p->appraisers->pluck('id')->push($p->assigned_appraiser_id)->filter()->unique();
+
+        // Hanya jabatan lapangan & review (2026-09-21, feedback user).
+        $users = User::whereIn('jabatan', [User::JABATAN_PELAKSANA_INSPEKSI, User::JABATAN_PENILAI, User::JABATAN_REVIEWER])
+            ->where('is_active', true)
+            ->get(['id', 'name', 'jabatan'])
+            ->keyBy('id');
+
+        $review = [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED];
+
+        return $users->map(function ($u) use ($active, $doneMonth, $ids, $today, $review) {
+            $mine = $active->filter(fn ($p) => $ids($p)->contains($u->id));
+
+            return [
+                'user'      => $u,
+                'upcoming'  => $mine->filter(fn ($p) => ! $p->review_status && $p->survey_date?->gt($today))->count(),
+                'surveying' => $mine->filter(fn ($p) => ! $p->review_status && (! $p->survey_date || $p->survey_date->lte($today)))->count(),
+                'review'    => $mine->filter(fn ($p) => in_array($p->review_status, $review, true))->count(),
+                'draft'     => $mine->filter(fn ($p) => $p->review_status && ! in_array($p->review_status, $review, true))->count(),
+                'total'     => $mine->count(),
+                'doneMonth' => $doneMonth->filter(fn ($p) => $ids($p)->contains($u->id))->count(),
+            ];
+        })->sortBy([['total', 'desc'], [fn ($r) => $r['user']->name, 'asc']])->values();
+    }
+
+    /**
+     * 5 bank Pemberi Tugas dengan proyek terbanyak (2026-09-21, feedback
+     * user), proyek batal tidak dihitung. Klien bank dengan nama sama
+     * digabung walau alamatnya beda (mis. cabang berbeda): nama dinormalkan
+     * tanpa "PT", "Tbk", "(Persero)", tanda baca, dan huruf besar/kecil.
+     */
+    private function topBanks(): array
+    {
+        $rows = Project::query()
+            ->where('status', '!=', Project::STATUS_BATAL)
+            ->join('clients', 'clients.id', '=', 'projects.instructing_client_id')
+            ->selectRaw('clients.client_name, COUNT(*) AS total')
+            ->groupBy('clients.client_name')
+            ->get();
+
+        $norm = fn (string $n) => trim(preg_replace('/\s+/', ' ', preg_replace(
+            '/\b(pt|tbk|persero)\b/', ' ', preg_replace('/[^a-z0-9 ]+/', ' ', mb_strtolower($n))
+        )));
+
+        $banks = $rows->filter(fn ($r) => str_contains(mb_strtolower($r->client_name), 'bank'))
+            ->groupBy(fn ($r) => $norm($r->client_name))
+            ->map(fn ($group) => [
+                // Nama tampil tanpa PT / (Persero) / Tbk, huruf besar semua
+                // supaya seragam dan muat di legenda (2026-09-21, feedback user).
+                'label' => $this->shortBankName($group->sortByDesc('total')->first()->client_name),
+                'value' => (int) $group->sum('total'),
+            ])
+            ->sortByDesc('value')
+            ->values();
+
+        $palette = ['#1B5E7B', '#E8702A', '#1E7B34', '#1098D6', '#9B2D96'];
+        $slices  = $banks->take(5)->values()->map(fn ($b, $i) => $b + ['color' => $palette[$i]])->all();
+        $others  = (int) $banks->slice(5)->sum('value');
+        if ($others > 0) {
+            $slices[] = ['label' => 'Bank lainnya', 'value' => $others, 'color' => '#9CA3AF'];
+        }
+
+        return [
+            'slices'  => $slices,
+            'nonBank' => (int) $rows->reject(fn ($r) => str_contains(mb_strtolower($r->client_name), 'bank'))->sum('total'),
+        ];
+    }
+
+    /** "PT Bank Mandiri (Persero) Tbk" -> "BANK MANDIRI". */
+    private function shortBankName(string $name): string
+    {
+        $name = preg_replace('/\(\s*persero\s*\)|\bpersero\b|\bpt\b\.?|\btbk\b\.?/i', ' ', $name);
+        $name = preg_replace('/\s*,(\s*,)*\s*/', ', ', $name);         // koma ganda sisa pembuangan
+        $name = trim(preg_replace('/\s+/', ' ', $name), " ,.");
+
+        return mb_strtoupper($name);
     }
 
     /**

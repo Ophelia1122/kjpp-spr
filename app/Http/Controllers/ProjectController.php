@@ -36,7 +36,7 @@ class ProjectController extends Controller
     {
         $this->ensureFieldworkOpen($project);
 
-        // 1-3 penilai lapangan setara (2026-09-15, feedback user).
+        // 1-5 penilai lapangan setara (2026-09-15, feedback user).
         $request->merge(['appraiser_ids' => array_values(array_filter((array) $request->input('appraiser_ids', [])))]);
         $validated = $request->validate([
             'appraiser_ids'   => 'required|array|min:1|max:' . Project::MAX_APPRAISERS,
@@ -130,10 +130,13 @@ class ProjectController extends Controller
         abort_unless($project->review_status === $def['from'], 403, 'Tahap proyek sudah berubah. Muat ulang halaman.');
         abort_unless(Project::userCanActAs(auth()->user(), $def['actor']), 403, 'Anda tidak memiliki akses untuk langkah ini.');
 
-        $isReturn = $def['note'] === 'required';
+        // 'stay' (banding Draft Resume): catatan wajib tetapi bukan pengembalian —
+        // tahap tidak berubah dan tidak memunculkan peringatan "dikembalikan".
+        $stays    = ! empty($def['stay']);
+        $isReturn = $def['note'] === 'required' && ! $stays;
         $note = $request->validate(
-            ['note' => ($isReturn ? 'required' : 'nullable') . '|string|max:1000'],
-            ['note.required' => 'Alasan pengembalian wajib diisi.']
+            ['note' => ($def['note'] === 'required' ? 'required' : 'nullable') . '|string|max:1000'],
+            ['note.required' => $stays ? 'Catatan banding wajib diisi.' : 'Alasan pengembalian wajib diisi.']
         )['note'] ?? null;
 
         if ($step === 'mark_printed' && ! $project->final_report_number) {
@@ -144,14 +147,16 @@ class ProjectController extends Controller
         $uid = auth()->id();
 
         // Catatan pengembalian terakhir tampil sebagai peringatan sampai ada langkah maju.
-        $changes = ['review_status' => $def['to']] + ($isReturn
-            ? ['review_rejected_at' => $now, 'review_rejected_by_user_id' => $uid, 'review_rejection_note' => $note]
-            : ['review_rejected_at' => null, 'review_rejected_by_user_id' => null, 'review_rejection_note' => null]);
+        $changes = ['review_status' => $def['to']] + match (true) {
+            $stays    => [],
+            $isReturn => ['review_rejected_at' => $now, 'review_rejected_by_user_id' => $uid, 'review_rejection_note' => $note],
+            default   => ['review_rejected_at' => null, 'review_rejected_by_user_id' => null, 'review_rejection_note' => null],
+        };
 
         $changes += match ($step) {
-            'submit_value'  => ['review_submitted_at' => $now, 'review_submitted_by_user_id' => $uid],
-            'approve_value' => ['reviewed_at' => $now, 'reviewed_by_user_id' => $uid,
-                                'review_approved_at' => $now, 'review_approved_by_user_id' => $uid],
+            'submit_value'   => ['review_submitted_at' => $now, 'review_submitted_by_user_id' => $uid],
+            'release_resume' => ['reviewed_at' => $now, 'reviewed_by_user_id' => $uid],
+            'approve_value'  => ['review_approved_at' => $now, 'review_approved_by_user_id' => $uid],
             'submit_draft'  => ['draft_submitted_at' => $now],
             'confirm_draft' => ['draft_confirmed_at' => $now],
             'review_draft'  => ['draft_reviewed_at' => $now],
@@ -173,7 +178,7 @@ class ProjectController extends Controller
             dispatch(fn () => \App\Services\WhatsAppNotifier::reviewReturned($project, $actor, (string) $note, $title))->afterResponse();
         }
 
-        return back()->with($isReturn ? 'warning' : 'success', $def['flash']);
+        return back()->with($isReturn ? 'warning' : ($stays ? 'info' : 'success'), $def['flash']);
     }
 
     /**

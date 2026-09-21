@@ -1,9 +1,11 @@
 {{-- Beranda Reviewer: antrean review nilai & draft laporan. --}}
 @php
     $d = $reviewer;
-    $kindBadge = fn ($p) => $p->review_status === \App\Models\Project::REVIEW_SUBMITTED
-        ? ['Nilai', 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300']
-        : ['Draft Laporan', 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'];
+    $kindBadge = fn ($p) => match ($p->review_status) {
+        \App\Models\Project::REVIEW_SUBMITTED => ['Nilai', 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'],
+        \App\Models\Project::REVIEW_RELEASED  => ['Draft Resume', 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'],
+        default                                 => ['Draft Laporan', 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'],
+    };
 @endphp
 
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

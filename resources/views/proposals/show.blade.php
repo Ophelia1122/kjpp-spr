@@ -418,7 +418,7 @@
                                     </svg>
                                 </span>
                             </label>
-                            {{-- 1-3 penilai lapangan SETARA (2026-09-15, feedback user) — semua
+                            {{-- 1-5 penilai lapangan SETARA (2026-09-15, feedback user) — semua
                                  ikut memiliki proyek (Beranda, Proyek Saya, Timeline, WhatsApp). --}}
                             @php
                                 $chosenAppraisers = array_values(array_filter((array) old('appraiser_ids',
@@ -1486,6 +1486,7 @@
             rose: 'bg-rose-600 hover:bg-rose-700',
             indigo: 'bg-indigo-600 hover:bg-indigo-700',
             emerald: 'bg-emerald-600 hover:bg-emerald-700',
+            orange: 'bg-orange-600 hover:bg-orange-700',
         };
         document.getElementById('reviewRejectForm').action = actionUrl;
         document.getElementById('reviewRejectTitle').textContent = title;
@@ -1494,7 +1495,7 @@
         field.value = '';
         field.name = 'note';
         field.required = !optional;
-        field.placeholder = optional ? 'Tulis catatan bila perlu...' : 'Jelaskan apa yang perlu diperbaiki...';
+        field.placeholder = opts.placeholder || (optional ? 'Tulis catatan bila perlu...' : 'Jelaskan apa yang perlu diperbaiki...');
         document.getElementById('reviewNoteLabel').textContent = opts.label || (optional ? 'Catatan (opsional)' : 'Alasan / Catatan Revisi');
 
         const hint = document.getElementById('reviewNoteHint');

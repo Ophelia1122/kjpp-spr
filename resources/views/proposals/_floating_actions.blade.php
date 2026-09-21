@@ -90,7 +90,9 @@
         $fabIcons['book'] = 'M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25';
         $stepUi = [
             'submit_value'          => ['icon' => 'send',      'tone' => 'indigo'],
+            'release_resume'        => ['icon' => 'send',      'tone' => 'indigo'],
             'approve_value'         => ['icon' => 'badge',     'tone' => 'emerald'],
+            'appeal_resume'         => ['icon' => 'uturn',     'tone' => 'orange'],
             'return_value'          => ['icon' => 'uturn',     'tone' => 'rose'],
             'submit_draft'          => ['icon' => 'doc-check', 'tone' => 'indigo'],
             'confirm_draft'         => ['icon' => 'check',     'tone' => 'emerald'],
@@ -101,7 +103,8 @@
         ];
 
         foreach ($project->availableWorkflowSteps(auth()->user()) as $stepKey => $step) {
-            $isReturn = $step['note'] === 'required';
+            $isReturn = $step['note'] === 'required' && empty($step['stay']);
+            $isAppeal = ! empty($step['stay']);
             $hint = $step['hint'] ?? null;
             if ($stepKey === 'mark_printed' && ! $project->final_report_number) {
                 $hint = 'Nomor Laporan Final belum diisi — isi dulu di kartu "Nomor Laporan Final".';
@@ -112,10 +115,13 @@
                 'label' => $step['button'], 'tip' => $step['tip'],
                 'url' => route('projects.workflow', [$project, $stepKey]),
                 'modal_title' => $step['title'],
-                'modal_opts' => $isReturn
-                    ? ['label' => 'Alasan pengembalian', 'button' => 'Kembalikan', 'tone' => 'rose']
-                    : ['optional' => true, 'label' => 'Catatan (opsional)', 'button' => $step['button'],
-                       'tone' => $stepUi[$stepKey]['tone'], 'hint' => $hint],
+                'modal_opts' => match (true) {
+                    $isReturn => ['label' => 'Alasan pengembalian', 'button' => 'Kembalikan', 'tone' => 'rose'],
+                    $isAppeal => ['label' => 'Catatan banding', 'button' => 'Catat Banding', 'tone' => 'orange',
+                                  'placeholder' => 'Tulis poin banding atas Draft Resume...'],
+                    default   => ['optional' => true, 'label' => 'Catatan (opsional)', 'button' => $step['button'],
+                                  'tone' => $stepUi[$stepKey]['tone'], 'hint' => $hint],
+                },
             ];
         }
     }
