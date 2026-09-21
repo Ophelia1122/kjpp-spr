@@ -29,7 +29,7 @@ return [
 
     // Penilai Publik penanggung jawab / penandatangan proposal (baku).
     'signatory' => [
-        'name'           => 'Arief Rachman Setiady, S.M., M.M.',
+        'name'           => 'Arief Rachman Setiady, S.M., M.M., MAPPI (Cert.)',
         'title'          => 'Partner',
         'izin_pp_no'     => 'P-1.25.00690',
         'sk_menkeu_no'   => '185/MK/SJ/2025 tanggal 23 April 2025',

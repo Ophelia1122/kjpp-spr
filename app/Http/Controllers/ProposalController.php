@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\DocxToPdf;
 use App\Services\ProposalDocxBuilder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProposalController extends Controller
@@ -94,7 +95,7 @@ class ProposalController extends Controller
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
             'is_public_company'        => $request->boolean('is_public_company'),
             'status'                   => Project::STATUS_DRAFT,
-        ]);
+        ] + $this->signatureData($request));
 
         $project->intendedUsers()->sync($validated['intended_user_ids']);
         $this->syncValuationObjects($project, $validated['objects']);
@@ -196,7 +197,7 @@ class ProposalController extends Controller
             $updateData['payment_terms'] = $this->parsePaymentTerms($validated['payment_terms']);
         }
 
-        $project->update($updateData);
+        $project->update($updateData + $this->signatureData($request, $project));
 
         $project->intendedUsers()->sync($validated['intended_user_ids']);
 
@@ -259,6 +260,16 @@ class ProposalController extends Controller
      * Unduh proposal sebagai .docx (MASTER — bisa diedit staf untuk
      * penyesuaian SPM). Teks baku mengikuti config/proposal_clauses.php.
      */
+    /** Surat Representasi (.docx) untuk dikirim ke klien bersama proposal. */
+    public function exportRepresentatif(Project $project)
+    {
+        $doc = \App\Services\RepresentatifDocx::for($project);
+
+        return response()
+            ->download($doc->save(), $doc->fileName() . '.docx')
+            ->deleteFileAfterSend(true);
+    }
+
     public function exportWord(Project $project)
     {
         $builder = ProposalDocxBuilder::for($project);
@@ -517,6 +528,30 @@ class ProposalController extends Controller
         return array_values(array_map(fn ($v) => (float) str_replace(',', '.', $v), $parts));
     }
 
+    /**
+     * Kolom barcode tanda tangan & stempel dari form (2026-09-21). File
+     * baru menggantikan file lama; memilih "Tidak" menghapus file lama.
+     */
+    private function signatureData(Request $request, ?Project $project = null): array
+    {
+        $useBarcode = $request->boolean('use_signature_barcode');
+        $path       = $project?->signature_barcode;
+
+        if (! $useBarcode || $request->hasFile('signature_barcode')) {
+            if ($path) {
+                Storage::disk('public')->delete($path);
+            }
+            $path = $useBarcode ? $request->file('signature_barcode')->store('proposal-signatures', 'public') : null;
+        }
+
+        return [
+            'use_signature_barcode' => $useBarcode,
+            'signature_barcode'     => $path,
+            'use_stamp'             => $request->boolean('use_stamp'),
+            'representative_limited' => $request->boolean('representative_limited'),
+        ];
+    }
+
     private function validateProposal(Request $request, ?Project $project = null): array
     {
         return $request->validate([
@@ -544,6 +579,16 @@ class ProposalController extends Controller
             // baku kantor" dihapus dari dropdown — data bakunya sudah dipindah
             // ke akun user-nya sendiri.
             'signed_by_user_id'        => 'required|exists:users,id',
+            // Barcode tanda tangan & stempel (2026-09-21). Aturan file sama
+            // dengan barcode Surat Tugas. Wajib diunggah bila memilih barcode
+            // dan proposal belum punya barcode tersimpan.
+            'use_signature_barcode'    => 'nullable|boolean',
+            'use_stamp'                => 'nullable|boolean',
+            'representative_limited'   => 'nullable|boolean',
+            'signature_barcode'        => [
+                ($request->boolean('use_signature_barcode') && ! $project?->signature_barcode) ? 'required' : 'nullable',
+                'image', 'mimes:png,jpg,jpeg', 'max:100', 'dimensions:width=370,height=370',
+            ],
             // Pihak yang menyetujui (blok tanda tangan kolom kanan) — dipilih
             // dari Database Klien, bisa bank atau PT tergantung kasus. Kosong =
             // pakai nama Pemberi Tugas.
@@ -617,6 +662,11 @@ class ProposalController extends Controller
             'objects.*.ownership_form'  => 'required|string|max:255',
             'objects.*.owner_name'      => 'required|string|max:255',
             'objects.*.notes'           => 'nullable|string',
+        ], [
+            'signature_barcode.required'   => 'Unggah file barcode tanda tangan, atau pilih "Tidak".',
+            'signature_barcode.mimes'      => 'Barcode harus berformat PNG atau JPG/JPEG.',
+            'signature_barcode.max'        => 'Ukuran file barcode maksimal 100 KB.',
+            'signature_barcode.dimensions' => 'Dimensi gambar barcode harus tepat 370x370 piksel.',
         ]);
     }
 

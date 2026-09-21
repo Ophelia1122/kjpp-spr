@@ -794,10 +794,17 @@
         <div id="section-tagihan" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-4 dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between flex-wrap gap-2">
                 <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Daftar Tagihan &amp; Pembayaran</h2>
+                {{-- Sisa Tagihan = belum di-invoice; Sisa Pelunasan = belum dibayar (2026-09-21). --}}
                 @if ($project->remaining_balance > 0)
-                    <span class="text-xs font-semibold text-amber-600 whitespace-nowrap dark:text-amber-400">
-                        Sisa Tagihan: Rp {{ number_format($project->remaining_balance, 0, ',', '.') }}
-                    </span>
+                    <div class="flex items-center gap-x-4 gap-y-1 flex-wrap text-xs font-semibold">
+                        <span class="whitespace-nowrap {{ $project->uninvoiced_balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500' }}"
+                              title="Nilai kontrak yang belum dibuatkan invoice">
+                            Sisa Tagihan: Rp {{ number_format($project->uninvoiced_balance, 0, ',', '.') }}
+                        </span>
+                        <span class="whitespace-nowrap text-rose-600 dark:text-rose-400" title="Nilai kontrak yang belum dibayar">
+                            Sisa Pelunasan: Rp {{ number_format($project->remaining_balance, 0, ',', '.') }}
+                        </span>
+                    </div>
                 @else
                     <span class="text-xs font-semibold text-emerald-600 whitespace-nowrap dark:text-emerald-400">✔ Lunas</span>
                 @endif
@@ -887,6 +894,10 @@
 
             @can('invoices.manage')
                 @if ($project->remaining_balance > 0)
+                    <div id="invoiceFullAlert" role="alert"
+                         class="hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                        Seluruh nilai kontrak sudah ditagihkan — invoice/kwitansi sudah terbit. Tidak bisa menambah invoice lagi kecuali invoice yang ada dihapus.
+                    </div>
                     <div class="pt-1">
                         <button type="button" onclick="openInvoiceModal()"
                                 class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
@@ -1257,7 +1268,7 @@
                 </select>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">
-                Sisa Tagihan saat ini: <span class="font-semibold text-amber-600 dark:text-amber-400">Rp {{ number_format($project->remaining_balance, 0, ',', '.') }}</span>
+                Sisa Tagihan (belum di-invoice): <span class="font-semibold text-amber-600 dark:text-amber-400">Rp {{ number_format($project->uninvoiced_balance, 0, ',', '.') }}</span>
                 dari total kontrak Rp {{ number_format((float) $project->total_fee, 0, ',', '.') }}.
             </p>
             <div>
@@ -1399,9 +1410,16 @@
 
 <script>
     const INVOICE_MODAL_TOTAL_FEE = {{ (float) $project->total_fee }};
-    const INVOICE_MODAL_REMAINING = {{ (float) $project->remaining_balance }};
+    const INVOICE_MODAL_REMAINING = {{ (float) $project->uninvoiced_balance }};
 
     function openInvoiceModal() {
+        // Semua nilai kontrak sudah di-invoice: tampilkan peringatan, modal tidak dibuka.
+        if (INVOICE_MODAL_REMAINING <= 0) {
+            const alertBox = document.getElementById('invoiceFullAlert');
+            alertBox.classList.remove('hidden');
+            alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return;
+        }
         const amountInput = document.getElementById('inv_amount');
         const percentageInput = document.getElementById('inv_percentage');
         amountInput.value = Math.round(INVOICE_MODAL_REMAINING);

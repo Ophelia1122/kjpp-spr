@@ -95,7 +95,7 @@
     {{-- ===================== PROYEK DENGAN SISA TAGIHAN ===================== --}}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden lift dark:bg-gray-800 dark:border-gray-700">
         <div class="px-6 pt-6 pb-1">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Proyek dengan Sisa Tagihan <span class="font-normal normal-case">({{ $outstandingProjects->count() }})</span></h2>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Proyek dengan Sisa Pelunasan <span class="font-normal normal-case">({{ $outstandingProjects->count() }})</span></h2>
             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Sisa = nilai kontrak dikurangi yang sudah dibayar. "Belum Ditagih" = bagian yang belum dibuatkan invoice.</p>
         </div>
         {{-- Maks. ±5 baris lalu scroll, header tetap menempel. Seluruh baris bisa diklik. --}}
@@ -108,7 +108,7 @@
                     <th class="px-6 py-3 text-right">Nilai Kontrak</th>
                     <th class="px-6 py-3 w-[190px]">Diterima</th>
                     <th class="px-6 py-3 text-right">Belum Ditagih</th>
-                    <th class="px-6 py-3 text-right">Sisa Tagihan</th>
+                    <th class="px-6 py-3 text-right">Sisa Pelunasan</th>
                     <th class="px-4 py-3 text-center">Aksi</th>
                 </tr>
             </thead>
@@ -153,7 +153,7 @@
                 @empty
                     <tr>
                         <td colspan="7" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
-                            🎉 Tidak ada proyek dengan sisa tagihan — semua sudah lunas.
+                            🎉 Tidak ada proyek dengan sisa pelunasan — semua sudah lunas.
                         </td>
                     </tr>
                 @endforelse
@@ -177,7 +177,7 @@
                             <p class="truncate text-xs text-gray-500 dark:text-gray-500">{{ $p->effective_client_name ?: '-' }}</p>
                         </div>
                         <div class="shrink-0 text-right">
-                            <p class="text-[11px] text-gray-500 dark:text-gray-400">Sisa tagihan</p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">Sisa pelunasan</p>
                             <p class="font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $rp($p->remaining_balance) }}</p>
                         </div>
                     </div>
@@ -207,7 +207,7 @@
                     </div>
                 </div>
             @empty
-                <p class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">🎉 Tidak ada proyek dengan sisa tagihan — semua sudah lunas.</p>
+                <p class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">🎉 Tidak ada proyek dengan sisa pelunasan — semua sudah lunas.</p>
             @endforelse
         </div>
     </div>

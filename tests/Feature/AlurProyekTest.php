@@ -121,6 +121,27 @@ class AlurProyekTest extends TestCase
         $this->assertEqualsWithDelta(50_000_000, $proyek->total_fee, 0.01);
     }
 
+    public function test_edit_proposal_menyimpan_barcode_tanda_tangan(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->dataProposal());
+        $proyek = Project::first();
+
+        $this->actingAs($this->admin)
+            ->put(route('proposals.update', $proyek), $this->dataProposal([
+                'use_signature_barcode' => 1,
+                'use_stamp'             => 1,
+                'signature_barcode'     => \Illuminate\Http\UploadedFile::fake()->image('ttd.png', 370, 370),
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $proyek->refresh();
+        $this->assertTrue($proyek->use_signature_barcode);
+        $this->assertTrue($proyek->use_stamp);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($proyek->signature_barcode);
+    }
+
     public function test_nomor_proposal_tidak_boleh_kembar(): void
     {
         $this->actingAs($this->admin)->post(route('proposals.store'), $this->dataProposal());
@@ -163,6 +184,23 @@ class AlurProyekTest extends TestCase
             ->assertSessionHasErrors('amount');
 
         $this->assertSame(0, $proyek->invoices()->count());
+    }
+
+    public function test_invoice_ditolak_bila_seluruh_kontrak_sudah_ditagihkan(): void
+    {
+        $proyek = $this->buatProyek();
+
+        // Invoice penuh, belum dibayar: Sisa Tagihan 0, Sisa Pelunasan masih penuh.
+        $this->actingAs($this->admin)->post(route('invoices.store', $proyek), ['amount' => 20_000_000]);
+
+        $this->actingAs($this->admin)
+            ->post(route('invoices.store', $proyek), ['amount' => 1_000_000])
+            ->assertSessionHas('error');
+
+        $proyek->refresh();
+        $this->assertSame(1, $proyek->invoices()->count());
+        $this->assertEqualsWithDelta(0, $proyek->uninvoiced_balance, 0.01);
+        $this->assertEqualsWithDelta(20_000_000, $proyek->remaining_balance, 0.01);
     }
 
     public function test_menandai_invoice_lunas_menjalankan_pekerjaan(): void

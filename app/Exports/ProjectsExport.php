@@ -96,7 +96,7 @@ class ProjectsExport implements FromQuery, WithHeadings, WithMapping, ShouldAuto
             'Jumlah Invoice Diterbitkan',
             'Total Ditagihkan (Rp)',
             'Total Dibayar (Rp)',
-            'Sisa Tagihan (Rp)',
+            'Sisa Pelunasan (Rp)',
             'Status Pembayaran',
             'Nomor Laporan Final',
             'Tanggal Dibuat',

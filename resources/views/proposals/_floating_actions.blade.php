@@ -53,6 +53,12 @@
             'label' => 'Unduh Word', 'tip' => 'Unduh proposal sebagai dokumen Word',
             'url' => route('proposals.exportWord', $project),
         ];
+        // Surat Representasi untuk klien (2026-09-21, feedback user).
+        $fabActions[] = [
+            'type' => 'link', 'icon' => 'doc-check', 'tone' => 'emerald',
+            'label' => 'Representatif', 'tip' => 'Unduh Surat Representasi (Word) untuk klien',
+            'url' => route('proposals.exportRepresentatif', $project),
+        ];
     }
 
     if ($isActiveProject) {

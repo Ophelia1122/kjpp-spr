@@ -51,7 +51,7 @@ return [
     // ------------------------------------------------------------------
     // Markup **...** = tebal (di-render ProposalDocxBuilder; di-strip utk editor teks).
     'status_penilai' => [
-        'Penilai Publik yang bertanda tangan di dalam Laporan Penilaian ini adalah **:nama, MAPPI (Cert.)** '
+        'Penilai Publik yang bertanda tangan di dalam Laporan Penilaian ini adalah **:nama** '
         . 'merupakan Penilai Publik Properti dengan Izin Penilai Publik **No. :izin** berdasarkan Surat '
         . 'Keputusan Menteri Keuangan Republik Indonesia Nomor **:sk_menkeu**, Penilai Publik juga telah '
         . 'terdaftar sebagai Profesi Penunjang Penilai Publik pada Sektor Jasa Keuangan sesuai dengan '

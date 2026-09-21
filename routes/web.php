@@ -129,6 +129,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/proposals/{project}', [ProjectController::class, 'show'])->name('proposals.show');
         Route::get('/proposals/{project}/pdf', [ProposalController::class, 'exportPdf'])->name('proposals.exportPdf');
         Route::get('/proposals/{project}/word', [ProposalController::class, 'exportWord'])->name('proposals.exportWord');
+        Route::get('/proposals/{project}/representatif', [ProposalController::class, 'exportRepresentatif'])->name('proposals.exportRepresentatif');
     });
 
     // --- Survei Lapangan: lihat (termasuk cetak Surat Tugas — dokumen hasil, bukan aksi ubah data) ---

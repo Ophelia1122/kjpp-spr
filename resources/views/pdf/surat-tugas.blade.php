@@ -179,7 +179,7 @@
     @endphp
     {{-- margin-top negatif: gambar barcode punya bingkai putih (quiet zone) sendiri,
          jadi nama ditarik ke atas supaya benar-benar menempel. --}}
-    <p class="bold underline" style="margin: {{ $project->assignment_letter_barcode ? '-3px' : '0' }} 0 0 0;">{{ $signerName }}, MAPPI (Cert.)</p>
+    <p class="bold underline" style="margin: {{ $project->assignment_letter_barcode ? '-3px' : '0' }} 0 0 0;">{{ $signerName }}</p>
     <p class="italic" style="margin: 0;">{{ $signerTitle }}</p>
 
     {{-- Tulisan "Perhatian" 10pt (2026-09-14, feedback user). --}}

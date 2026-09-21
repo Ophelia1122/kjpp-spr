@@ -143,7 +143,7 @@
                 <br><br><br><br><br><br>
                 {{-- Penandatangan = Penanggung Jawab proyek (akun user), data
                      baku config hanya cadangan (2026-09-15, feedback user). --}}
-                <strong>{{ optional($project->signedBy)->name ?: config('kjpp.signatory.name') }}, MAPPI (Cert.)</strong><br>
+                <strong>{{ optional($project->signedBy)->name ?: config('kjpp.signatory.name') }}</strong><br>
                 {{ optional($project->signedBy)->partner_status ?: config('kjpp.signatory.title') }}
             </td>
         </tr>

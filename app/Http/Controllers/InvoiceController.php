@@ -63,16 +63,19 @@ class InvoiceController extends Controller
             return back()->with('info', 'Invoice dengan nominal yang sama baru saja diterbitkan — tidak dibuat ulang.');
         }
 
-        $remaining = $project->remaining_balance;
+        // Batas invoice baru = Sisa Tagihan (nilai kontrak yang belum
+        // di-invoice), bukan sisa yang belum dibayar — supaya total invoice
+        // tidak pernah melebihi nilai kontrak (2026-09-21).
+        $remaining = $project->uninvoiced_balance;
 
         if ($remaining <= 0) {
-            return back()->with('info', 'Tagihan proyek ini sudah lunas — tidak perlu invoice tambahan.');
+            return back()->with('error', 'Seluruh nilai kontrak sudah ditagihkan (invoice/kwitansi sudah terbit). Hapus invoice yang ada dulu bila ingin membuat invoice baru.');
         }
 
         // Toleransi Rp 1 utk pembulatan persentase/PPN.
         if ($amount > $remaining + 1) {
             return back()
-                ->withErrors(['amount' => 'Nominal melebihi sisa tagihan (Rp ' . number_format($remaining, 0, ',', '.') . ').'])
+                ->withErrors(['amount' => 'Nominal melebihi sisa tagihan yang belum di-invoice (Rp ' . number_format($remaining, 0, ',', '.') . ').'])
                 ->withInput();
         }
 

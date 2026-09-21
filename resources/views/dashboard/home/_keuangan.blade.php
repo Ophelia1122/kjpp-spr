@@ -10,7 +10,7 @@
         'sub' => $rp($d['overdueSum']), 'hint' => 'Belum dibayar lebih dari ' . $d['overdueDays'] . ' hari sejak terbit',
         'href' => route('dashboard.pembayaran', ['status' => 'overdue'])])
     @include('dashboard.home._tile', ['label' => 'Selesai, belum lunas', 'value' => $d['unpaidDone']->count(), 'tone' => $d['unpaidDone']->count() ? 'amber' : null,
-        'sub' => $rp($d['unpaidDoneSum']), 'hint' => 'Sisa tagihan pekerjaan yang sudah selesai'])
+        'sub' => $rp($d['unpaidDoneSum']), 'hint' => 'Sisa pelunasan pekerjaan yang sudah selesai'])
 </div>
 
 {{-- ---------- Pekerjaan selesai, belum lunas ---------- --}}
@@ -28,7 +28,7 @@
                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         <th class="px-5 py-2.5">Proyek</th>
                         <th class="px-4 py-2.5">Selesai</th>
-                        <th class="px-4 py-2.5 text-right">Sisa Tagihan</th>
+                        <th class="px-4 py-2.5 text-right">Sisa Pelunasan</th>
                         <th class="px-4 py-2.5 text-right">Belum Ditagih</th>
                         <th class="px-5 py-2.5">Tenggat Penagihan</th>
                     </tr>
@@ -67,7 +67,7 @@
                             <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $clientOf($p) }}</p>
                         </div>
                         <div class="shrink-0 text-right">
-                            <p class="text-[11px] text-gray-400 dark:text-gray-500">Sisa tagihan</p>
+                            <p class="text-[11px] text-gray-400 dark:text-gray-500">Sisa pelunasan</p>
                             <p class="font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $rp($p->remaining_balance) }}</p>
                         </div>
                     </div>

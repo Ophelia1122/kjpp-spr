@@ -178,7 +178,7 @@ class SuratTugasDocxBuilder
             $s->addTextBreak(3, $this->f());
         }
 
-        $s->addText(($p->signedBy->name ?? config('kjpp.signatory.name')) . ', MAPPI (Cert.)', $this->f(true, false, true), $this->para());
+        $s->addText(($p->signedBy->name ?? config('kjpp.signatory.name')), $this->f(true, false, true), $this->para());
         $s->addText($p->signedBy->partner_status ?? config('kjpp.signatory.title'), $this->f(false, true), $this->para());
 
         $run = $s->addTextRun($this->para(Jc::START, 0, 120));

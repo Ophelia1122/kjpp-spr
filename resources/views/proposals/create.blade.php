@@ -51,7 +51,7 @@
         </div>
     </div>
 
-    <form id="proposalForm" action="{{ route('proposals.store') }}" method="POST" class="space-y-6">
+    <form id="proposalForm" action="{{ route('proposals.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf
 
         {{-- ============================================================
@@ -228,6 +228,8 @@
                         </p>
                     @endif
                 </div>
+
+                @include('proposals._signature_options')
 
                 {{-- Pihak yang Menyetujui --}}
                 <div>

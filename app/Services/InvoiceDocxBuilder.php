@@ -175,7 +175,7 @@ class InvoiceDocxBuilder
         for ($i = 0; $i < 7; $i++) {
             $this->p($c, '', $this->f(), Jc::CENTER);
         }
-        $this->p($c, $this->signerName() . ', MAPPI (Cert.)', $this->f(10, true), Jc::CENTER);
+        $this->p($c, $this->signerName(), $this->f(10, true), Jc::CENTER);
         $this->p($c, $this->signerTitle(), $this->f(), Jc::CENTER);
 
         // Footer alamat kantor.
@@ -297,7 +297,7 @@ class InvoiceDocxBuilder
             $this->p($c, '', $this->f($size));
         }
         // Nama & jabatan rata tengah di kolom rekening (2026-09-14, feedback user).
-        $this->p($c, $this->signerName() . ', MAPPI (Cert.)', $this->f($size, true), Jc::CENTER);
+        $this->p($c, $this->signerName(), $this->f($size, true), Jc::CENTER);
         $this->p($c, $this->signerTitle(), $this->f($size, false, true), Jc::CENTER);
 
         // Catatan keabsahan di DALAM tabel, rata tengah, 2 baris dimulai bahasa Inggris.

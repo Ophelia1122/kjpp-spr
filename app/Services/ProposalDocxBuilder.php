@@ -257,14 +257,31 @@ class ProposalDocxBuilder
         $path = storage_path('app/tmp/' . $this->safeName() . '-' . uniqid() . '.docx');
         @mkdir(dirname($path), 0775, true);
 
-        \PhpOffice\PhpWord\IOFactory::createWriter($this->word, 'Word2007')->save($path);
+        try {
+            \PhpOffice\PhpWord\IOFactory::createWriter($this->word, 'Word2007')->save($path);
+        } finally {
+            foreach ($this->tempFiles as $tmp) {
+                @unlink($tmp);
+            }
+        }
 
         return $path;
     }
 
+    /**
+     * Nama file unduhan: "00246 - Pnw_PT Bank ABC" (2026-09-21, feedback
+     * user). 5 digit = nomor urut di depan nomor proposal, nol di depan
+     * dipertahankan. Karakter terlarang di nama file Windows dibuang.
+     */
     public function safeName(): string
     {
-        return 'Proposal-' . str_replace(['/', '\\', ' '], '-', $this->project->proposal_number);
+        $no = preg_match('/^\s*(\d+)/', (string) $this->project->proposal_number, $m)
+            ? str_pad(substr($m[1], -5), 5, '0', STR_PAD_LEFT)
+            : '00000';
+        $client = $this->project->instructingClient?->client_name ?? 'Klien';
+        $client = trim(preg_replace('/\s+/', ' ', preg_replace('#[\\\\/:*?"<>|]+#', ' ', $client)));
+
+        return $no . ' - Pnw_' . $client;
     }
 
     // =====================================================================
@@ -581,7 +598,8 @@ class ProposalDocxBuilder
     private function sectionObjek(): void
     {
         $this->sectionTitle('Identifikasi Obyek Penilaian dan Kepemilikan');
-        $this->para('Obyek Penilaian dalam lingkup penugasan ini adalah :');
+        // keepNext: kalimat pengantar ikut pindah halaman bersama tabelnya.
+        $this->para('Obyek Penilaian dalam lingkup penugasan ini adalah :', null, ['keepNext' => true]);
 
         // Lebar tabel disamakan dengan lebar paragraf di atasnya: total
         // lebar kolom + indent = lebar area isi halaman, dan tabel digeser
@@ -602,30 +620,37 @@ class ProposalDocxBuilder
             'indent'     => new TblWidthComplexType($this->bodyIndent, TblWidthSimpleType::TWIP),
             'layout'     => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED,
         ]);
-        // Semua teks tabel rata tengah. Baris pertama kolom "Jenis
-        // Aset/Properti" (kategori "Real Properti"/"Personal Properti"/dst)
-        // dibuat tebal.
-        $hd = ['bold' => true, 'size' => 9];
-        $cd = ['size' => 9];
-        $cdBold = ['size' => 9, 'bold' => true];
-        $pc = ['alignment' => Jc::CENTER, 'spaceAfter' => 0];
-        $tbl->addRow(null, ['tblHeader' => true]);
-        $tbl->addCell($colW[0])->addText('No.', $hd, $pc);
-        $tbl->addCell($colW[1])->addText('Jenis Aset/Properti', $hd, $pc);
-        $tbl->addCell($colW[2])->addText('Lokasi', $hd, $pc);
-        $tbl->addCell($colW[3])->addText('Bentuk/Jenis Hak Atas Tanah', $hd, $pc);
-        $tbl->addCell($colW[4])->addText('Atas Nama', $hd, $pc);
+        // Header berlatar biru muda, huruf 11 pt tebal (2026-09-21, feedback
+        // user, meniru format dokumen resmi KJPP). Semua teks rata tengah.
+        // Baris pertama kolom "Jenis Aset/Properti" (kategori) dibuat tebal.
+        // keepNext di tiap paragraf sel (kecuali baris terakhir) membuat
+        // tabel tidak terpotong: kalau tidak muat, seluruh tabel pindah ke
+        // halaman berikutnya bersama judul bab.
+        $hd     = ['bold' => true, 'size' => 11];
+        $cd     = ['size' => 11];
+        $cdBold = ['size' => 11, 'bold' => true];
+        $hdCell = ['bgColor' => 'C6D9F1', 'valign' => 'center'];
+        $bdCell = ['valign' => 'center'];
+        $pKeep  = ['alignment' => Jc::CENTER, 'spaceAfter' => 0, 'keepNext' => true, 'keepLines' => true];
+        $pLast  = ['alignment' => Jc::CENTER, 'spaceAfter' => 0, 'keepLines' => true];
 
-        foreach ($this->project->valuationObjects as $i => $o) {
-            $tbl->addRow();
-            $tbl->addCell($colW[0])->addText((string) ($i + 1), $cd, $pc);
-            $jenis = $tbl->addCell($colW[1]);
+        $objects = $this->project->valuationObjects;
+        $tbl->addRow(null, ['tblHeader' => true, 'cantSplit' => true]);
+        foreach (['No.', 'Jenis Aset/Properti', 'Lokasi', 'Bentuk/Jenis Hak Atas Tanah', 'Atas Nama'] as $c => $label) {
+            $tbl->addCell($colW[$c], $hdCell)->addText($label, $hd, $objects->isEmpty() ? $pLast : $pKeep);
+        }
+
+        foreach ($objects as $i => $o) {
+            $pc = $i === $objects->count() - 1 ? $pLast : $pKeep;
+            $tbl->addRow(null, ['cantSplit' => true]);
+            $this->cellLines($tbl->addCell($colW[0], $bdCell), (string) ($i + 1), $cd, $pc);
+            $jenis = $tbl->addCell($colW[1], $bdCell);
             foreach ($o->description_lines as $k => $ln) {
-                $jenis->addText($ln, $k === 0 ? $cdBold : $cd, $pc);
+                $this->cellLines($jenis, $ln, $k === 0 ? $cdBold : $cd, $pc);
             }
-            $tbl->addCell($colW[2])->addText($o->location, $cd, $pc);
-            $tbl->addCell($colW[3])->addText($o->ownership_form, $cd, $pc);
-            $tbl->addCell($colW[4])->addText($o->owner_name, $cd, $pc);
+            $this->cellLines($tbl->addCell($colW[2], $bdCell), $o->location, $cd, $pc);
+            $this->cellLines($tbl->addCell($colW[3], $bdCell), $o->ownership_form, $cd, $pc);
+            $this->cellLines($tbl->addCell($colW[4], $bdCell), $o->owner_name, $cd, $pc);
         }
 
         $this->s->addTextBreak(1);
@@ -634,6 +659,19 @@ class ProposalDocxBuilder
             $this->para(strtr($this->cl['post_objek_hubungan'], $this->objekPenutupRepl()));
             $this->para($this->cl['post_objek']);
         });
+    }
+
+    /**
+     * Isi sel tabel, satu paragraf per baris. Teks dari textarea membawa
+     * CRLF; kalau karakter CR ikut masuk ke XML, LibreOffice gagal membaca
+     * tabel dan mencetak semua sel bertumpuk tanpa garis (bug 2026-09-21).
+     */
+    private function cellLines($cell, ?string $text, array $font, array $pStyle): void
+    {
+        $lines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) $text)), 'strlen') ?: [''];
+        foreach ($lines as $ln) {
+            $cell->addText($ln, $font, $pStyle);
+        }
     }
 
     /**
@@ -1186,6 +1224,115 @@ class ProposalDocxBuilder
         }, null, ['keepNext' => true]);
     }
 
+    /** File gambar sementara (gabungan barcode + stempel), dihapus setelah save(). */
+    private array $tempFiles = [];
+
+    // Sisi barcode di dokumen (cm), sama dengan Surat Tugas.
+    private const BARCODE_CM = 2.65;
+
+    /**
+     * Gambar untuk blok "Hormat kami": [path, lebar cm, tinggi cm] atau null.
+     * Barcode + stempel digabung jadi SATU gambar PNG lewat GD, supaya posisi
+     * stempel yang menimpa barcode sama persis di Word maupun LibreOffice
+     * (gambar mengambang sering bergeser antarversi LibreOffice).
+     */
+    private function signatureImage(): ?array
+    {
+        $p       = $this->project;
+        $disk    = \Illuminate\Support\Facades\Storage::disk('public');
+        $barcode = $p->use_signature_barcode && $p->signature_barcode && $disk->exists($p->signature_barcode)
+            ? $disk->path($p->signature_barcode) : null;
+        $stamp   = $p->use_stamp && is_file(public_path('images/stempel-spr.png'))
+            ? public_path('images/stempel-spr.png') : null;
+
+        if (! $barcode && ! $stamp) {
+            return null;
+        }
+        if (! $stamp) {
+            $bc = $this->cleanBarcode($barcode);
+            if (! $bc) {
+                return [$barcode, self::BARCODE_CM, self::BARCODE_CM];
+            }
+            return [$this->tempPng($bc), self::BARCODE_CM, self::BARCODE_CM];
+        }
+
+        $st = imagecreatefrompng($stamp);
+        $sw = imagesx($st);
+        $sh = imagesy($st);
+
+        if (! $barcode) {
+            imagedestroy($st);
+            $w = 4.5;
+            return [$stamp, $w, $w * $sh / $sw];
+        }
+
+        // Kanvas: barcode di kiri, stempel menimpa dari tengah barcode ke
+        // kanan (meniru contoh dokumen resmi). Satuan piksel barcode (370).
+        $bc  = $this->cleanBarcode($barcode);
+        $q   = 370;
+        $cw  = (int) round($q * 2.3);
+        $img = imagecreatetruecolor($cw, $q);
+        imagesavealpha($img, true);
+        imagefill($img, 0, 0, imagecolorallocatealpha($img, 0, 0, 0, 127));
+        if ($bc) {
+            imagecopyresampled($img, $bc, 0, 0, 0, 0, $q, $q, imagesx($bc), imagesy($bc));
+            imagedestroy($bc);
+        }
+        $tw = (int) round($q * 1.8);
+        $th = (int) round($tw * $sh / $sw);
+        imagealphablending($img, true);
+        imagecopyresampled($img, $st, (int) round($q * 0.45), (int) round(($q - $th) / 2 - $q * 0.08), 0, 0, $tw, $th, $sw, $sh);
+        imagedestroy($st);
+
+        return [$this->tempPng($img), self::BARCODE_CM * $cw / $q, self::BARCODE_CM];
+    }
+
+    /**
+     * Barcode dengan latar putih dibuat transparan dan tepi 4 piksel
+     * dibuang (2026-09-21, feedback user): garis abu-abu di tepi file
+     * barcode tidak lagi terlihat sebagai bingkai kaku di dokumen.
+     */
+    private function cleanBarcode(string $path): ?\GdImage
+    {
+        $src = @imagecreatefromstring((string) file_get_contents($path));
+        if (! $src) {
+            return null;
+        }
+        $w   = imagesx($src);
+        $h   = imagesy($src);
+        $img = imagecreatetruecolor($w, $h);
+        imagealphablending($img, false);
+        imagesavealpha($img, true);
+        $clear = imagecolorallocatealpha($img, 255, 255, 255, 127);
+        $edge  = 4;
+
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $rgb = imagecolorat($src, $x, $y);
+                $r = ($rgb >> 16) & 0xFF;
+                $g = ($rgb >> 8) & 0xFF;
+                $b = $rgb & 0xFF;
+                $onEdge = $x < $edge || $y < $edge || $x >= $w - $edge || $y >= $h - $edge;
+                imagesetpixel($img, $x, $y, ($onEdge || min($r, $g, $b) > 200) ? $clear : $rgb & 0xFFFFFF);
+            }
+        }
+        imagedestroy($src);
+
+        return $img;
+    }
+
+    /** Simpan gambar GD ke PNG sementara (dihapus setelah save()). */
+    private function tempPng(\GdImage $img): string
+    {
+        $out = storage_path('app/tmp/ttd-' . uniqid() . '.png');
+        @mkdir(dirname($out), 0775, true);
+        imagepng($img, $out);
+        imagedestroy($img);
+        $this->tempFiles[] = $out;
+
+        return $out;
+    }
+
     private function sectionTandaTangan(): void
     {
         // Paragraf jeda ber-keepNext = jembatan supaya blok tanda tangan
@@ -1209,8 +1356,17 @@ class ProposalDocxBuilder
         $l->addText('Hormat kami,', $this->fBody, ['spaceAfter' => 0]);
         $l->addText(strtoupper($this->cfg['company_name']), $this->fBold, ['spaceAfter' => 0]);
         $l->addText($this->cfg['company_tagline'], $this->fBody, ['spaceAfter' => 0]);
-        $l->addTextBreak(7); // ruang tanda tangan + stempel
-        $l->addText($sig['name'] . ', MAPPI (Cert.)', $this->fBold, ['spaceAfter' => 0]);
+        // Barcode tanda tangan / stempel (2026-09-21). Tanpa keduanya, nama
+        // penandatangan langsung di bawah nama kantor (tanpa ruang kosong).
+        if ($img = $this->signatureImage()) {
+            [$file, $wCm, $hCm] = $img;
+            $l->addImage($file, [
+                'width'  => Converter::cmToPoint($wCm),
+                'height' => Converter::cmToPoint($hCm),
+                'alignment' => Jc::START,
+            ]);
+        }
+        $l->addText($sig['name'], $this->fBold, ['spaceAfter' => 0]);
         $l->addText($sig['title'], $this->fBody, ['spaceAfter' => 0]);
         $l->addText('Penilai Properti Izin Menkeu No. : ' . $sig['izin_pp_no'], $this->fBody, ['spaceAfter' => 0]);
         $l->addText('MAPPI No. ' . $sig['mappi_no'], $this->fBody, ['spaceAfter' => 0]);

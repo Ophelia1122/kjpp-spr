@@ -254,6 +254,10 @@ class Project extends Model
         'assigned_appraiser',
         'assigned_appraiser_id',
         'signed_by_user_id',
+        'use_signature_barcode',
+        'signature_barcode',
+        'use_stamp',
+        'representative_limited',
         'approver_name',
         'approver_client_id',
         'marketing_name',
@@ -294,6 +298,9 @@ class Project extends Model
         'transport_cost'           => 'decimal:2',
         'fee_ppn_included'         => 'boolean',
         'fee_breakdown'            => 'boolean',
+        'use_signature_barcode'    => 'boolean',
+        'use_stamp'                => 'boolean',
+        'representative_limited'   => 'boolean',
         'transport_reimbursed'     => 'boolean',
         'sla_draft_days'           => 'integer',
         'sla_final_days'           => 'integer',
@@ -758,7 +765,25 @@ class Project extends Model
         return round((float) $this->invoices->where('status', Invoice::STATUS_PAID)->sum('amount'), 2);
     }
 
-    /** Sisa tagihan = total_fee - yang sudah Paid. Tidak pernah negatif. */
+    /** Total yang SUDAH ditagihkan (semua invoice, lunas maupun belum). */
+    public function getTotalInvoicedAttribute(): float
+    {
+        return round((float) $this->invoices->sum('amount'), 2);
+    }
+
+    /**
+     * Sisa Tagihan = nilai kontrak yang BELUM dibuatkan invoice
+     * (2026-09-21, feedback user). Batas nominal invoice baru.
+     */
+    public function getUninvoicedBalanceAttribute(): float
+    {
+        return max(0, round((float) $this->total_fee - $this->total_invoiced, 2));
+    }
+
+    /**
+     * Sisa Pelunasan = total_fee - yang sudah Paid (belum dibayar).
+     * Nama atribut lama dipertahankan karena dipakai dashboard & export.
+     */
     public function getRemainingBalanceAttribute(): float
     {
         return max(0, round((float) $this->total_fee - $this->total_paid, 2));
