@@ -7,7 +7,7 @@
         ['label' => 'SLA Draft', 'value' => $profile['avg_days'] !== null ? $profile['avg_days'] . ' hr' : '—',
          'sub' => $profile['on_time_pct'] !== null ? $profile['on_time_pct'] . '% tepat' : 'belum ada data',
          'tone' => ($profile['on_time_pct'] ?? 100) >= 80 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400',
-         'tip' => 'Rata-rata hari dari tanggal survei sampai nilai diajukan (1 tahun terakhir, ' . $profile['sample'] . ' proyek)'],
+         'tip' => 'Rata-rata hari dari tanggal survei sampai nilai diajukan (nilai diajukan bulan ini, ' . $profile['sample'] . ' proyek)'],
         ['label' => 'Survei bulan ini', 'value' => $profile['month_survey'], 'sub' => 'proyek', 'tone' => 'text-gray-900 dark:text-gray-100',
          'tip' => 'Proyek dengan tanggal survei di bulan berjalan'],
         ['label' => 'Selesai bulan ini', 'value' => $profile['month_done'], 'sub' => 'buku cetak', 'tone' => 'text-gray-900 dark:text-gray-100',
@@ -36,10 +36,13 @@
         </div>
     </div>
 
-    <div class="ml-auto flex flex-wrap items-center gap-x-5 gap-y-2">
+    {{-- HP: angka dalam grid 3 kolom selebar kartu supaya tiga angka utama
+         tetap satu baris (2026-09-21, feedback user). Desktop: berjajar di kanan. --}}
+    <div class="grid w-full grid-cols-3 gap-x-3 gap-y-3 border-t border-gray-100 pt-3 dark:border-gray-700
+                sm:ml-auto sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2 sm:border-0 sm:pt-0">
         @foreach ($stats as $s)
-            <div class="min-w-[86px] border-l border-gray-100 pl-4 first:border-0 first:pl-0 dark:border-gray-700" title="{{ $s['tip'] }}">
-                <p class="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ $s['label'] }}</p>
+            <div class="min-w-0 sm:min-w-[86px] sm:border-l sm:border-gray-100 sm:pl-4 sm:first:border-0 sm:first:pl-0 dark:border-gray-700" title="{{ $s['tip'] }}">
+                <p class="truncate text-[10px] uppercase tracking-wide text-gray-400 sm:text-[11px] dark:text-gray-500">{{ $s['label'] }}</p>
                 <p class="text-lg font-bold leading-tight {{ $s['tone'] }}">{{ $s['value'] }}</p>
                 <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ $s['sub'] }}</p>
             </div>

@@ -1356,9 +1356,12 @@ class ProposalDocxBuilder
         $l->addText('Hormat kami,', $this->fBody, ['spaceAfter' => 0]);
         $l->addText(strtoupper($this->cfg['company_name']), $this->fBold, ['spaceAfter' => 0]);
         $l->addText($this->cfg['company_tagline'], $this->fBody, ['spaceAfter' => 0]);
-        // Barcode tanda tangan / stempel (2026-09-21). Tanpa keduanya, nama
-        // penandatangan langsung di bawah nama kantor (tanpa ruang kosong).
-        if ($img = $this->signatureImage()) {
+        // Barcode tanda tangan / stempel (2026-09-21). Tanpa keduanya, ruang
+        // tanda tangan basah seperti semula (feedback user 2026-09-21).
+        $img = $this->signatureImage();
+        if (! $img) {
+            $l->addTextBreak(7);
+        } else {
             [$file, $wCm, $hCm] = $img;
             $l->addImage($file, [
                 'width'  => Converter::cmToPoint($wCm),

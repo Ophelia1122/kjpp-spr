@@ -235,11 +235,14 @@ class DashboardController extends Controller
         $officeWide = $mode === 'kantor';
         $base = fn () => $officeWide ? Project::query() : Project::forAppraiser($user->id);
 
-        // Skor SLA Draft: rata-rata hari survei -> submit nilai, 1 tahun terakhir.
+        $monthStart = now()->startOfMonth();
+        $monthEnd   = now()->endOfMonth();
+
+        // Skor SLA Draft: rata-rata hari survei -> submit nilai, nilai yang
+        // diajukan BULAN INI saja (2026-09-21, feedback user; dulu 1 tahun).
         $done = $base()
             ->whereNotNull('survey_date')
-            ->whereNotNull('review_submitted_at')
-            ->where('review_submitted_at', '>=', now()->subYear())
+            ->whereBetween('review_submitted_at', [$monthStart, $monthEnd])
             ->get();
 
         $avgDays = $done->isEmpty() ? null : round($done->avg(
@@ -251,9 +254,6 @@ class DashboardController extends Controller
             $withTarget->filter(fn ($p) => $p->review_submitted_at->lte($p->estimated_completion_date))->count()
                 / $withTarget->count() * 100
         );
-
-        $monthStart = now()->startOfMonth();
-        $monthEnd   = now()->endOfMonth();
 
         $profile = [
             'office_wide'  => $officeWide,
