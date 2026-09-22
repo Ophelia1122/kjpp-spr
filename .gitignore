@@ -35,3 +35,8 @@ Thumbs.db
 /*.sql
 /*.sql.gz
 /backups/
+
+# Data bot WhatsApp (sesi login & database) — JANGAN masuk git.
+/wa-db-data/
+/wa-instances/
+/tailscale-state/
