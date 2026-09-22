@@ -4,8 +4,16 @@ Bot mengirim pesan ke grup WhatsApp kantor:
 
 | Pemicu | Yang di-mention |
 |---|---|
-| Surveyor klik **Ajukan Review** | Reviewer di Surat Tugas proyek (bila tidak ada: semua Reviewer aktif) |
-| Reviewer klik **Kembalikan ke Surveyor** | Pengguna yang mengajukan review |
+| Surveyor klik **Submit Review** (nilai diajukan) | Reviewer di Surat Tugas proyek (bila tidak ada: semua Reviewer aktif) |
+| Admin Produksi klik **Konfirmasi Draft** (draft laporan dikirim ke Reviewer) | Sama seperti di atas |
+| Reviewer / Admin Produksi klik **Ke Surveyor** (nilai atau draft dikembalikan) | Pengguna yang mengajukan review + semua penilai lapangan proyek |
+
+Itu pengaturan bawaan. Semua tombol alur (termasuk Release Resume, Resume
+Disetujui, Resume Banding, Draft Dibuat, Telah Direview, Buku Dicetak) bisa
+diatur di **Pengaturan Sistem > Bot WhatsApp > Notifikasi per Tombol**:
+aktif/tidak, siapa yang di-mention (kelompok, jabatan, atau orang tertentu),
+grup tujuan (bawaan: grup utama), dan isi pesan dengan penanda seperti
+`{nomor_proposal}`, `{klien}`, `{oleh}`, `{catatan}`, `{mention}`, `{link}`.
 
 Pesan dikirim setelah halaman selesai diproses; bila bot mati, tombol tetap berjalan normal (kegagalan dicatat di `storage/logs/laravel.log`).
 

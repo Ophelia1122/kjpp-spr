@@ -1,7 +1,12 @@
-# Pin Debian Bookworm: tag generik php:8.3-fpm kini dapat berpindah ke
-# rilis Debian/LibreOffice baru. LibreOffice 25.2 pada base terbaru gagal
-# merender teks pada DOCX PhpWord proposal dalam mode headless.
+# Pin Debian Bookworm supaya base image tidak berpindah diam-diam.
 FROM php:8.3-fpm-bookworm
+
+# LibreOffice DIKUNCI ke versi yang sama dengan laptop pengembang (2026-09-22):
+# paket resmi The Document Foundation, bukan paket Debian (bookworm = 7.4,
+# hasil PDF-nya berbeda dari yang dicek di laptop). Ganti versi = ubah dua
+# baris ini, build ulang, lalu cek ulang hasil PDF proposal.
+ARG LO_VERSION=25.2.7.2
+ARG LO_SERIES=25.2
 
 # --- Dependency sistem: Laravel + nginx/supervisor + LibreOffice (proposal .docx -> PDF) ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -18,9 +23,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     fontconfig \
-    libreoffice-writer \
-    libreoffice-java-common \
-    default-jre-headless \
     fonts-liberation \
     fonts-dejavu-core \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -35,7 +37,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         opcache \
     && rm -rf /var/lib/apt/lists/*
 
-# Path binary LibreOffice untuk App\Services\DocxToPdf.
+# --- LibreOffice resmi (TDF) versi terkunci ---
+# Pustaka sistem yang dibutuhkan LibreOffice headless untuk konversi DOCX->PDF.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libxinerama1 libdbus-1-3 libcups2 libnss3 libsm6 libice6 libxext6 libxrender1 \
+        libx11-xcb1 libcairo2 libglib2.0-0 libxml2 libxslt1.1 \
+    && curl -fsSL -o /tmp/lo.tar.gz \
+        "https://downloadarchive.documentfoundation.org/libreoffice/old/${LO_VERSION}/deb/x86_64/LibreOffice_${LO_VERSION}_Linux_x86-64_deb.tar.gz" \
+    && mkdir /tmp/lo && tar -xzf /tmp/lo.tar.gz -C /tmp/lo --strip-components=1 \
+    && dpkg -i /tmp/lo/DEBS/*.deb \
+    && ln -sf /opt/libreoffice${LO_SERIES}/program/soffice /usr/local/bin/soffice \
+    && rm -rf /tmp/lo /tmp/lo.tar.gz /var/lib/apt/lists/* \
+    && soffice --version
+
+# Path binary LibreOffice untuk App\Services\DocxToPdf ("soffice" = symlink di atas).
 ENV LIBREOFFICE_BIN=soffice
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

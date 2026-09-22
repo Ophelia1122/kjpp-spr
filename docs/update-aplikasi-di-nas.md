@@ -41,8 +41,11 @@ cd /volume2/docker/kjpp-app && git rev-parse --is-inside-work-tree 2>/dev/null |
 
 ### 3A. Tarik perubahan
 
+Git dijalankan lewat container (`alpine/git`). `-c safe.directory=/repo` wajib,
+karena pemilik folder berbeda dengan user di dalam container.
+
 ```bash
-cd /volume2/docker/kjpp-app && git fetch origin && git checkout -f 19092026-update && git pull --ff-only && git log --oneline -3
+cd /volume2/docker/kjpp-app && sudo docker run --rm -v "$PWD":/repo -w /repo alpine/git -c safe.directory=/repo fetch origin 19092026-update && sudo docker run --rm -v "$PWD":/repo -w /repo alpine/git -c safe.directory=/repo checkout -f -B 19092026-update origin/19092026-update && sudo docker run --rm -v "$PWD":/repo -w /repo alpine/git -c safe.directory=/repo log --oneline -1
 ```
 
 `checkout -f` hanya menimpa file yang dilacak git. File data dan `.env` tidak tersentuh.
@@ -73,13 +76,36 @@ Untuk update berikutnya cukup dua perintah terakhir (`fetch` lalu `checkout -f`)
 > GitHub (Settings → Developer settings → Tokens), lalu pakai sebagai password.
 > Jangan menyimpan token di file yang ikut repo.
 
+### 3C. Pastikan font Arial Narrow ada (wajib sebelum build)
+
+File font berlisensi sehingga tidak ikut git. Tanpa file ini LibreOffice diam-diam
+memakai **Liberation Sans Narrow** dan huruf proposal terlihat berbeda/kaku.
+
+```bash
+ls /volume2/docker/kjpp-app/public/fonts/
+```
+
+Harus ada `arialn.ttf`, `arialnb.ttf`, `arialni.ttf`, `arialnbi.ttf`. Kalau kosong,
+salin dari laptop (`C:\laragon\www\kjpp-app\publiconts\`) lewat SMB dulu.
+
 ### 4. Bangun ulang container aplikasi
 
 ```bash
-cd /volume2/docker/kjpp-app && sudo docker compose up -d --build app && sudo docker compose logs -f app
+cd /volume2/docker/kjpp-app && sudo docker compose up -d --build app queue scheduler && sudo docker compose logs -f app
 ```
 
 Tunggu sampai muncul `nginx entered RUNNING state`, lalu tekan `Ctrl + C`.
+
+Sejak 22 September 2026 image memasang **LibreOffice 25.2.7** resmi (versi terkunci,
+sama dengan laptop). Build pertama sesudahnya mengunduh ±200 MB, jadi lebih lama.
+Cek versinya:
+
+```bash
+sudo docker exec kjpp-app soffice --version
+sudo docker exec kjpp-app fc-list | grep -ci "arial narrow"
+```
+
+Hasil harus `LibreOffice 25.2.7.2 ...` dan angka `4` (empat file font terpasang).
 
 Saat start, container otomatis menjalankan `storage:link`, `migrate --force`, dan `optimize`.
 
@@ -125,6 +151,9 @@ Semua bersifat **menambah**. Tidak ada kolom yang dihapus, tidak ada data yang d
 | `000012_add_payment_terms_to_projects` | Kolom persentase termin | Kosong = ikut bawaan skema (50/50 atau 100%) |
 | `000013_add_performance_indexes` | Indeks pada kolom filter & urutan | Hanya mempercepat; isi tabel tidak berubah |
 | `000014_add_soft_deletes_to_projects_and_clients` | Kolom `deleted_at` (Sampah) | Kosong untuk data lama; tidak ada yang terhapus |
+| `000015_add_signature_options_to_projects` | Barcode tanda tangan, stempel, opsi Representatif terbatas | Proyek lama: tanpa barcode/stempel |
+| `000016_create_whatsapp_notifications_table` | Tabel baru pengaturan notifikasi WhatsApp per tombol | Tidak ada data lama yang berubah |
+| `000017_add_status_penilai_fields_to_users` | Izin Penilai Pertanahan & sektor OJK di biodata user | Kosong untuk user lama |
 
 Kalau NAS sudah pernah menjalankan 000010–000012 (terlihat `Ran` di langkah 5),
 update ini hanya menambahkan 000013 dan 000014.
@@ -153,6 +182,27 @@ sudo docker exec kjpp-app php artisan trash:purge --dry-run
 ```
 
 ---
+
+## Sekali saja setelah update 22 September 2026
+
+**Akun Penilai Publik.** Membuat akun Budi, Heru, Pipik, Hery (jabatan Penanggung
+Jawab) dan melengkapi sektor OJK Arief. Aman diulang; data yang sudah diisi tidak
+ditimpa. Cek dulu dengan `--dry-run`:
+
+```bash
+sudo docker exec kjpp-app php artisan kjpp:penilai-publik --dry-run
+sudo docker exec kjpp-app php artisan kjpp:penilai-publik
+```
+
+Lalu di aplikasi: atur password keempat akun (Kelola Pengguna), dan pastikan nama
+Penanggung Jawab memuat gelar lengkap, mis. `..., MAPPI (Cert.)` — gelar tidak lagi
+ditambahkan otomatis.
+
+**Bot WhatsApp.** Ikuti [bot-whatsapp.md](bot-whatsapp.md). Ringkasnya: isi
+`WA_BOT_API_KEY` & `WA_DB_PASSWORD` di `.env`, `sudo docker compose up -d wa wa-db`,
+buat instance `kjpp` & scan QR di `http://IP-NAS:8081/manager`, lalu di aplikasi isi
+URL **`http://kjpp-wa:8080`**. Logout dulu sesi bot di laptop supaya nomor tidak
+tersambung di dua tempat.
 
 ## Kalau update bermasalah
 

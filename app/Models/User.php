@@ -17,6 +17,7 @@ use Illuminate\Notifications\Notifiable;
     // saat user ini jadi penandatangan.
     'jabatan', 'partner_status', 'mappi_no', 'rmk_no', 'izin_menkeu_no',
     'sk_menkeu_no', 'sk_menkeu_date', 'sttd_ojk_no', 'sttd_ojk_date',
+    'pertanahan_izin_no', 'pertanahan_izin_date', 'ojk_sectors',
     'klasifikasi', 'whatsapp_number', 'avatar_path',
 ])]
 #[Hidden(['password', 'remember_token'])]
@@ -123,6 +124,35 @@ class User extends Authenticatable
     public const JABATAN_PENANGGUNG_JAWAB   = 'Penanggung Jawab';
     public const JABATAN_REVIEWER           = 'Reviewer';
 
+    /**
+     * Sektor jasa keuangan pada Surat Tanda Terdaftar OJK (2026-09-22).
+     * Dicetak berurutan sebagai daftar bernomor di bab Penjelasan Status
+     * Penilai. Tiap penilai bisa punya lingkup berbeda.
+     */
+    public const OJK_SECTORS = [
+        'Perbankan',
+        'Pasar Modal, Keuangan Derivatif dan Bursa Karbon dengan ruang lingkup kegiatan Penilai Properti',
+        'Perasuransian, Penjaminan dan Dana Pensiun',
+        'Lembaga Pembiayaan, Perusahaan Modal Ventura, Lembaga Keuangan Mikro dan Lembaga Jasa Keuangan Lainnya',
+        'Inovasi Teknologi Sektor Keuangan serta Aset Keuangan Digital dan Aset Kripto',
+    ];
+
+    /**
+     * Gabungkan centang sektor baku (urut sesuai daftar baku) dengan sektor
+     * tambahan yang diketik satu per baris. Null bila kosong semua.
+     */
+    public static function composeOjkSectors(array $checked, ?string $other): ?array
+    {
+        $extra = collect(preg_split('/\r\n|\r|\n/', (string) $other))
+            ->map(fn ($l) => trim(rtrim(trim($l), ';.')))
+            ->filter()
+            ->reject(fn ($l) => in_array($l, self::OJK_SECTORS, true));
+
+        $all = collect(self::OJK_SECTORS)->intersect($checked)->values()->merge($extra)->unique()->values()->all();
+
+        return $all ?: null;
+    }
+
     public const JABATAN_OPTIONS = [
         self::JABATAN_PELAKSANA_INSPEKSI,
         self::JABATAN_PENILAI,
@@ -143,6 +173,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'dark_mode' => 'boolean',
+            'ojk_sectors' => 'array',
         ];
     }
 

@@ -62,7 +62,8 @@ class UserController extends Controller
             'role_id'  => 'required|exists:roles,id',
         ] + $this->biodataRules(), User::$avatarMessages);
 
-        $user = new User(\Illuminate\Support\Arr::except($validated, ['avatar', 'remove_avatar']));
+        $validated['ojk_sectors'] = User::composeOjkSectors($validated['ojk_sectors'] ?? [], $validated['ojk_sectors_other'] ?? null);
+        $user = new User(\Illuminate\Support\Arr::except($validated, ['avatar', 'remove_avatar', 'ojk_sectors_other']));
         $user->applyAvatarUpload($request);
         $user->save(); // password otomatis ter-hash lewat cast 'hashed' di Model
         \App\Helpers\AuditLogger::record('user.created', "Menambahkan pengguna baru \"{$user->name}\" dengan role {$user->role?->name}", $user);
@@ -110,6 +111,9 @@ class UserController extends Controller
             'sk_menkeu_date'  => $validated['sk_menkeu_date'] ?? null,
             'sttd_ojk_date'   => $validated['sttd_ojk_date'] ?? null,
             'klasifikasi'     => $validated['klasifikasi'] ?? null,
+            'pertanahan_izin_no'   => $validated['pertanahan_izin_no'] ?? null,
+            'pertanahan_izin_date' => $validated['pertanahan_izin_date'] ?? null,
+            'ojk_sectors'          => User::composeOjkSectors($validated['ojk_sectors'] ?? [], $validated['ojk_sectors_other'] ?? null),
             'whatsapp_number' => $validated['whatsapp_number'] ?? null,
         ]);
 
@@ -168,6 +172,11 @@ class UserController extends Controller
             'sk_menkeu_date'  => 'nullable|date',
             'sttd_ojk_date'   => 'nullable|date',
             'klasifikasi'     => 'nullable|string|max:255',
+            'pertanahan_izin_no'   => 'nullable|string|max:255',
+            'pertanahan_izin_date' => 'nullable|date',
+            'ojk_sectors'          => 'nullable|array',
+            'ojk_sectors.*'        => ['string', Rule::in(User::OJK_SECTORS)],
+            'ojk_sectors_other'    => 'nullable|string|max:2000',
             'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s]+$/'],
             'avatar'          => User::AVATAR_RULES,
             'remove_avatar'   => 'nullable|boolean',

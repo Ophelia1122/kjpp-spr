@@ -214,5 +214,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings/whatsapp', [\App\Http\Controllers\WhatsAppSettingsController::class, 'update'])->name('settings.whatsapp.update');
         Route::get('/settings/whatsapp/groups', [\App\Http\Controllers\WhatsAppSettingsController::class, 'groups'])->name('settings.whatsapp.groups');
         Route::post('/settings/whatsapp/test', [\App\Http\Controllers\WhatsAppSettingsController::class, 'test'])->name('settings.whatsapp.test');
+        Route::put('/settings/whatsapp/notifications', [\App\Http\Controllers\WhatsAppSettingsController::class, 'updateNotifications'])->name('settings.whatsapp.notifications');
+        Route::post('/settings/whatsapp/notifications/{step}/test', [\App\Http\Controllers\WhatsAppSettingsController::class, 'testNotification'])->name('settings.whatsapp.notifications.test');
     });
 });

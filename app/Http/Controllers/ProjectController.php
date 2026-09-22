@@ -170,13 +170,7 @@ class ProjectController extends Controller
 
         // Notifikasi WhatsApp dikirim setelah respons — tidak memperlambat tombol.
         $actor = auth()->user();
-        if (in_array($step, ['submit_value', 'confirm_draft'], true)) {
-            $title = $step === 'submit_value' ? 'Pengajuan Review Nilai' : 'Review Draft Laporan';
-            dispatch(fn () => \App\Services\WhatsAppNotifier::reviewSubmitted($project, $actor, $note, $title))->afterResponse();
-        } elseif ($isReturn) {
-            $title = $def['title'];
-            dispatch(fn () => \App\Services\WhatsAppNotifier::reviewReturned($project, $actor, (string) $note, $title))->afterResponse();
-        }
+        dispatch(fn () => \App\Services\WhatsAppNotifier::workflowStep($project->fresh(), $step, $actor, $note))->afterResponse();
 
         return back()->with($isReturn ? 'warning' : ($stays ? 'info' : 'success'), $def['flash']);
     }

@@ -125,6 +125,39 @@
                     {{-- Isian "KEP OJK" dihapus — nomornya sama dengan STTD OJK
                          di atas (2026-09-15, feedback user). --}}
                 </div>
+            {{-- Bab "Penjelasan Status Penilai" (2026-09-22): sektor OJK & izin
+                 Penilai Pertanahan. Izin pertanahan kosong = poinnya tidak dicetak. --}}
+            <div>
+                <p class="block text-sm font-medium text-gray-700 dark:text-gray-300">Lingkup Sektor Jasa Keuangan (OJK)</p>
+                @php $bioSectors = (array) old('ojk_sectors', []); @endphp
+                <div class="mt-1.5 space-y-1.5">
+                    @foreach (\App\Models\User::OJK_SECTORS as $sector)
+                        <label class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <input type="checkbox" name="ojk_sectors[]" value="{{ $sector }}" class="mt-0.5 rounded border-gray-300" @checked(in_array($sector, $bioSectors, true))>
+                            {{ $sector }}
+                        </label>
+                    @endforeach
+                </div>
+                <label class="mt-3 block text-xs font-medium text-gray-500 dark:text-gray-400" for="ojk_sectors_other">Sektor lain (di luar daftar di atas), satu per baris</label>
+                <textarea id="ojk_sectors_other" name="ojk_sectors_other" rows="2" placeholder="Contoh: Pergadaian"
+                class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600">{{ old('ojk_sectors_other', '') }}</textarea>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Dicetak berurutan di bab Penjelasan Status Penilai.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor Izin Penilai Pertanahan</label>
+                    <input type="text" name="pertanahan_izin_no" value="{{ old('pertanahan_izin_no') }}"
+                           placeholder="Kosongkan bila tidak ada"
+                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Izin Pertanahan</label>
+                    <input type="date" name="pertanahan_izin_date" lang="id"
+                           value="{{ old('pertanahan_izin_date') }}"
+                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                </div>
+            </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Klasifikasi</label>
                     <input type="text" name="klasifikasi" value="{{ old('klasifikasi') }}"

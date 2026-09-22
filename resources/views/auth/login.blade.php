@@ -93,7 +93,7 @@
                 <span class="text-3xl font-bold italic tracking-tight text-white" style="font-family: Georgia, 'Times New Roman', serif;">SPR</span>
             </div>
             <div class="text-lg font-semibold text-white">KJPP Sugianto Prasodjo &amp; Rekan</div>
-            <div class="text-sm text-slate-400">Workshop Kebagusan</div>
+            <div class="text-sm text-slate-400">Supporting Business Unit Kebagusan</div>
         </div>
 
         <div class="glow-card rise rise-1 rounded-2xl bg-white/[.06] p-6 backdrop-blur-xl space-y-4">

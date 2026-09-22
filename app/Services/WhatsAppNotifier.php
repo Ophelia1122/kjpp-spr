@@ -5,15 +5,15 @@ namespace App\Services;
 use App\Models\AppSetting;
 use App\Models\Project;
 use App\Models\User;
+use App\Models\WhatsAppNotification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Bot notifikasi WhatsApp (2026-09-14, feedback user) — mengirim pesan ke grup
  * WhatsApp kantor lewat Evolution API (container sendiri di NAS) dan me-mention
- * pengguna terkait. Pemicu saat ini:
- *   - Surveyor mengajukan review   -> mention Reviewer
- *   - Reviewer mengembalikan proyek -> mention Surveyor yang mengajukan
+ * pengguna terkait. Pemicu = tombol alur proyek; isi pesan, penerima, dan
+ * grup tiap tombol diatur di Pengaturan Sistem > Bot WhatsApp (2026-09-22).
  *
  * Pengaturan disimpan di app_settings (halaman Pengaturan Sistem > Bot WhatsApp),
  * dengan cadangan dari .env. Kegagalan kirim TIDAK pernah menggagalkan aksi
@@ -60,58 +60,80 @@ class WhatsAppNotifier
     }
 
     // ===================================================================
-    // Pemicu
+    // Pemicu: satu tombol alur proyek (2026-09-22)
     // ===================================================================
 
-    public static function reviewSubmitted(Project $project, ?User $submitter, ?string $note = null, string $title = 'Pengajuan Review Nilai'): void
+    /**
+     * Kirim notifikasi untuk tombol alur $step sesuai pengaturan di
+     * Pengaturan Sistem > Bot WhatsApp (isi pesan, penerima, grup).
+     * $project sudah berisi tahap SETELAH tombol ditekan.
+     */
+    public static function workflowStep(Project $project, string $step, ?User $actor, ?string $note = null): bool
     {
-        $project->loadMissing('assignmentStaff.user');
+        $cfg = WhatsAppNotification::forStep($step);
+        if (! $cfg->enabled) {
+            return false;
+        }
 
-        // Reviewer yang ditugaskan di Surat Tugas proyek ini; bila tidak ada,
-        // semua pengguna aktif berjabatan Reviewer.
+        $users = self::recipients($project, (array) $cfg->recipients);
+        $text  = self::render($cfg->template, $project, $step, $actor, $note, $users);
+
+        return self::sendToGroup($text, $users, $cfg->group_jid);
+    }
+
+    /** Pengguna penerima mention dari daftar kelompok penerima. */
+    public static function recipients(Project $project, array $groups)
+    {
+        $project->loadMissing('assignmentStaff.user', 'reviewSubmittedBy', 'appraisers');
+        $users = collect();
+
+        foreach ($groups as $group) {
+            $users = $users->merge(match (true) {
+                $group === 'reviewers'  => self::reviewersOf($project),
+                $group === 'appraisers' => $project->appraisers->isNotEmpty()
+                    ? $project->appraisers
+                    : collect([User::find($project->assigned_appraiser_id)]),
+                $group === 'submitter'  => collect([$project->reviewSubmittedBy]),
+                str_starts_with($group, 'jabatan:') => User::where('jabatan', substr($group, 8))->where('is_active', true)->get(),
+                str_starts_with($group, 'user:')    => User::whereKey((int) substr($group, 5))->where('is_active', true)->get(),
+                default => collect(),
+            });
+        }
+
+        return $users->filter()->unique('id')->values();
+    }
+
+    /** Reviewer di Surat Tugas proyek; bila tidak ada, semua Reviewer aktif. */
+    private static function reviewersOf(Project $project)
+    {
         $reviewers = $project->assignmentStaff->pluck('user')->filter()
             ->filter(fn (User $u) => $u->isReviewer() && $u->is_active)
             ->unique('id')->values();
-        if ($reviewers->isEmpty()) {
-            $reviewers = User::where('jabatan', User::JABATAN_REVIEWER)->where('is_active', true)->get();
-        }
 
-        $lines = [
-            '📝 *' . $title . '*',
-            '',
-            'Proyek *' . $project->proposal_number . '*',
-            'Klien: ' . ($project->effective_client_name ?? '-'),
-            'Dari: ' . ($submitter->name ?? '-'),
-            ...(filled($note) ? ['Catatan: ' . $note] : []),
-            '',
-            self::mentionLine($reviewers) . ' mohon direview 🙏',
-            route('proposals.show', $project),
-        ];
-
-        self::sendToGroup(implode("\n", $lines), $reviewers);
+        return $reviewers->isNotEmpty()
+            ? $reviewers
+            : User::where('jabatan', User::JABATAN_REVIEWER)->where('is_active', true)->get();
     }
 
-    public static function reviewReturned(Project $project, ?User $reviewer, string $reason, string $title = 'Dikembalikan ke Surveyor'): void
+    /** Isi pesan dengan penanda diganti. Baris {catatan} dihapus bila catatan kosong. */
+    public static function render(string $template, Project $project, string $step, ?User $actor, ?string $note, $users): string
     {
-        // Mention pengaju review & SEMUA penilai lapangan proyek (bisa orang yang sama).
-        $project->loadMissing('reviewSubmittedBy', 'appraisers');
-        $surveyors = collect([$project->reviewSubmittedBy])
-            ->merge($project->appraisers->isNotEmpty() ? $project->appraisers : [User::find($project->assigned_appraiser_id)])
-            ->filter()->unique('id')->values();
+        $lines = preg_split('/\r\n|\r|\n/', $template);
+        if (blank($note)) {
+            $lines = array_filter($lines, fn ($l) => ! str_contains($l, '{catatan}'));
+        }
 
-        $lines = [
-            '↩️ *' . $title . '*',
-            '',
-            'Proyek *' . $project->proposal_number . '*',
-            'Klien: ' . ($project->effective_client_name ?? '-'),
-            'Dikembalikan oleh: ' . ($reviewer->name ?? '-'),
-            'Alasan: ' . $reason,
-            '',
-            self::mentionLine($surveyors) . ' mohon direvisi 🙏',
-            route('proposals.show', $project),
-        ];
-
-        self::sendToGroup(implode("\n", $lines), $surveyors);
+        return trim(strtr(implode("\n", $lines), [
+            '{judul}'          => Project::WORKFLOW_STEPS[$step]['title'] ?? $step,
+            '{nomor_proposal}' => $project->proposal_number,
+            '{klien}'          => $project->effective_client_name ?: '-',
+            '{pemberi_tugas}'  => $project->instructingClient?->client_name ?? '-',
+            '{oleh}'           => $actor?->name ?? '-',
+            '{catatan}'        => (string) $note,
+            '{tahap}'          => $project->stage['label'] ?? '-',
+            '{mention}'        => self::mentionLine($users),
+            '{link}'           => route('proposals.show', $project),
+        ]));
     }
 
     // ===================================================================
@@ -119,7 +141,7 @@ class WhatsAppNotifier
     // ===================================================================
 
     /** "@6281... @6285..." — pengguna tanpa nomor WA ditulis namanya saja. */
-    private static function mentionLine($users): string
+    public static function mentionLine($users): string
     {
         $parts = collect($users)->map(function (User $u) {
             $n = self::normalizeNumber($u->whatsapp_number);
@@ -129,7 +151,7 @@ class WhatsAppNotifier
         return $parts->isEmpty() ? 'Tim' : $parts->implode(' ');
     }
 
-    public static function sendToGroup(string $text, $mentionUsers = []): bool
+    public static function sendToGroup(string $text, $mentionUsers = [], ?string $groupJid = null): bool
     {
         if (! self::isConfigured()) {
             return false;
@@ -139,7 +161,8 @@ class WhatsAppNotifier
             ->map(fn (User $u) => self::normalizeNumber($u->whatsapp_number))
             ->filter()->unique()->values()->all();
 
-        return self::send(self::setting('group_jid'), $text, $mentioned);
+        // Grup khusus per tombol; kosong = grup utama.
+        return self::send($groupJid ?: self::setting('group_jid'), $text, $mentioned);
     }
 
     /** Kirim teks ke nomor/grup. Mengembalikan true bila API menerima pesan. */
@@ -171,10 +194,15 @@ class WhatsAppNotifier
             ->get('/group/fetchAllGroups/' . rawurlencode(self::setting('instance')), ['getParticipants' => 'false']);
         $response->throw();
 
-        return collect($response->json())
+        $groups = collect($response->json())
             ->map(fn ($g) => ['id' => $g['id'] ?? '', 'subject' => $g['subject'] ?? '(tanpa nama)'])
             ->filter(fn ($g) => str_ends_with($g['id'], '@g.us'))
             ->sortBy('subject')->values()->all();
+
+        // Disimpan supaya pilihan grup per tombol tampil dengan nama grup.
+        AppSetting::putValue('wa_groups_cache', json_encode($groups));
+
+        return $groups;
     }
 
     private static function client()

@@ -60,7 +60,7 @@ class ProposalDocxBuilder
 
     // Indent kiri (twip) untuk SELURUH isi bab — supaya isi sejajar dengan
     // huruf pertama judul bab, bukan dengan nomornya. = kira-kira lebar
-    // "N. ". Di-set di sectionTitle()/sectionIdentifikasi(), 0 di luar bab.
+    // "N. ". Di-set di sectionTitle(), 0 di luar bab.
     private int $bodyIndent = 0;
 
     // Tabel daftar bernomor yang sedang dibangun (lihat openListRow/closeList).
@@ -83,20 +83,20 @@ class ProposalDocxBuilder
         'status_penilai' => [
             'title'    => 'Penjelasan Status Penilai',
             'editable' => true,
-            'note'     => 'Nomor izin (Menkeu, OJK, MAPPI, dll) sudah ter-render dari data penandatangan/kantor.',
+            'note'     => 'Nomor izin, izin Penilai Pertanahan & sektor OJK diambil dari biodata penandatangan. Tampil sebagai poin; bila diedit, tiap blok jadi paragraf biasa.',
         ],
         'pemberi_tugas' => [
-            'title'    => 'Identifikasi Pemberi Tugas',
+            'title'    => 'Pemberi Tugas',
             'editable' => false,
-            'note'     => 'Isinya blok nama + alamat Pemberi Tugas, dibuat otomatis dari data klien. Tidak ada teks prosa untuk diedit.',
+            'note'     => 'Satu paragraf nama + alamat Pemberi Tugas, dibuat otomatis dari data klien. Tidak ada teks prosa untuk diedit.',
         ],
         'pengguna_laporan' => [
-            'title'    => 'Identifikasi Pengguna Laporan',
+            'title'    => 'Pengguna Laporan',
             'editable' => false,
-            'note'     => 'Isinya daftar nama + alamat Pengguna Laporan, dibuat otomatis dari data klien.',
+            'note'     => 'Satu paragraf nama + alamat seluruh Pengguna Laporan, dibuat otomatis dari data klien.',
         ],
         'pengguna_laporan_lk' => [
-            'title'    => 'Identifikasi Pengguna Laporan — Kalimat KAP/Auditor',
+            'title'    => 'Pengguna Laporan — Kalimat KAP/Auditor',
             'editable' => true,
             'note'     => 'Kalimat tambahan khusus proposal Pelaporan Keuangan, tercetak setelah daftar Pengguna Laporan.',
             'only'     => Project::PURPOSE_LK_PROPERTI,
@@ -492,6 +492,9 @@ class ProposalDocxBuilder
             'mappi_no'     => $u->mappi_no ?: $cfg['mappi_no'],
             'rmk_no'       => $u->rmk_no ?: $cfg['rmk_no'],
             'klasifikasi'  => $u->klasifikasi ?: $cfg['klasifikasi'],
+            // Bab Penjelasan Status Penilai versi poin (2026-09-22).
+            'pertanahan'   => $u->licenseWithDate('pertanahan_izin_no', 'pertanahan_izin_date'),
+            'ojk_sectors'  => $u->ojk_sectors ?: null,
         ];
     }
 
@@ -502,6 +505,9 @@ class ProposalDocxBuilder
 
         return [
             ':nama'        => $sig['name'],
+            // "Klasifikasi Bidang Jasa Properti dan Bisnis" -> "Penilai Publik Properti dan Bisnis".
+            ':jenis'       => 'Penilai Publik ' . (trim((string) preg_replace('/^\s*klasifikasi\s+bidang\s+jasa\s+/i', '', (string) $sig['klasifikasi'])) ?: 'Properti'),
+            ':pertanahan'  => (string) ($sig['pertanahan'] ?? ''),
             ':izin'        => $sig['izin_pp_no'],
             ':sk_menkeu'   => $sig['sk_menkeu_no'],
             // Nomor KEP Dewan Komisioner OJK = nomor Surat Tanda Terdaftar OJK
@@ -513,76 +519,85 @@ class ProposalDocxBuilder
         ];
     }
 
+    /**
+     * Poin-poin bab Penjelasan Status Penilai (2026-09-22): key => teks, sudah
+     * diisi data. Poin pertanahan dibuang bila penandatangan tidak punya izin.
+     */
+    private function statusPenilaiPoin(): array
+    {
+        $repl = $this->statusPenilaiRepl();
+        $poin = array_map(fn ($t) => strtr($t, $repl), $this->cl['status_penilai_poin']);
+        if (blank($this->signatory()['pertanahan'] ?? null)) {
+            unset($poin['pertanahan']);
+        }
+
+        return $poin;
+    }
+
+    /** Sektor OJK penandatangan; kosong = 4 sektor baku (tanpa Pasar Modal). */
+    private function ojkSectors(): array
+    {
+        $list = $this->signatory()['ojk_sectors'] ?? null;
+
+        return $list ?: array_values(array_filter(
+            \App\Models\User::OJK_SECTORS, fn ($x) => ! str_starts_with($x, 'Pasar Modal')
+        ));
+    }
+
     private function sectionStatusPenilai(): void
     {
         $this->sectionTitle('Penjelasan Status Penilai');
         $this->bodyOr('status_penilai', function () {
-            $repl = $this->statusPenilaiRepl();
-            foreach ($this->cl['status_penilai'] as $p) {
-                $this->richPara(strtr($p, $repl));
+            // Daftar poin "•" (bukan paragraf) mengikuti dokumen resmi; sektor
+            // OJK jadi sub-daftar bernomor di bawah poin OJK.
+            foreach ($this->statusPenilaiPoin() as $key => $text) {
+                $this->bulletItem($text);
+                if ($key === 'ojk') {
+                    $sectors = $this->ojkSectors();
+                    foreach ($sectors as $i => $sector) {
+                        $this->numberedSubItem($i + 1, $sector . ($i === count($sectors) - 1 ? '.' : ''));
+                    }
+                }
             }
         });
     }
 
     /**
-     * Bab Identifikasi (Pemberi Tugas / Pengguna Laporan) — format 2 kolom:
-     * kolom kiri = nomor + judul bab + sub-label; kolom kanan = nama pihak
-     * (tebal) diikuti baris-baris alamat. Bila pihak lebih dari satu,
-     * masing-masing jadi blok bertumpuk dengan jarak antar-blok.
+     * "**PT A** yang beralamat di Jl. X" — satu pihak untuk paragraf bab
+     * Pemberi Tugas / Pengguna Laporan (2026-09-22, feedback user).
      */
-    private function sectionIdentifikasi(string $title, string $subLabel, array $parties, ?string $trailing = null): void
+    private function partyPhrase($client): string
     {
-        $this->closeList();
-        $this->listJustClosed = false;
-        $this->secNo++;
-        $this->listNo = 0;
-        $this->bodyIndent = $this->numPrefixIndent();
+        $name = '**' . mb_strtoupper((string) $client->client_name) . '**';
+        $addr = rtrim($this->flatAddress($client->address), ' .');
 
-        $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
-        $t->addRow(null, ['cantSplit' => true]);
+        return $addr === '' ? $name : $name . ' yang beralamat di ' . $addr;
+    }
 
-        $left = $t->addCell(Converter::cmToTwip(6.4));
-        $left->addText(
-            $this->secNo . '. ' . $title,
-            ['bold' => true, 'size' => self::HEADING_SIZE, 'name' => $this->fName],
-            ['spaceBefore' => 220, 'spaceAfter' => 40]
-        );
-        // "Pemberi/Pengguna Laporan adalah" sejajar dg huruf pertama judul
-        // (setelah "N. "), bukan di bawah nomornya.
-        $left->addText($subLabel, $this->fBody, ['spaceAfter' => 0] + $this->bodyIndentStyle());
-
-        $right = $t->addCell(Converter::cmToTwip(9.5));
-        foreach (array_values($parties) as $i => $p) {
-            $lead = ['spaceBefore' => $i === 0 ? 220 : 160];
-            $right->addText($p['name'], $this->fBold, ['spaceAfter' => 0] + $lead);
-            foreach ($p['lines'] as $ln) {
-                $right->addText($ln, $this->fBody, ['spaceAfter' => 0]);
-            }
+    /** "A", "A dan B", "A, B dan C". */
+    private function joinParties(array $phrases): string
+    {
+        if (count($phrases) <= 1) {
+            return (string) ($phrases[0] ?? '');
         }
+        $last = array_pop($phrases);
 
-        if ($trailing !== null && $trailing !== '') {
-            $this->para($trailing);
-        }
+        return implode(', ', $phrases) . ' dan ' . $last;
     }
 
     private function sectionPemberiTugas(): void
     {
-        $pt = $this->project->instructingClient;
-        $this->sectionIdentifikasi('Identifikasi Pemberi Tugas', 'Pemberi Tugas adalah', [
-            ['name' => mb_strtoupper((string) $pt->client_name), 'lines' => $this->addressLines($pt->address)],
-        ]);
+        $this->sectionTitle('Pemberi Tugas');
+        $this->richPara('Pemberi Tugas adalah ' . $this->partyPhrase($this->project->instructingClient) . '.');
     }
 
     private function sectionPenggunaLaporan(): void
     {
-        $parties = [];
-        foreach ($this->project->intendedUsers as $u) {
-            $parties[] = ['name' => mb_strtoupper((string) $u->client_name), 'lines' => $this->addressLines($u->address)];
-        }
+        $this->sectionTitle('Pengguna Laporan');
+        $phrases = $this->project->intendedUsers->map(fn ($u) => $this->partyPhrase($u))->all();
+        $this->richPara('Pengguna laporan adalah ' . $this->joinParties($phrases) . '.');
 
-        $this->sectionIdentifikasi('Identifikasi Pengguna Laporan', 'Pengguna Laporan adalah', $parties);
-
-        // Kalimat KAP/Auditor — khusus Pelaporan Keuangan, di bawah tabel.
+        // Kalimat KAP/Auditor — khusus Pelaporan Keuangan.
         if ($this->project->proposal_purpose === Project::PURPOSE_LK_PROPERTI) {
             $this->bodyOr('pengguna_laporan_lk', fn () => $this->para($this->pgnLaporanLkBaku()));
         }
@@ -1526,8 +1541,10 @@ class ProposalDocxBuilder
         return match ($key) {
             'pembuka'        => $this->pembukaBaku(),
             'status_penilai' => $this->stripMd(implode("\n\n", array_map(
-                fn ($p) => strtr($p, $this->statusPenilaiRepl()),
-                $this->cl['status_penilai']
+                fn ($k, $p) => $k === 'ojk'
+                    ? $p . "\n" . implode("\n", array_map(fn ($i, $x) => ($i + 1) . '. ' . $x, array_keys($this->ojkSectors()), $this->ojkSectors()))
+                    : $p,
+                array_keys($this->statusPenilaiPoin()), $this->statusPenilaiPoin()
             ))),
             'pengguna_laporan_lk' => $this->pgnLaporanLkBaku(),
             'objek' => strtr($this->cl['post_objek_hubungan'], $this->objekPenutupRepl())
@@ -1666,10 +1683,17 @@ class ProposalDocxBuilder
         $hPara = ['spaceBefore' => 220, 'spaceAfter' => 70, 'keepNext' => true, 'keepLines' => true];
 
         // Istilah Inggris pada judul (mis. "(Exposure Time)") tetap dimiringkan.
+        // Judul huruf besar + garis bawah (2026-09-22, feedback user); nomor
+        // bab tidak ikut digarisbawahi.
+        // Judul sangat panjang (mis. bab "Batasan atau Pengecualian ...")
+        // dirapatkan jarak hurufnya 0,5 pt supaya tetap 1 baris.
+        if (mb_strlen($title) > 70) {
+            $hFont['spacing'] = -10;   // 1/20 pt
+        }
         $tr = $this->s->addTextRun($hPara);
         $tr->addText($this->secNo . '. ', $hFont);
-        foreach ($this->scanTerms($title, true) as [$t, $b, $it]) {
-            $tr->addText($t, $it ? ['italic' => true] + $hFont : $hFont);
+        foreach ($this->scanTerms(mb_strtoupper($title), true) as [$t, $b, $it]) {
+            $tr->addText($t, ($it ? ['italic' => true] : []) + ['underline' => 'single'] + $hFont);
         }
 
         $this->keepWithHeading = true;
@@ -1750,9 +1774,14 @@ class ProposalDocxBuilder
     }
 
     /** Buang markup **…** (untuk textarea editor teks). */
+    /**
+     * Teks baku untuk editor. Penanda **tebal** sekarang DIBIARKAN (2026-09-22,
+     * feedback user) supaya bagian tebal terlihat & bisa ditambah/dihapus di
+     * Editor Teks; saat dicetak, **...** jadi huruf tebal.
+     */
     private function stripMd(string $text): string
     {
-        return str_replace('**', '', $text);
+        return $text;
     }
 
     private function runFont(bool $bold, bool $italic, ?array $base = null): array
@@ -1861,7 +1890,8 @@ class ProposalDocxBuilder
 
     // Ukuran font (pt) judul sub-bab bernomor + judul "LAMPIRAN …".
     // Isi paragraf memakai config('kjpp.pdf_font_size') (default 11).
-    private const HEADING_SIZE = 12;
+    // 11 pt sejak 2026-09-22 (huruf besar membuat judul panjang jadi 2 baris di 12 pt).
+    private const HEADING_SIZE = 11;
 
     // Lebar area isi halaman (cm) = lebar A4 (21) dikurangi margin kiri &
     // kanan (2,54 masing-masing, lihat addSection() di boot()). Dipakai
@@ -1893,7 +1923,7 @@ class ProposalDocxBuilder
      * Mulai / lanjutkan tabel daftar; kembalikan [selPenanda, selIsi].
      * $extra = indent tambahan (untuk sub-daftar, mis. Struktur Laporan).
      */
-    private function openListRow(int $extra = 0): array
+    private function openListRow(int $extra = 0, bool $withContent = true): array
     {
         if ($this->listTbl !== null && $this->listKey !== $extra) {
             $this->closeList();
@@ -1910,6 +1940,9 @@ class ProposalDocxBuilder
         $this->listTbl->addRow(null, ['cantSplit' => true]);
         $markerW = $this->bodyIndent + $extra + self::LIST_MARKER_COL;
         $mc = $this->listTbl->addCell($markerW);
+        if (! $withContent) {
+            return [$mc, null];   // pemanggil menambah sel sendiri (numberedSubItem)
+        }
         $cc = $this->listTbl->addCell(self::LIST_TABLE_W - $markerW);
         return [$mc, $cc];
     }
@@ -1942,6 +1975,37 @@ class ProposalDocxBuilder
     private function richListItem(string $text, ?string $align = null): void
     {
         $this->listItem($text, $align);
+    }
+
+    /** Poin "•" (bab Penjelasan Status Penilai, 2026-09-22). */
+    private function bulletItem(string $text): void
+    {
+        [$mc, $cc] = $this->openListRow();
+        $mc->addText("\u{2022}", $this->fBody,
+            ['indentation' => ['left' => $this->bodyIndent]] + $this->listCellPara());
+        $this->writeStyled($cc, $text);
+    }
+
+    /**
+     * Sub-daftar "1." di bawah poin "•" (sektor OJK). Ditaruh di tabel daftar
+     * yang SAMA (sel penanda kosong) supaya tidak ada paragraf pemisah antar
+     * tabel yang membuat jarak kosong; nomor + teks memakai tab & hanging
+     * indent sehingga baris lanjutan sejajar teks (2026-09-22).
+     */
+    private function numberedSubItem(int $no, string $text): void
+    {
+        // Baris 3 kolom di tabel poin yang sama: sel penanda "•" kosong |
+        // nomor | teks. Kolom teks sendiri membuat baris lanjutan sejajar.
+        [$mc] = $this->openListRow(0, false);
+        $mc->addText('', $this->fBody, $this->listCellPara());
+        $markerW = $this->bodyIndent + self::LIST_MARKER_COL;
+        // Nomor menjorok ~0,35 cm dari awal teks poin, jarak nomor-teks rapat
+        // (2026-09-22, feedback user).
+        $shift   = 200;
+        $numW    = $shift + 260;
+        $this->listTbl->addCell($numW)->addText($no . '.', $this->fBody,
+            ['indentation' => ['left' => $shift]] + $this->listCellPara());
+        $this->writeStyled($this->listTbl->addCell(self::LIST_TABLE_W - $markerW - $numW), $text);
     }
 
     /** Item daftar penanda "–" (sub-daftar Struktur Laporan). */

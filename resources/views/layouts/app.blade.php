@@ -171,7 +171,7 @@
                         <img src="{{ asset('images/logo-spr-icon.png') }}" alt="" class="h-9 w-auto">
                         <span class="text-2xl font-bold italic tracking-tight text-white" style="font-family: Georgia, 'Times New Roman', serif;">SPR</span>
                     </span>
-                    <span class="mt-0.5 block text-xs text-gray-400">Workshop Kebagusan</span>
+                    <span class="mt-0.5 block text-xs text-gray-400">Supporting Business Unit Kebagusan</span>
                 </a>
                 <button onclick="closeSidebar()" class="lg:hidden text-gray-400 hover:text-white text-xl leading-none">&times;</button>
             </div>

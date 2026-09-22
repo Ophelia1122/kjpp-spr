@@ -50,6 +50,32 @@ return [
     // 1. Penjelasan Status Penilai
     // ------------------------------------------------------------------
     // Markup **...** = tebal (di-render ProposalDocxBuilder; di-strip utk editor teks).
+    // Versi poin (2026-09-22, feedback user, mengikuti dokumen "Status
+    // Penilai Publik"). Urutan poin tetap; poin :pertanahan hanya dicetak
+    // bila penandatangan punya izin Penilai Pertanahan, dan poin OJK diikuti
+    // daftar sektor bernomor dari biodata penandatangan.
+    'status_penilai_poin' => [
+        'identitas'  => 'Penilai Publik yang bertanda tangan dalam Laporan Penilaian ini yaitu **:nama** merupakan '
+            . ':jenis dengan Nomor Izin Penilai Publik Nomor: :izin berdasarkan Surat Keputusan Menteri Keuangan Nomor: :sk_menkeu.',
+        'izin_usaha' => 'Penilai bertindak atas nama Kantor Jasa Penilai Publik (KJPP) Sugianto Prasodjo dan Rekan yang memperoleh '
+            . 'Izin Usaha dari Kementerian Keuangan Nomor: :izin_usaha berdasarkan Kepmenkeu Nomor: :kepmenkeu.',
+        'pasar_modal' => 'Kantor Jasa Penilai Publik (KJPP) Sugianto Prasodjo dan Rekan memiliki Surat Tanda Terdaftar Profesi '
+            . 'Penunjang Pasar Modal Nomor: :sttd_ojk.',
+        'pertanahan' => 'Penilai Publik terdaftar sebagai Penilai Pertanahan dengan Nomor Izin: :pertanahan.',
+        'ojk'        => 'Penilai Publik terdaftar sebagai Profesi Penunjang Penilai Publik Sektor Jasa Keuangan Nomor: :ojk_kep '
+            . 'memiliki lingkup pemberian jasa pada sektor:',
+        'mappi'      => 'Kantor Jasa Penilai Publik (KJPP) Sugianto Prasodjo dan Rekan adalah usaha penilai independen yang terdaftar '
+            . 'di Masyarakat Profesi Penilai Indonesia (MAPPI).',
+        'objektif'   => 'Penilai dalam posisi untuk memberikan penilaian secara obyektif dan tidak memihak.',
+        'benturan'   => 'Penilai tidak memiliki potensi benturan kepentingan dengan subjek dan/atau objek penilaian.',
+        'kompetensi' => 'Penilai memiliki kompetensi untuk melakukan penilaian sehingga tidak memerlukan bantuan tenaga ahli untuk '
+            . 'melengkapi pelaksanaan tugas sebagaimana yang dimaksud dalam Lingkup Penugasan.',
+        'koordinator' => 'Seluruh Penilai, ahli dan staf pelaksana dalam penugasan ini di bawah koordinator Penilai berizin atau '
+            . 'Penilai Publik pada laporan penilaian.',
+    ],
+
+    // Versi paragraf lama — tidak dipakai lagi sejak 2026-09-22 (diganti
+    // status_penilai_poin), disimpan sebagai arsip teks.
     'status_penilai' => [
         'Penilai Publik yang bertanda tangan di dalam Laporan Penilaian ini adalah **:nama** '
         . 'merupakan Penilai Publik Properti dengan Izin Penilai Publik **No. :izin** berdasarkan Surat '

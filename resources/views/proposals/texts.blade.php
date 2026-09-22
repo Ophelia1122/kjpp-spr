@@ -26,6 +26,7 @@
             <li>Bab yang <span class="font-medium">tidak diedit</span> di sini otomatis memakai teks baku. Tampilan, tabel, penomoran bab, kop &amp; footer proposal <span class="font-medium">tidak berubah</span>.</li>
             <li>Bab yang <span class="font-medium">diedit</span> akan memakai teks Anda apa adanya (rata kiri-kanan biasa). Tabel &amp; elemen otomatis bab tsb tetap dibuat sistem.</li>
             <li>Teks di kotak sudah <span class="font-medium">ter-render</span> (nama klien, nominal biaya, tanggal, dll sudah jadi). Karena itu teks hasil edit <span class="font-medium">tidak ikut berubah</span> kalau data proyek diubah — klik <span class="font-medium">"Kembalikan ke teks baku"</span> untuk menyegarkan.</li>
+            <li><span class="font-medium">Huruf tebal:</span> apit teks dengan dua bintang, contoh <code>**PT BANK DANAMON**</code> tercetak <b>PT BANK DANAMON</b>. Hapus bintangnya untuk membatalkan tebal.</li>
             <li><span class="font-medium">Satu poin / paragraf per baris</span> (tekan Enter biasa). Baris berawalan <code>a.</code> <code>b.</code> <code>c.</code> otomatis dirapikan jadi daftar bernomor huruf yang sejajar. Baris kosong memisahkan kelompok.</li>
         </ul>
         <div class="pt-1 flex items-center gap-3">
