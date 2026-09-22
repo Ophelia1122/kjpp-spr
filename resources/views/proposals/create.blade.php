@@ -307,7 +307,7 @@
             <div class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Proposal</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tujuan Penilaian</label>
                         <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
                                 class="mt-1 w-full rounded-md shadow-sm {{ $errCls('proposal_purpose') }}">
                             @foreach (['Penjaminan Utang', 'Jual Beli', 'Lelang', 'Pelaporan Keuangan'] as $purpose)

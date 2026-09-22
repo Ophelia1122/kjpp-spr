@@ -119,7 +119,7 @@
         <div id="advancedFilters" @if (!$hasAdvancedFilter) style="display:none" @endif
              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 border-t border-gray-100 pt-3 dark:border-gray-700">
             <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">Jenis Proposal</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">Tujuan Penilaian</label>
                 <select name="purpose" class="w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
                     <option value="">Semua Jenis</option>
                     @foreach ($purposeOptions as $purpose)
@@ -233,7 +233,7 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">Jenis Proposal</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">Tujuan Penilaian</label>
                 <select name="purpose" class="w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
                     <option value="">Semua Jenis</option>
                     @foreach ($purposeOptions as $purpose)

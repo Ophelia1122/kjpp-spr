@@ -26,7 +26,7 @@
     <div class="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
         <div class="min-w-0">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Notifikasi per Tombol</h2>
-            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Klik tombol untuk mengatur pesan, penerima mention, dan grup tujuannya.</p>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Tiap baris = satu kejadian di alur proyek. Klik untuk mengatur apakah bot mengirim pesan, siapa yang di-mention, ke grup mana, dan isi pesannya. Urutan mengikuti alur kerja.</p>
         </div>
         @if ($noNumber->isNotEmpty())
             {{-- Ringkas: jumlah saja, nama muncul saat diklik. --}}
@@ -62,8 +62,11 @@
             <details class="group" @if ($errors->has("n.$step.*")) open @endif>
                 <summary class="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40">
                     <svg aria-hidden="true" class="h-4 w-4 shrink-0 text-gray-400 transition group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-                    <span class="font-medium text-gray-900 dark:text-gray-100">{{ $def['title'] }}</span>
-                    <span class="text-xs text-gray-400 dark:text-gray-500">tombol &ldquo;{{ $def['button'] }}&rdquo;</span>
+                    @php [$plain, $who] = WhatsAppNotification::STEP_LABELS[$step] ?? [$def['title'], '']; @endphp
+                    <span class="min-w-0">
+                        <span class="block font-medium text-gray-900 dark:text-gray-100">{{ $plain }}</span>
+                        <span class="block text-xs text-gray-400 dark:text-gray-500">Ditekan {{ $who }} &middot; tombol &ldquo;{{ $def['button'] }}&rdquo;</span>
+                    </span>
                     <span class="ml-auto flex items-center gap-2">
                         <span class="hidden text-xs text-gray-400 sm:inline dark:text-gray-500">{{ $recipientLabel((array) $n->recipients) }}</span>
                         @if ($n->enabled)

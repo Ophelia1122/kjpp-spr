@@ -31,7 +31,7 @@
                 Halo, {{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->first() }}! 👋
             </p>
             <p class="truncate text-xs text-gray-500 dark:text-gray-400">
-                {{ $profile['office_wide'] ? 'Angka seluruh kantor' : 'Angka Anda' }} &middot; {{ now()->locale('id')->translatedFormat('l, d F Y') }}
+                Hari ini &middot; {{ now()->locale('id')->translatedFormat('l, d F Y') }}
             </p>
         </div>
     </div>

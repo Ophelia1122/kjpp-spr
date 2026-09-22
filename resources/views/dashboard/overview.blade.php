@@ -242,7 +242,7 @@
 
         {{-- Proyek per jenis proposal --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-500">Proyek per Jenis Proposal</h2>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-500">Proyek per Tujuan Penilaian</h2>
             <div class="space-y-3">
                 @foreach ($purposeCounts as $label => $count)
                     <div class="flex items-center gap-3 text-sm">

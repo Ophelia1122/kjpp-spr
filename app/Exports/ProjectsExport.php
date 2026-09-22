@@ -80,7 +80,7 @@ class ProjectsExport implements FromQuery, WithHeadings, WithMapping, ShouldAuto
             'No. Proposal',
             'Tanggal Proposal',
             'Status',
-            'Jenis Proposal',
+            'Tujuan Penilaian',
             'Pemberi Tugas',
             'Nama Klien',
             'Pengguna Laporan',

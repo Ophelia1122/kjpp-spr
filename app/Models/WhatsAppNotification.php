@@ -32,6 +32,25 @@ class WhatsAppNotification extends Model
         '{link}'           => 'Tautan ke halaman proyek',
     ];
 
+    /**
+     * Keterangan awam tiap tombol di halaman pengaturan (2026-09-22, feedback
+     * user): apa yang terjadi + siapa yang menekan. Dua tombol "Ke Surveyor"
+     * untuk draft dibedakan jelas (Admin Produksi vs Reviewer).
+     */
+    public const STEP_LABELS = [
+        'submit_value'          => ['Surveyor mengajukan nilai untuk direview', 'Surveyor'],
+        'release_resume'        => ['Reviewer merilis Draft Resume', 'Reviewer'],
+        'approve_value'         => ['Draft Resume disetujui, SLA Laporan Final mulai', 'Reviewer / Admin Produksi'],
+        'appeal_resume'         => ['Draft Resume dibanding (dicatat di riwayat)', 'Reviewer'],
+        'return_value'          => ['Nilai dikembalikan ke Surveyor untuk direvisi', 'Reviewer / Admin Produksi'],
+        'submit_draft'          => ['Surveyor selesai membuat draft laporan', 'Surveyor'],
+        'confirm_draft'         => ['Admin Produksi meneruskan draft laporan ke Reviewer', 'Admin Produksi'],
+        'return_draft_admin'    => ['Admin Produksi mengembalikan draft laporan ke Surveyor', 'Admin Produksi'],
+        'review_draft'          => ['Reviewer selesai mereview draft laporan', 'Reviewer'],
+        'return_draft_reviewer' => ['Reviewer mengembalikan draft laporan ke Surveyor', 'Reviewer'],
+        'mark_printed'          => ['Buku laporan selesai dicetak, proyek Selesai', 'Admin Produksi'],
+    ];
+
     /** Kelompok penerima => label. Ditambah 'jabatan:<nama>' dan 'user:<id>'. */
     public const RECIPIENT_GROUPS = [
         'reviewers'  => 'Reviewer di Surat Tugas (bila kosong: semua Reviewer aktif)',

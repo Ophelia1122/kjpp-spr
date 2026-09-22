@@ -276,21 +276,11 @@
                     <span class="font-medium text-gray-700 dark:text-gray-300">{{ $project->sla_final_days ? $project->sla_final_days . ' hari kerja' : '—' }}</span>
                 </dd>
             </div>
+            {{-- Tujuan Penilaian di samping Jenis Laporan (2026-09-22, feedback user). --}}
             <div>
-                {{-- Caption sekunder ("biodata dari akun pengguna" / "belum
-                     dipilih di proposal") dibuang (2026-09-14, feedback
-                     user) — cuma catatan asal data, tidak perlu selalu
-                     tampil. Jabatan/gelar penandatangan tetap ditampilkan
-                     karena itu info substantif, bukan catatan provenance. --}}
-                <dt class="text-gray-500 dark:text-gray-400">Penanggung Jawab</dt>
-                @if ($project->signedBy)
-                    <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->signedBy->name }}</dd>
-                    <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">
-                        {{ $project->signedBy->partner_status ?: config('kjpp.signatory.title') }}
-                    </dd>
-                @else
-                    <dd class="font-medium text-gray-900 dark:text-gray-100">{{ config('kjpp.signatory.name') }}</dd>
-                @endif
+                <dt class="text-gray-500 dark:text-gray-400">Tujuan Penilaian</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->proposal_purpose ?: '—' }}</dd>
+                <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">Dasar nilai: {{ $project->value_basis_label }}</dd>
             </div>
             <div>
                 <dt class="text-gray-500 dark:text-gray-400">Rekening Pembayaran</dt>
@@ -328,9 +318,22 @@
                 <dt class="text-gray-500 dark:text-gray-400">Pihak yang Menyetujui</dt>
                 <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->effective_approver_name }}</dd>
             </div>
+            {{-- Marketing tidak ditampilkan lagi; Penanggung Jawab pindah ke sini (2026-09-22). --}}
             <div>
-                <dt class="text-gray-500 dark:text-gray-400">Marketing</dt>
-                <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->marketing_name ?: '—' }}</dd>
+                {{-- Caption sekunder ("biodata dari akun pengguna" / "belum
+                     dipilih di proposal") dibuang (2026-09-14, feedback
+                     user) — cuma catatan asal data, tidak perlu selalu
+                     tampil. Jabatan/gelar penandatangan tetap ditampilkan
+                     karena itu info substantif, bukan catatan provenance. --}}
+                <dt class="text-gray-500 dark:text-gray-400">Penanggung Jawab</dt>
+                @if ($project->signedBy)
+                    <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->signedBy->name }}</dd>
+                    <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">
+                        {{ $project->signedBy->partner_status ?: config('kjpp.signatory.title') }}
+                    </dd>
+                @else
+                    <dd class="font-medium text-gray-900 dark:text-gray-100">{{ config('kjpp.signatory.name') }}</dd>
+                @endif
             </div>
         </dl>
 
