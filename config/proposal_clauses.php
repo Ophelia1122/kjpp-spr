@@ -32,16 +32,20 @@ return [
             'Comprehensive Style Report', 'Short Form Report',
             'limited inspection', 'subsequent event',
             'hour meter', 'odometer', 'Counterpart',
+            '(setelahnya ketentuan/biaya dapat ditinjau kembali).',
         ],
-        'bold' => ['SPI', 'KEPI', 'PSAK', 'POJK', 'PMK'],
+        // Kata sumber (SPI/KEPI/...) tidak lagi ditebalkan otomatis (2026-09-22,
+        // mengikuti proposal resmi 02309). Kutipan dalam kurung "(SPI ...)"
+        // tetap tebal lewat CITATION_RE di builder; sisanya pakai **...**.
+        'bold' => [],
     ],
 
     // Kalimat pembuka. Bagian :basis diisi MANUAL lewat field
     // "Dasar Permintaan Penilaian" di form proposal (projects.request_basis).
     'pembuka' =>
         'Sesuai dengan informasi permintaan penilaian :basis, mengenai permohonan jasa Penilai '
-        . 'untuk melakukan penilaian aset milik :klien. Bersama ini kami Kantor Jasa Penilai Publik '
-        . '(KJPP) SUGIANTO PRASODJO DAN REKAN mengajukan proposal biaya jasa Penilaian Aset dengan '
+        . 'untuk melakukan penilaian aset milik **:klien**. Bersama ini kami Kantor Jasa Penilai Publik '
+        . '**(KJPP) SUGIANTO PRASODJO DAN REKAN** mengajukan proposal biaya jasa Penilaian Aset dengan '
         . 'Lingkup Penugasan sebagai berikut:',
     'pembuka_basis_placeholder' =>
         'yang kami terima melalui ...................... permintaan penilaian tanggal ......................',
@@ -56,11 +60,10 @@ return [
     // daftar sektor bernomor dari biodata penandatangan.
     'status_penilai_poin' => [
         'identitas'  => 'Penilai Publik yang bertanda tangan dalam Laporan Penilaian ini yaitu **:nama** merupakan '
-            . ':jenis dengan Nomor Izin Penilai Publik Nomor: :izin berdasarkan Surat Keputusan Menteri Keuangan Nomor: :sk_menkeu.',
-        'izin_usaha' => 'Penilai bertindak atas nama Kantor Jasa Penilai Publik (KJPP) Sugianto Prasodjo dan Rekan yang memperoleh '
-            . 'Izin Usaha dari Kementerian Keuangan Nomor: :izin_usaha berdasarkan Kepmenkeu Nomor: :kepmenkeu.',
-        'pasar_modal' => 'Kantor Jasa Penilai Publik (KJPP) Sugianto Prasodjo dan Rekan memiliki Surat Tanda Terdaftar Profesi '
-            . 'Penunjang Pasar Modal Nomor: :sttd_ojk.',
+            . ':jenis dengan Nomor Izin Penilai Publik Nomor: **:izin** berdasarkan Surat Keputusan Menteri Keuangan Nomor: :sk_menkeu.',
+        'izin_usaha' => 'Penilai bertindak atas nama **Kantor Jasa Penilai Publik (KJPP) Sugianto Prasodjo dan Rekan** yang memperoleh '
+            . '**Izin Usaha dari Kementerian Keuangan Nomor: :izin_usaha** berdasarkan :kepmenkeu.',
+        'pasar_modal' => 'Kantor Jasa Penilai Publik (KJPP) Sugianto Prasodjo dan Rekan memiliki :sttd_ojk.',
         'pertanahan' => 'Penilai Publik terdaftar sebagai Penilai Pertanahan dengan Nomor Izin: :pertanahan.',
         'ojk'        => 'Penilai Publik terdaftar sebagai Profesi Penunjang Penilai Publik Sektor Jasa Keuangan Nomor: :ojk_kep '
             . 'memiliki lingkup pemberian jasa pada sektor:',
@@ -117,8 +120,8 @@ return [
     // Slot: :nama_sertifikat = daftar "Atas Nama" objek penilaian (form),
     //       :pemberi_tugas   = nama Pemberi Tugas.
     'post_objek_hubungan' =>
-        'Nama yang tercantum dalam dokumen kepemilikan atas objek penilaian adalah :nama_sertifikat, '
-        . 'sedangkan Pemberi Tugas dalam penugasan ini adalah :pemberi_tugas. Berdasarkan dokumen dan '
+        'Nama yang tercantum dalam dokumen kepemilikan atas objek penilaian adalah **:nama_sertifikat**, '
+        . 'sedangkan Pemberi Tugas dalam penugasan ini adalah **:pemberi_tugas**. Berdasarkan dokumen dan '
         . 'informasi yang disampaikan kepada Penilai, terdapat hubungan kepemilikan/penguasaan atas '
         . 'objek penilaian dimaksud oleh Pemberi Tugas. Penilai tidak melakukan verifikasi hukum secara '
         . 'independen terhadap hubungan hukum dimaksud dan menggunakan dokumen serta informasi yang '
@@ -137,26 +140,26 @@ return [
     // ------------------------------------------------------------------
     // 5. Jenis Mata Uang
     // ------------------------------------------------------------------
-    'mata_uang' => 'Jenis Mata Uang yang akan digunakan dalam laporan penilaian adalah Rupiah (Rp).',
+    'mata_uang' => 'Jenis Mata Uang yang akan digunakan dalam laporan penilaian adalah **Rupiah (Rp).**',
 
     // ------------------------------------------------------------------
     // 6. Maksud & Tujuan (dipilih per jenis proposal oleh builder)
     // ------------------------------------------------------------------
-    'maksud_pasar'  => 'Memberikan opini atas Nilai Pasar (Market Value) terhadap properti yang dinilai pada tanggal penilaian.',
-    'maksud_lelang' => 'Memberikan opini atas Nilai Pasar (Market Value) dan Nilai Likuidasi (Liquidation Value) terhadap properti yang dinilai pada tanggal penilaian.',
-    'maksud_wajar'  => 'Memberikan opini atas Nilai Wajar (Fair Value) terhadap properti yang dinilai pada tanggal penilaian.',
+    'maksud_pasar'  => 'Memberikan opini atas **Nilai Pasar (Market Value)** terhadap properti yang dinilai pada tanggal penilaian.',
+    'maksud_lelang' => 'Memberikan opini atas **Nilai Pasar (Market Value)** dan **Nilai Likuidasi (Liquidation Value)** terhadap properti yang dinilai pada tanggal penilaian.',
+    'maksud_wajar'  => 'Memberikan opini atas **Nilai Wajar (Fair Value)** terhadap properti yang dinilai pada tanggal penilaian.',
 
-    'tujuan_jual_beli'      => 'Penilaian untuk tujuan Jual Beli untuk kepentingan :klien.',
-    'tujuan_penjaminan'     => 'Penilaian untuk tujuan Penjaminan Utang pada :klien.',
-    'tujuan_lelang'         => 'Penilaian untuk tujuan Lelang pada :klien.',
+    'tujuan_jual_beli'      => 'Penilaian untuk tujuan **Jual Beli** untuk kepentingan **:klien**.',
+    'tujuan_penjaminan'     => 'Penilaian untuk tujuan **Penjaminan Utang** pada **:klien**.',
+    'tujuan_lelang'         => 'Penilaian untuk tujuan **Lelang** pada **:klien**.',
     'tujuan_lk'             =>
-        'Penilaian ini dilakukan untuk tujuan Pelaporan Keuangan. Aset berupa :objek diklasifikasikan '
+        'Penilaian ini dilakukan untuk tujuan **Pelaporan Keuangan**. Aset berupa :objek diklasifikasikan '
         . 'sebagai :psak sesuai dengan PSAK 216/240/202, dengan pengukuran nilai wajar mengacu pada PSAK 113.',
 
     // ------------------------------------------------------------------
     // 7. Dasar Nilai
     // ------------------------------------------------------------------
-    'dasar_nilai_intro' => 'Sesuai dengan tujuan penilaian, Dasar Nilai yang digunakan adalah :dasar.',
+    'dasar_nilai_intro' => 'Sesuai dengan tujuan penilaian, Dasar Nilai yang digunakan adalah **:dasar**.',
 
     'def_nilai_pasar' =>
         'Nilai Pasar didefinisikan sebagai estimasi sejumlah uang yang dapat diperoleh atau dibayar '
@@ -189,7 +192,7 @@ return [
     'pu_likuidasi_note' =>
         'Pada beberapa kasus, bank dapat meminta Penilai untuk memberikan opini Nilai Likuidasi pada '
         . 'saat proses pemberian kredit (penilaian untuk penjaminan utang) dan dasar nilai ini '
-        . 'dinyatakan sebagai Indikasi Nilai Likuidasi. Indikasi nilai ini hanya merupakan estimasi '
+        . '**dinyatakan sebagai Indikasi Nilai Likuidasi**. Indikasi nilai ini hanya merupakan estimasi '
         . 'awal yang tidak mengikat dan tidak dapat digunakan pada saat terjadi pelepasan kredit macet '
         . 'atau pengambilalihan aset jaminan oleh Bank. Pada umumnya Indikasi Nilai Likuidasi diperoleh '
         . 'dengan mengenakan diskon sebesar 20% sampai dengan 40% dari Nilai Pasar (Interpretasi SPI '
@@ -379,10 +382,10 @@ return [
         'Bagian-bagian bangunan yang tidak terlihat seperti struktur, pondasi dan tingkat kekerasan '
         . 'dinding terpenuhi sebagaimana mestinya dan berfungsi dengan baik.',
     'asumsi_khusus' => [
-        'Asumsi Khusus adalah asumsi yang berbeda dari fakta yang sebenarnya pada tanggal penilaian '
+        '**Asumsi Khusus** adalah asumsi yang berbeda dari fakta yang sebenarnya pada tanggal penilaian '
         . 'atau hal yang tidak akan diberatkan oleh sebagian kecil pelaku pasar dalam suatu transaksi '
-        . 'pada tanggal penilaian. Asumsi yang digunakan untuk penilaian aset ini sesuai dengan KEPI & '
-        . 'SPI Edisi VII - 2018 dan Edisi Revisi Tahun 2020.',
+        . 'pada tanggal penilaian. Asumsi yang digunakan untuk penilaian aset ini sesuai dengan **KEPI & '
+        . 'SPI Edisi VII - 2018 dan Edisi Revisi Tahun 2020.**',
         'Asumsi Khusus yang diperlukan dalam penilaian ini akan ditetapkan dan dirumuskan setelah '
         . 'Penilai melakukan inspeksi lapangan serta memperoleh data pendukung yang relevan. Asumsi '
         . 'Khusus tersebut akan diungkapkan secara jelas dalam Laporan Penilaian.',
@@ -404,7 +407,7 @@ return [
     // ------------------------------------------------------------------
     'konfirmasi_spi' =>
         'Penilaian ini dilakukan berdasarkan Kode Etik (KEPI) & Standar Penilaian Indonesia (SPI) '
-        . 'Edisi VII Tahun 2018 dan SPI Edisi VII Revisi Tahun 2020 :spi_code sesuai ketentuan yang '
+        . '**Edisi VII Tahun 2018** dan **SPI Edisi VII Revisi Tahun 2020 :spi_code** sesuai ketentuan yang '
         . 'berlaku dan menjadi bagian yang tidak terpisahkan dari standar penilaian yang digunakan.',
     'spi_code_default' => 'SPI-300 (Real Properti)',
 
@@ -466,9 +469,9 @@ return [
         . 'dan staf baik yang bertandatangan maupun yang tidak bertandatangan di dalam laporan '
         . 'penilaian dibebaskan dari tuntutan perdata dan/atau pidana atas kerugian yang timbul baik '
         . 'secara langsung maupun tidak langsung.',
-        'Pemberi Tugas wajib dan bersedia memberikan surat pernyataan tertulis yang memuat substansi '
+        '**Pemberi Tugas wajib dan bersedia memberikan surat pernyataan tertulis yang memuat substansi '
         . 'sebagaimana disebutkan di atas, yang dibuat terpisah dari surat penawaran ini serta '
-        . 'ditandatangani di atas meterai yang berlaku.',
+        . 'ditandatangani di atas meterai yang berlaku.**',
     ],
 
     // ------------------------------------------------------------------
@@ -509,7 +512,7 @@ return [
     // LAMPIRAN (di akhir dokumen, setelah tanda tangan) — REV.1
     // ------------------------------------------------------------------
     'lampiran_title' => 'LAMPIRAN PERMINTAAN DATA - DATA',
-    'data_diperlukan_intro' => 'Data - data yang diperlukan :',
+    'data_diperlukan_intro' => '**Data - data yang diperlukan :**',
     'data_diperlukan_lk_extra' => 'List Objek Penilaian sesuai dengan Laporan Keuangan.',
     'data_diperlukan_items' => [
         'Copy legalitas / sertifikat tanah (lembaran lengkap sesuai aslinya)',
@@ -583,11 +586,11 @@ return [
     'termin_label' => 'Termin Pembayaran :',
     // Termin dinamis (2026-09-19): persentase ikut skema/isian proposal.
     // :pct = angka persen, :pct_words = persen dalam huruf, :rp & :terbilang = nominal.
-    'termin_item_first' => ':pct% (:pct_words persen) sebesar :rp (:terbilang), dibayarkan sebelum dilakukan inspeksi lapangan.',
-    'termin_item_last'  => ':pct% (:pct_words persen) sebesar :rp (:terbilang), dibayarkan sebelum laporan final diserahkan.',
-    'termin_item_mid'   => ':pct% (:pct_words persen) sebesar :rp (:terbilang), dibayarkan sebelum laporan final diserahkan.',
-    'termin_1' => '50% (lima puluh persen) sebesar :rp (:terbilang), dibayarkan sebelum dilakukan inspeksi lapangan.',
-    'termin_2' => '50% (lima puluh persen) sebesar :rp (:terbilang), dibayarkan sebelum laporan final diserahkan.',
+    'termin_item_first' => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum dilakukan inspeksi lapangan.',
+    'termin_item_last'  => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
+    'termin_item_mid'   => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
+    'termin_1' => '50% (lima puluh persen) sebesar **:rp (:terbilang),** dibayarkan sebelum dilakukan inspeksi lapangan.',
+    'termin_2' => '50% (lima puluh persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
     'rekening_label' => 'Rekening Bank :',
     'biaya_pembatalan' =>
         'Apabila terjadi pembatalan penugasan, pembayaran yang sudah dibayarkan kepada KJPP/Penilai '
@@ -599,14 +602,14 @@ return [
     'pernyataan_pemberi_tugas' =>
         'Pemberi tugas menyatakan bahwa aset yang dinilai tidak sedang atau telah dinilai oleh Penilai '
         . 'Publik lainnya untuk maksud, tujuan, pengguna laporan, dan tanggal penilaian yang sama atau '
-        . 'berdekatan (dalam jangka waktu tidak lebih dari dua bulan). (KEPI 5.8 C.4)',
+        . 'berdekatan **(dalam jangka waktu tidak lebih dari dua bulan). (KEPI 5.8 C.4)**',
     'penutup_spk' =>
         'Jika disetujui, proposal ini berlaku sebagai SPK efektif pada tanggal penandatanganan. Mohon '
         . 'tanda tangan di kolom persetujuan dan paraf pada setiap halaman. Jika dokumen memuat '
         . 'barcode/QR KJPP SPR, keabsahan diverifikasi melalui pemindaian dan sah bila data yang '
         . 'tampil identik. Jika tanpa barcode/QR, keabsahan ditentukan oleh tanda tangan & paraf serta '
         . 'kesesuaian identitas dokumen. Perubahan/penggantian/penambahan halaman tanpa persetujuan '
-        . 'tertulis KJPP Sugianto Prasodjo & Rekan membatalkan keabsahan. Masa berlaku penawaran 1 '
+        . 'tertulis KJPP Sugianto Prasodjo & Rekan membatalkan keabsahan. **Masa berlaku penawaran 1 '
         . '(satu) bulan kalender sejak tanggal proposal ini (setelahnya ketentuan/biaya dapat ditinjau '
-        . 'kembali).',
+        . 'kembali).**',
 ];

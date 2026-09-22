@@ -140,7 +140,7 @@
             <td style="width: 45%; vertical-align: top; text-align: center;">
                 Jakarta, {{ $invoice->displayDate->translatedFormat('d F Y') }}
                 {{-- Ruang tanda tangan +2 baris (2026-09-14, feedback user). --}}
-                <br><br><br><br><br><br>
+                <br><br><br><br><br><br><br><br>
                 {{-- Penandatangan = Penanggung Jawab proyek (akun user), data
                      baku config hanya cadangan (2026-09-15, feedback user). --}}
                 <strong>{{ optional($project->signedBy)->name ?: config('kjpp.signatory.name') }}</strong><br>

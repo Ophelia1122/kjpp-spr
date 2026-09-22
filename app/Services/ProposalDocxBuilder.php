@@ -236,8 +236,9 @@ class ProposalDocxBuilder
         $this->cfg = config('kjpp');
         $this->overrides = $this->project->sectionTexts->pluck('body', 'section_key')->all();
 
-        $it = array_map('preg_quote', $this->cl['text_style']['italic'] ?? []);
-        $bd = array_map('preg_quote', $this->cl['text_style']['bold'] ?? []);
+        // Delimiter '/' ikut di-escape (istilah bisa memuat "/", mis. "ketentuan/biaya").
+        $it = array_map(fn ($x) => preg_quote($x, '/'), $this->cl['text_style']['italic'] ?? []);
+        $bd = array_map(fn ($x) => preg_quote($x, '/'), $this->cl['text_style']['bold'] ?? []);
         // istilah terpanjang dulu supaya "Market Value" tidak kalah oleh frasa lebih pendek
         usort($it, fn ($a, $b) => strlen($b) <=> strlen($a));
         $this->italicRe = $it ? '/(?<![\p{L}])(?:' . implode('|', $it) . ')(?![\p{L}])/u' : '';
@@ -434,7 +435,7 @@ class ProposalDocxBuilder
 
         $this->s->addTextBreak(1);
         // "an." = Nama Klien (isian manual), jatuh ke Pemberi Tugas bila kosong.
-        $this->s->addText('Hal : Proposal Biaya Jasa Penilaian an. ' . $this->project->effective_client_name, $this->fBold, ['spaceAfter' => 120]);
+        $this->s->addText('Hal : Proposal Biaya Jasa Penilaian an. ' . $this->project->effective_client_name, $this->fBody, ['spaceAfter' => 120]);
         $this->s->addText('Dengan hormat,', $this->fBody, ['spaceAfter' => 120]);
 
         $this->bodyOr('pembuka', fn () => $this->para($this->pembukaBaku()));
@@ -498,6 +499,24 @@ class ProposalDocxBuilder
         ];
     }
 
+    /**
+     * "185/MK/SJ/2025 tanggal 23 April 2025" -> "**185/MK/SJ/2025** tanggal
+     * **23 April 2025**" (contoh proposal resmi 02309). $lead ikut ditebalkan
+     * di depan nomor, mis. "Kepmenkeu Nomor: ".
+     */
+    private function boldLicense(?string $value, string $lead = ''): string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '';
+        }
+        if (preg_match('/^(.*?)\s+tanggal\s+(.+)$/iu', $value, $m)) {
+            return '**' . $lead . $m[1] . '** tanggal **' . $m[2] . '**';
+        }
+
+        return '**' . $lead . $value . '**';
+    }
+
     /** Placeholder -> nilai untuk kalimat "Penjelasan Status Penilai". */
     private function statusPenilaiRepl(): array
     {
@@ -507,15 +526,15 @@ class ProposalDocxBuilder
             ':nama'        => $sig['name'],
             // "Klasifikasi Bidang Jasa Properti dan Bisnis" -> "Penilai Publik Properti dan Bisnis".
             ':jenis'       => 'Penilai Publik ' . (trim((string) preg_replace('/^\s*klasifikasi\s+bidang\s+jasa\s+/i', '', (string) $sig['klasifikasi'])) ?: 'Properti'),
-            ':pertanahan'  => (string) ($sig['pertanahan'] ?? ''),
+            ':pertanahan'  => $this->boldLicense($sig['pertanahan'] ?? null),
             ':izin'        => $sig['izin_pp_no'],
-            ':sk_menkeu'   => $sig['sk_menkeu_no'],
+            ':sk_menkeu'   => $this->boldLicense($sig['sk_menkeu_no']),
             // Nomor KEP Dewan Komisioner OJK = nomor Surat Tanda Terdaftar OJK
             // penilai (satu nomor yang sama, 2026-09-15 feedback user).
-            ':ojk_kep'     => $sig['sttd_ojk_full'],
+            ':ojk_kep'     => $this->boldLicense($sig['sttd_ojk_full']),
             ':izin_usaha'  => $this->cfg['izin_usaha_no'],
-            ':kepmenkeu'   => $this->cfg['kepmenkeu_no'],
-            ':sttd_ojk'    => $this->cfg['sttd_ojk_no'],
+            ':kepmenkeu'   => $this->boldLicense($this->cfg['kepmenkeu_no'], 'Kepmenkeu Nomor: '),
+            ':sttd_ojk'    => $this->boldLicense($this->cfg['sttd_ojk_no'], 'Surat Tanda Terdaftar Profesi Penunjang Pasar Modal Nomor: '),
         ];
     }
 
@@ -763,8 +782,8 @@ class ProposalDocxBuilder
                 $t->addRow(null, ['cantSplit' => true]);
                 $pad = ['spaceAfter' => $i === 0 ? 120 : 0, 'spaceBefore' => 0];
                 $lc = $t->addCell(Converter::cmToTwip(3.3) + $this->bodyIndent);
-                $lc->addText($label, $this->fBold, ['indentation' => ['left' => $this->bodyIndent]] + $pad);
-                $t->addCell(Converter::cmToTwip(0.35))->addText(':', $this->fBold, $pad);
+                $lc->addText($label, $this->fBody, ['indentation' => ['left' => $this->bodyIndent]] + $pad);
+                $t->addCell(Converter::cmToTwip(0.35))->addText(':', $this->fBody, $pad);
                 $vc = $t->addCell(Converter::cmToTwip(12.4) - $this->bodyIndent);
                 $vr = $vc->addTextRun(['alignment' => Jc::BOTH] + $pad);
                 foreach ($this->styleRuns($val) as [$rt, $b, $it]) {
@@ -1126,13 +1145,13 @@ class ProposalDocxBuilder
 
         // Nominal biaya (+ terbilang) rata tengah.
         $this->s->addText($rp($total), $this->fBold, ['alignment' => Jc::CENTER, 'spaceAfter' => 20]);
-        $this->s->addText('(' . Terbilang::make($total) . ')', ['italic' => true] + $this->fBody, ['alignment' => Jc::CENTER, 'spaceAfter' => 120]);
+        $this->s->addText('(' . Terbilang::make($total) . ')', $this->fBold, ['alignment' => Jc::CENTER, 'spaceAfter' => 120]);
 
         // Kalimat status PPN — bagian dari override 'biaya' (ikut ter-render
         // di kotak teks), jadi hanya dicetak di sini kalau TIDAK di-override.
         if (! $ovBiaya) {
             foreach ($this->biayaCaptionLines() as $line) {
-                $this->para($line);
+                $this->para($line, ['italic' => true] + $this->fBody);
             }
         }
 
@@ -1211,14 +1230,15 @@ class ProposalDocxBuilder
             }
             $rows[] = ['Atas Nama', $b['account_name'] ?? '-'];
             $rows[] = ['No. Rek', $b['account_number'] ?? '-'];
-            $this->kvTable($lc, $rows, 2.4, 6.4);
+            $this->kvTable($lc, $rows, 2.4, 6.4, true);
         }
 
         $rc = $rt->addCell($colW[1]);
-        $this->kvTable($rc, [['NPWP No.', $this->cfg['npwp']]], 2.2, 3.6);
+        $this->kvTable($rc, [['NPWP No.', $this->cfg['npwp']]], 2.2, 3.6, true);
 
         $this->s->addTextBreak(1);
-        $this->para($this->cl['biaya_pembatalan']);
+        // Kalimat pembatalan tebal + miring (contoh proposal resmi 02309).
+        $this->para($this->cl['biaya_pembatalan'], ['bold' => true, 'italic' => true] + $this->fBody);
     }
 
     /** Persentase PPN diformat "11" / "11,5" (tanpa nol berlebih). */
@@ -1370,7 +1390,7 @@ class ProposalDocxBuilder
         $l = $t->addCell($colW[0]);
         $l->addText('Hormat kami,', $this->fBody, ['spaceAfter' => 0]);
         $l->addText(strtoupper($this->cfg['company_name']), $this->fBold, ['spaceAfter' => 0]);
-        $l->addText($this->cfg['company_tagline'], $this->fBody, ['spaceAfter' => 0]);
+        $l->addText($this->cfg['company_tagline'], ['italic' => true] + $this->fBody, ['spaceAfter' => 0]);
         // Barcode tanda tangan / stempel (2026-09-21). Tanpa keduanya, ruang
         // tanda tangan basah seperti semula (feedback user 2026-09-21).
         $img = $this->signatureImage();
@@ -1385,7 +1405,7 @@ class ProposalDocxBuilder
             ]);
         }
         $l->addText($sig['name'], $this->fBold, ['spaceAfter' => 0]);
-        $l->addText($sig['title'], $this->fBody, ['spaceAfter' => 0]);
+        $l->addText($sig['title'], ['italic' => true] + $this->fBody, ['spaceAfter' => 0]);
         $l->addText('Penilai Properti Izin Menkeu No. : ' . $sig['izin_pp_no'], $this->fBody, ['spaceAfter' => 0]);
         $l->addText('MAPPI No. ' . $sig['mappi_no'], $this->fBody, ['spaceAfter' => 0]);
         $l->addText($sig['rmk_no'], $this->fBody, ['spaceAfter' => 0]);
@@ -1818,7 +1838,9 @@ class ProposalDocxBuilder
 
     // Kutipan sumber ber-tanda kurung: "(SPI 106 3.12 - …)", "(KEPI 5.8 C.4)",
     // "(Interpretasi SPI 102 …)" -> SELURUH kurung sampai penutup di-tebalkan.
-    private const CITATION_RE = '/\([^()]*(?:SPI|KEPI|PSAK|POJK|PMK)[^()]*\)/u';
+    // Harus diikuti nomor (mis. "SPI 101.3.1"), jadi singkatan saja seperti
+    // "(KEPI)" / "(SPI)" tidak ikut tebal (2026-09-22, contoh proposal 02309).
+    private const CITATION_RE = '/\([^()]*(?:SPI|KEPI|PSAK|POJK|PMK)\s+\d[^()]*\)/u';
 
     /** Cari kutipan sumber (tebal penuh), sumber (tebal), istilah (miring). */
     private function scanTerms(string $seg, bool $baseBold): array
@@ -2051,14 +2073,15 @@ class ProposalDocxBuilder
      * Tabel mini "label : value" (kolom titik-dua sejajar) di dalam sebuah
      * cell — dipakai blok Rekening Bank / NPWP.
      */
-    private function kvTable($container, array $rows, float $labelCm = 2.4, float $valCm = 6.4): void
+    private function kvTable($container, array $rows, float $labelCm = 2.4, float $valCm = 6.4, bool $bold = false): void
     {
+        $f = $bold ? $this->fBold : $this->fBody;
         $t = $container->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
         foreach ($rows as [$k, $v]) {
             $t->addRow();
-            $t->addCell(Converter::cmToTwip($labelCm))->addText($k, $this->fBody, ['spaceAfter' => 0]);
-            $t->addCell(Converter::cmToTwip(0.3))->addText(':', $this->fBody, ['spaceAfter' => 0]);
-            $t->addCell(Converter::cmToTwip($valCm))->addText((string) $v, $this->fBody, ['spaceAfter' => 0]);
+            $t->addCell(Converter::cmToTwip($labelCm))->addText($k, $f, ['spaceAfter' => 0]);
+            $t->addCell(Converter::cmToTwip(0.3))->addText(':', $f, ['spaceAfter' => 0]);
+            $t->addCell(Converter::cmToTwip($valCm))->addText((string) $v, $f, ['spaceAfter' => 0]);
         }
     }
 
