@@ -86,7 +86,7 @@ ls /volume2/docker/kjpp-app/public/fonts/
 ```
 
 Harus ada `arialn.ttf`, `arialnb.ttf`, `arialni.ttf`, `arialnbi.ttf`. Kalau kosong,
-salin dari laptop (`C:\laragon\www\kjpp-app\publiconts\`) lewat SMB dulu.
+salin dari laptop (`C:\laragon\www\kjpp-app\public\fonts\`) lewat SMB dulu.
 
 ### 4. Bangun ulang container aplikasi
 
