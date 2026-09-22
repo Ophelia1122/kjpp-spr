@@ -64,8 +64,13 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 # Font Arial Narrow (berlisensi, tidak ada di git): kalau file public/fonts/*.ttf
 # ikut disalin ke folder proyek NAS, pasang ke sistem supaya LibreOffice
 # memakainya. Kalau tidak ada, LibreOffice memakai Liberation Sans Narrow.
+# chmod 644 WAJIB: file dari SMB sering berizin 770 root. Tanpa ini LibreOffice
+# (jalan sebagai www-data) memilih Arial Narrow tapi tidak bisa membukanya, dan
+# PDF proposal keluar TANPA TEKS (kejadian nyata NAS 2026-09-22).
 RUN mkdir -p /usr/share/fonts/truetype/kjpp \
     && (cp public/fonts/*.ttf /usr/share/fonts/truetype/kjpp/ 2>/dev/null || true) \
+    && chmod 755 /usr/share/fonts/truetype/kjpp \
+    && (chmod 644 /usr/share/fonts/truetype/kjpp/* 2>/dev/null || true) \
     && fc-cache -f
 
 COPY docker/nginx.conf /etc/nginx/sites-available/default
