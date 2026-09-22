@@ -435,7 +435,7 @@ class ProposalDocxBuilder
 
         $this->s->addTextBreak(1);
         // "an." = Nama Klien (isian manual), jatuh ke Pemberi Tugas bila kosong.
-        $this->s->addText('Hal : Proposal Biaya Jasa Penilaian an. ' . $this->project->effective_client_name, $this->fBody, ['spaceAfter' => 120]);
+        $this->s->addText('Hal : Proposal Biaya Jasa Penilaian an. ' . $this->project->effective_client_name, $this->fBold, ['spaceAfter' => 120]);
         $this->s->addText('Dengan hormat,', $this->fBody, ['spaceAfter' => 120]);
 
         $this->bodyOr('pembuka', fn () => $this->para($this->pembukaBaku()));
