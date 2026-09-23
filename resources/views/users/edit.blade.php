@@ -22,6 +22,15 @@
                            class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+                    <input type="text" name="username" value="{{ old('username', $user->username) }}" required autocapitalize="none" spellcheck="false"
+                           placeholder="contoh: budi.p"
+                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Dipakai untuk login. Huruf kecil, angka, titik, garis bawah, strip. Hanya Administrator yang bisa mengubah.</p>
+                    @error('username') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                     <input type="email" name="email" value="{{ old('email', $user->email) }}" required
                            class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">

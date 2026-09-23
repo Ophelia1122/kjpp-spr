@@ -113,9 +113,11 @@
             <form id="loginForm" action="{{ route('login.attempt') }}" method="POST" class="space-y-4">
                 @csrf
                 <div class="relative">
-                    <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="username" placeholder=" "
+                    {{-- Login memakai username (2026-09-23, feedback user). --}}
+                    <input type="text" id="username" name="username" value="{{ old('username') }}" required
+                           autocomplete="username" autocapitalize="none" spellcheck="false" placeholder=" "
                            class="field peer w-full rounded-lg px-3 pt-5 pb-2 text-base text-white outline-none">
-                    <label for="email" class="float-label">Email</label>
+                    <label for="username" class="float-label">Username</label>
                 </div>
                 <div class="relative">
                     <input type="password" id="password" name="password" required autocomplete="current-password" placeholder=" "

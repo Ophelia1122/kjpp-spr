@@ -43,12 +43,13 @@ class WhatsAppNotification extends Model
         'approve_value'         => ['Draft Resume disetujui, SLA Laporan Final mulai', 'Reviewer / Admin Produksi'],
         'appeal_resume'         => ['Draft Resume dibanding (dicatat di riwayat)', 'Reviewer'],
         'return_value'          => ['Nilai dikembalikan ke Surveyor untuk direvisi', 'Reviewer / Admin Produksi'],
-        'submit_draft'          => ['Surveyor selesai membuat draft laporan', 'Surveyor'],
+        'submit_draft'          => ['Surveyor selesai membuat draft narasi laporan', 'Surveyor'],
         'confirm_draft'         => ['Admin Produksi meneruskan draft laporan ke Reviewer', 'Admin Produksi'],
         'return_draft_admin'    => ['Admin Produksi mengembalikan draft laporan ke Surveyor', 'Admin Produksi'],
         'review_draft'          => ['Reviewer selesai mereview draft laporan', 'Reviewer'],
         'return_draft_reviewer' => ['Reviewer mengembalikan draft laporan ke Surveyor', 'Reviewer'],
-        'mark_printed'          => ['Buku laporan selesai dicetak, proyek Selesai', 'Admin Produksi'],
+        'mark_printed'          => ['Buku laporan selesai dicetak, lanjut proses tanda tangan', 'Admin Produksi'],
+        'mark_signed'           => ['Buku selesai ditandatangani, lanjut proses pengiriman', 'Admin Produksi / General Admin'],
     ];
 
     /** Kelompok penerima => label. Ditambah 'jabatan:<nama>' dan 'user:<id>'. */
@@ -82,6 +83,7 @@ class WhatsAppNotification extends Model
             'review_draft'          => $info(['jabatan:' . User::JABATAN_ADMIN]),
             'return_draft_reviewer' => ['enabled' => true, 'recipients' => ['submitter', 'appraisers'], 'template' => self::T_RETURN],
             'mark_printed'          => $info(['appraisers']),
+            'mark_signed'           => $info(['jabatan:' . User::JABATAN_ADMIN]),
         ];
     }
 

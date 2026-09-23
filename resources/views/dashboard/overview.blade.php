@@ -10,6 +10,10 @@
         Project::STATUS_WAITING_APPROVAL => '#3b82f6',
         Project::STATUS_DP_INVOICING     => '#eab308',
         Project::STATUS_IN_PROGRESS      => '#22c55e',
+        Project::STATUS_FINALISASI       => '#0ea5e9',
+        Project::STATUS_TANDA_TANGAN     => '#8b5cf6',
+        Project::STATUS_PENGIRIMAN       => '#14b8a6',
+        Project::STATUS_SELESAI_BELUM_LUNAS => '#f59e0b',
         Project::STATUS_SELESAI          => '#059669',
         Project::STATUS_BATAL            => '#f43f5e',
     ];

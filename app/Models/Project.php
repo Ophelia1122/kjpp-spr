@@ -225,9 +225,9 @@ class Project extends Model
         ],
         'submit_draft' => [
             'from' => self::REVIEW_APPROVED, 'to' => self::STAGE_DRAFT_SUBMITTED, 'actor' => 'surveyor', 'note' => 'optional',
-            'title' => 'Draft Laporan Sudah Dibuat', 'button' => 'Draft Dibuat', 'tip' => 'Tandai draft laporan sudah dibuat — lanjut ke Admin Produksi',
-            'action' => 'draft.submitted', 'desc' => 'Menandai draft laporan sudah dibuat',
-            'flash' => 'Draft laporan dikirim ke Admin Produksi.',
+            'title' => 'Draft Narasi Sudah Dibuat', 'button' => 'Draft Narasi Dibuat', 'tip' => 'Tandai draft narasi laporan sudah dibuat — lanjut ke Admin Produksi',
+            'action' => 'draft.submitted', 'desc' => 'Menandai draft narasi laporan sudah dibuat',
+            'flash' => 'Draft narasi laporan dikirim ke Admin Produksi.',
         ],
         'confirm_draft' => [
             'from' => self::STAGE_DRAFT_SUBMITTED, 'to' => self::STAGE_DRAFT_CONFIRMED, 'actor' => 'admin', 'note' => 'optional',

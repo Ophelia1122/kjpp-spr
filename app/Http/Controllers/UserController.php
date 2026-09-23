@@ -32,7 +32,8 @@ class UserController extends Controller
 
         if ($request->filled('q')) {
             $query->where('name', 'like', '%' . $request->q . '%')
-                  ->orWhere('email', 'like', '%' . $request->q . '%');
+                  ->orWhere('email', 'like', '%' . $request->q . '%')
+                  ->orWhere('username', 'like', '%' . $request->q . '%');
         }
 
         // Jumlah baris dikunci 15 (2026-09-20, feedback user) — pilihan 15/25
@@ -58,11 +59,14 @@ class UserController extends Controller
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
+            // Username = identitas login; hanya Administrator (halaman ini) yang boleh mengisi/mengubah.
+            'username' => array_merge(User::USERNAME_RULES, [Rule::unique('users', 'username')]),
             'password' => 'required|string|min:8',
             'role_id'  => 'required|exists:roles,id',
         ] + $this->biodataRules(), User::$avatarMessages);
 
         $validated['ojk_sectors'] = User::composeOjkSectors($validated['ojk_sectors'] ?? [], $validated['ojk_sectors_other'] ?? null);
+        $validated['username'] = mb_strtolower($validated['username']);
         $user = new User(\Illuminate\Support\Arr::except($validated, ['avatar', 'remove_avatar', 'ojk_sectors_other']));
         $user->applyAvatarUpload($request);
         $user->save(); // password otomatis ter-hash lewat cast 'hashed' di Model
@@ -83,6 +87,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'username' => array_merge(User::USERNAME_RULES, [Rule::unique('users', 'username')->ignore($user->id)]),
             'password' => 'nullable|string|min:8',
             'role_id'  => 'required|exists:roles,id',
             'is_active' => 'nullable|boolean',
@@ -97,6 +102,7 @@ class UserController extends Controller
 
         $user->name    = $validated['name'];
         $user->email   = $validated['email'];
+        $user->username = mb_strtolower($validated['username']);
         $user->role_id = $validated['role_id'];
         $user->is_active = $request->boolean('is_active');
 

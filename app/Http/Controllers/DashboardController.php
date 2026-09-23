@@ -279,7 +279,7 @@ class DashboardController extends Controller
         ];
 
         if ($mode === 'reviewer') {
-            $profile['review_queue'] = Project::where('status', Project::STATUS_IN_PROGRESS)
+            $profile['review_queue'] = Project::whereIn('status', Project::WORK_STATUSES)
                 ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED, Project::STAGE_DRAFT_CONFIRMED])
                 ->count();
             $profile['review_done'] = Project::where('review_approved_by_user_id', $user->id)

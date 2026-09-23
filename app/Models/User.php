@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable([
-    'name', 'email', 'password', 'role_id', 'is_active', 'dark_mode',
+    'name', 'username', 'email', 'password', 'role_id', 'is_active', 'dark_mode',
     // Biodata profesi (lihat migration 2024_01_10_000001) — dipakai untuk
     // mengisi blok tanda tangan & Penjelasan Status Penilai pada proposal
     // saat user ini jadi penandatangan.
@@ -152,6 +152,14 @@ class User extends Authenticatable
 
         return $all ?: null;
     }
+
+    /**
+     * Aturan username login (2026-09-23, feedback user): huruf kecil, angka,
+     * titik, garis bawah, strip. Hanya Administrator yang boleh mengubah.
+     */
+    public const USERNAME_RULES = ['required', 'string', 'min:3', 'max:50', 'regex:/^[a-z0-9._-]+$/'];
+
+    public const USERNAME_MESSAGE = 'Username hanya boleh huruf kecil, angka, titik, garis bawah, dan strip.';
 
     public const JABATAN_OPTIONS = [
         self::JABATAN_PELAKSANA_INSPEKSI,

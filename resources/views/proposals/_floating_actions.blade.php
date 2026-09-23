@@ -37,7 +37,7 @@
         'rose'    => 'text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-900/30',
     ];
 
-    $isActiveProject = !$project->isCancelled() && $project->status !== \App\Models\Project::STATUS_SELESAI;
+    $isActiveProject = ! $project->isCancelled() && ! $project->isDone();
 
     // ---------- CETAK / UNDUH PROPOSAL ----------
     // Tersedia di SEMUA status, termasuk Selesai & Batal (2026-09-14,

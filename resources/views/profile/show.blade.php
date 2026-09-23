@@ -49,6 +49,14 @@
                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
             </div>
             <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+                <input type="text" value="{{ $user->username }}" disabled
+                       title="Username hanya bisa diubah Administrator"
+                       class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-500 shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Dipakai untuk login. Minta Administrator bila perlu diubah.</p>
+            </div>
+
+            <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                 <input type="email" name="email" value="{{ old('email', $user->email) }}" required
                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">

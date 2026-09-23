@@ -22,9 +22,8 @@
     // penilaian sudah dikonfirmasi, kalau belum ya fase Draft. Logika sama
     // dengan badge SLA di halaman detail proposal.
     $activeSlaFor = function ($project) {
-        // SLA hanya berjalan selama pekerjaan berjalan (In-Progress) — 2026-09-15.
-        if (!$project->assigned_appraiser || !$project->survey_date
-            || $project->status !== \App\Models\Project::STATUS_IN_PROGRESS) {
+        // SLA berjalan selama pekerjaan aktif (In-Progress s/d Pengiriman) — 2026-09-23.
+        if (!$project->assigned_appraiser || !$project->survey_date || !$project->isWorkActive()) {
             return null;
         }
         return ($project->isReviewApproved() && $project->estimated_final_completion_date)

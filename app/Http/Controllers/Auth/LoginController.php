@@ -15,24 +15,27 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
+        // Login memakai USERNAME (2026-09-23, feedback user) — email tetap
+        // tersimpan untuk data & pemulihan akun, tapi tidak dipakai login.
         $credentials = $request->validate([
-            'email'    => 'required|email',
+            'username' => 'required|string|max:50',
             'password' => 'required|string',
         ]);
+        $credentials['username'] = mb_strtolower(trim($credentials['username']));
 
         // Cek dulu apakah user ada tapi nonaktif -> beri pesan spesifik,
         // supaya tidak membingungkan user pikir passwordnya yang salah.
-        $user = \App\Models\User::where('email', $credentials['email'])->first();
+        $user = \App\Models\User::where('username', $credentials['username'])->first();
         if ($user && !$user->is_active) {
             return back()->withErrors([
-                'email' => 'Akun ini telah dinonaktifkan. Hubungi Administrator.',
-            ])->onlyInput('email');
+                'username' => 'Akun ini telah dinonaktifkan. Hubungi Administrator.',
+            ])->onlyInput('username');
         }
 
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors([
-                'email' => 'Email atau password yang Anda masukkan salah.',
-            ])->onlyInput('email');
+                'username' => 'Username atau password yang Anda masukkan salah.',
+            ])->onlyInput('username');
         }
 
         $request->session()->regenerate();

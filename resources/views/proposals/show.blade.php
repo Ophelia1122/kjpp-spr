@@ -13,9 +13,8 @@
         // Admin Produksi, kalau belum ya Draft. Null = belum relevan (belum
         // ada penilai/tanggal survei, atau proyek sudah Selesai/Batal).
         $activeSla = null;
-        // SLA hanya berjalan selama pekerjaan berjalan (In-Progress) — 2026-09-15.
-        if ($project->assigned_appraiser && $project->survey_date
-            && $project->status === \App\Models\Project::STATUS_IN_PROGRESS) {
+        // SLA berjalan selama pekerjaan aktif (In-Progress s/d Pengiriman) — 2026-09-23.
+        if ($project->assigned_appraiser && $project->survey_date && $project->isWorkActive()) {
             $activeSla = ($project->isReviewApproved() && $project->estimated_final_completion_date)
                 ? ['label' => 'SLA Laporan Final', 'state' => $project->final_sla_state, 'text' => $project->final_sla_label, 'target' => $project->estimated_final_completion_date_formatted]
                 : ['label' => 'SLA Draft/Resume', 'state' => $project->sla_state, 'text' => $project->sla_label, 'target' => $project->estimated_completion_date_formatted];
@@ -57,7 +56,7 @@
                 {{ $project->status }}
             </span>
             {{-- Pekerjaan bisa Selesai sebelum tagihan lunas (2026-09-15, feedback user). --}}
-            @if ($project->status === \App\Models\Project::STATUS_SELESAI && ! $project->is_fully_paid)
+            @if ($project->isDone() && ! $project->is_fully_paid)
                 <span class="px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">Belum Lunas</span>
             @endif
             @can('proposals.manage')
@@ -175,7 +174,7 @@
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Informasi Proyek</h2>
             <div class="flex items-center gap-1">
                 @can('proposals.manage')
-                    @if ($project->status !== \App\Models\Project::STATUS_SELESAI)
+                    @if (! $project->isDone())
                         <a href="{{ route('proposals.edit', $project) }}" title="Edit Proposal" aria-label="Edit Proposal"
                            class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                             @include('partials.icon-pencil')
@@ -1075,7 +1074,7 @@
                              (kesannya masih terkunci). Badge "sudah lunas"
                              dipertahankan — itu murni info status proyek,
                              tidak menyiratkan sedang terkunci. --}}
-                        @if ($project->status === \App\Models\Project::STATUS_SELESAI)
+                        @if ($project->isDone())
                             <span class="text-xs font-semibold text-emerald-600 whitespace-nowrap dark:text-emerald-400">✔ Proyek selesai{{ $project->is_fully_paid ? ' · tagihan lunas' : '' }}.</span>
                         @endif
                         @can('final_report.manage')
@@ -1197,7 +1196,7 @@
             </p>
 
         {{-- ---------- STATUS: IN-PROGRESS / SCHEDULED ---------- --}}
-        @elseif ($project->status === \App\Models\Project::STATUS_IN_PROGRESS)
+        @elseif ($project->isWorkActive())
             @can('survey.manage')
                 @if (!$project->assigned_appraiser || !$project->survey_date)
                     <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -1235,11 +1234,14 @@
                     @if ($project->review_status === \App\Models\Project::STAGE_DRAFT_REVIEWED && ! $project->final_report_number)
                         <p class="text-xs text-amber-600 dark:text-amber-400">Isi Nomor Laporan Final di kartu "Nomor Laporan Final" sebelum menandai buku selesai dicetak.</p>
                     @endif
+                    @if ($project->status === \App\Models\Project::STATUS_PENGIRIMAN)
+                        <p class="text-xs text-amber-600 dark:text-amber-400">Buat <b>Tanda Terima Pengiriman Buku</b> di kartu bawah untuk menutup proyek.</p>
+                    @endif
                 </div>
             @endif
 
         {{-- ---------- STATUS: SELESAI (pembayaran bisa menyusul) ---------- --}}
-        @elseif ($project->status === \App\Models\Project::STATUS_SELESAI)
+        @elseif ($project->isDone())
             @if ($project->is_fully_paid)
                 <p class="text-xs text-emerald-600 dark:text-emerald-400">✔ Pekerjaan selesai dan tagihan sudah lunas.</p>
             @else
