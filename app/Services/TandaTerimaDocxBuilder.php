@@ -17,9 +17,10 @@ use PhpOffice\PhpWord\SimpleType\Jc;
 class TandaTerimaDocxBuilder
 {
     private const NAVY = '001F60';
+    private const FONT = 'Arial Narrow';
 
-    private array $f     = ['name' => 'Arial', 'size' => 11];
-    private array $fB    = ['name' => 'Arial', 'size' => 11, 'bold' => true];
+    private array $f     = ['name' => self::FONT, 'size' => 11];
+    private array $fB    = ['name' => self::FONT, 'size' => 11, 'bold' => true];
     private array $fWhite;
     private array $p0    = ['spaceAfter' => 0, 'spaceBefore' => 0];
 
@@ -136,7 +137,7 @@ class TandaTerimaDocxBuilder
         ]);
         $warn->addRow();
         $wc = $warn->addCell(Converter::cmToTwip(7.5));
-        $small = ['name' => 'Arial', 'size' => 9.5, 'italic' => true, 'color' => '5B6478'];
+        $small = ['name' => self::FONT, 'size' => 9.5, 'italic' => true, 'color' => '5B6478'];
         foreach (['Perhatian.', 'Mohon sertakan nama jelas penerima dan tanggal penerimaan berkas.', 'Terima kasih.'] as $t) {
             $wc->addText($t, $small, $this->p0);
         }

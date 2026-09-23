@@ -3,12 +3,18 @@
 <head>
     <meta charset="utf-8">
     <style>
+        {{-- Arial Narrow untuk seluruh dokumen (2026-09-23, feedback user);
+             file font ada di public/fonts (tidak ikut git, lihat Dockerfile). --}}
+        @font-face { font-family: 'Arial Narrow'; font-weight: normal; font-style: normal; src: url("{{ public_path('fonts/arialn.ttf') }}") format("truetype"); }
+        @font-face { font-family: 'Arial Narrow'; font-weight: bold;   font-style: normal; src: url("{{ public_path('fonts/arialnb.ttf') }}") format("truetype"); }
+        @font-face { font-family: 'Arial Narrow'; font-weight: normal; font-style: italic; src: url("{{ public_path('fonts/arialni.ttf') }}") format("truetype"); }
+        @font-face { font-family: 'Arial Narrow'; font-weight: bold;   font-style: italic; src: url("{{ public_path('fonts/arialnbi.ttf') }}") format("truetype"); }
         /* Dua lembar kwitansi identik dalam satu halaman A4, dipisah garis
            putus-putus untuk digunting (2026-09-15, feedback user). Tinggi
            tiap lembar dikunci (.copy) supaya garis potong selalu jatuh di
            tengah halaman, berapa pun panjang nama klien/rekeningnya. */
         @page { margin: 22px 40px; }
-        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 9.8px; color: #000; line-height: 1.35; margin: 0; }
+        body { font-family: 'Arial Narrow', 'Helvetica', Arial, sans-serif; font-size: 9.8px; color: #000; line-height: 1.35; margin: 0; }
         table { width: 100%; border-collapse: collapse; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
