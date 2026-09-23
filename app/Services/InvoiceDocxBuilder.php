@@ -23,7 +23,7 @@ use PhpOffice\PhpWord\SimpleType\Jc;
  */
 class InvoiceDocxBuilder
 {
-    private const FONT = 'Arial Narrow';
+    private const FONT = 'Arial';
 
     private PhpWord $word;
     private $project;

@@ -3,14 +3,8 @@
 <head>
     <meta charset="utf-8">
     <style>
-        {{-- Arial Narrow untuk seluruh dokumen (2026-09-23, feedback user);
-             file font ada di public/fonts (tidak ikut git, lihat Dockerfile). --}}
-        @font-face { font-family: 'Arial Narrow'; font-weight: normal; font-style: normal; src: url("{{ public_path('fonts/arialn.ttf') }}") format("truetype"); }
-        @font-face { font-family: 'Arial Narrow'; font-weight: bold;   font-style: normal; src: url("{{ public_path('fonts/arialnb.ttf') }}") format("truetype"); }
-        @font-face { font-family: 'Arial Narrow'; font-weight: normal; font-style: italic; src: url("{{ public_path('fonts/arialni.ttf') }}") format("truetype"); }
-        @font-face { font-family: 'Arial Narrow'; font-weight: bold;   font-style: italic; src: url("{{ public_path('fonts/arialnbi.ttf') }}") format("truetype"); }
         @page { margin: 36px 55px 75px 55px; }
-        body { font-family: 'Arial Narrow', 'Helvetica', Arial, sans-serif; font-size: 10.5px; color: #000; line-height: 1.5; }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 10.5px; color: #000; line-height: 1.5; }
         table { width: 100%; border-collapse: collapse; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
