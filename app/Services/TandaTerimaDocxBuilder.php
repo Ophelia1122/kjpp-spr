@@ -126,7 +126,7 @@ class TandaTerimaDocxBuilder
         $sign->addRow();
         $sc = $sign->addCell(Converter::cmToTwip(8.5));
         $sc->addText('Diterima Oleh,', $this->fB, ['indentation' => ['left' => Converter::cmToTwip(0.6)]] + $this->p0);
-        $sc->addTextBreak(4, $this->f);
+        $sc->addTextBreak(3, $this->f);
         $sc->addText('( ________________ )', $this->f, $this->p0);
 
         $nc = $sign->addCell(Converter::cmToTwip(7.5));

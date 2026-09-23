@@ -108,7 +108,7 @@
     <table style="margin-top: 16px;">
         <tr>
             <td style="width: 55%;">
-                <p class="bold" style="margin: 0 0 46px 26px;">Diterima Oleh,</p>
+                <p class="bold" style="margin: 0 0 82px 26px;">Diterima Oleh,</p>
                 <p style="margin: 0 0 0 8px;">( ________________ )</p>
             </td>
             <td style="padding-top: 18px;">
