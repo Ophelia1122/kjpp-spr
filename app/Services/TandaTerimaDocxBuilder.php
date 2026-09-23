@@ -3,119 +3,187 @@
 namespace App\Services;
 
 use App\Models\DeliveryReceipt;
+use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\Shared\Converter;
 use PhpOffice\PhpWord\SimpleType\Jc;
 
 /**
- * Tanda Terima Pengiriman Buku versi .docx (2026-09-23, feedback user) —
- * isi & urutan sama dengan PDF (resources/views/pdf/tanda-terima.blade.php).
+ * Tanda Terima Pengiriman Buku versi .docx — tata letak, warna, dan tulisan
+ * disamakan dengan contoh kantor & versi PDF
+ * (resources/views/pdf/tanda-terima.blade.php), 2026-09-23 feedback user.
  */
 class TandaTerimaDocxBuilder
 {
-    private PhpWord $word;
+    private const NAVY = '001F60';
+
+    private array $f     = ['name' => 'Arial', 'size' => 9.5];
+    private array $fB    = ['name' => 'Arial', 'size' => 9.5, 'bold' => true];
+    private array $fWhite;
+    private array $p0    = ['spaceAfter' => 0, 'spaceBefore' => 0];
 
     public function __construct(private DeliveryReceipt $receipt)
     {
         $this->receipt->loadMissing('recipient', 'project.instructingClient', 'project.namedClient');
+        $this->fWhite = $this->fB + ['color' => 'FFFFFF'];
     }
 
     public function save(): string
     {
         Settings::setOutputEscapingEnabled(true);
 
-        $this->word = new PhpWord();
-        $font = ['name' => 'Arial', 'size' => 10.5];
-        $bold = $font + ['bold' => true];
-
-        $section = $this->word->addSection([
-            'marginTop' => Converter::cmToTwip(1.3), 'marginBottom' => Converter::cmToTwip(1.5),
-            'marginLeft' => Converter::cmToTwip(2), 'marginRight' => Converter::cmToTwip(2),
+        $word    = new PhpWord();
+        $section = $word->addSection([
+            'marginTop' => Converter::cmToTwip(1.2), 'marginBottom' => Converter::cmToTwip(1.2),
+            'marginLeft' => Converter::cmToTwip(2.5), 'marginRight' => Converter::cmToTwip(2.5),
         ]);
 
-        // Kop + garis tebal.
-        $logo = public_path('images/logo-spr-long.png');
-        if (is_file($logo)) {
-            $section->addImage($logo, ['width' => Converter::cmToPoint(16), 'alignment' => Jc::CENTER]);
-        }
-        $section->addText(str_repeat('_', 82), ['name' => 'Arial', 'size' => 8], ['spaceAfter' => 160]);
-
-        $section->addText('TANDA TERIMA', $font + ['bold' => true, 'size' => 15], ['alignment' => Jc::CENTER, 'spaceAfter' => 160]);
-
-        $r = $this->receipt;
+        $r         = $this->receipt;
         $recipient = $r->recipient;
-        $name      = $recipient?->client_name ?: $r->project->effective_client_name;
+        $name      = (string) ($recipient?->client_name ?: $r->project->effective_client_name);
+        $lines     = collect(preg_split('/\r\n|\r|\n/', (string) ($recipient?->address ?? '')))
+            ->map(fn ($l) => trim($l))->filter()->values()->all();
+        $up        = $r->recipient_up ?: '-';
+        $w         = Converter::cmToTwip(16);   // lebar isi halaman
 
-        $meta = $section->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
-        $meta->addRow();
-        $left  = $meta->addCell(Converter::cmToTwip(8.5));
-        $right = $meta->addCell(Converter::cmToTwip(8));
-        $left->addText('Nomor Pengiriman', $bold, ['spaceAfter' => 0]);
-        $left->addText($r->number, $font, ['spaceAfter' => 120]);
-        $right->addText('Tanggal Pengiriman', $bold, ['spaceAfter' => 0]);
-        $right->addText($r->delivery_date->translatedFormat('d F Y'), $font, ['spaceAfter' => 120]);
-
-        $left->addText('Penerima:', $bold, ['spaceAfter' => 0]);
-        $left->addText((string) $name, $bold, ['spaceAfter' => 0]);
-        foreach (preg_split('/\r\n|\r|\n/', (string) ($recipient?->address ?? '')) as $line) {
-            if (trim($line) !== '') {
-                $left->addText(trim($line), $font, ['spaceAfter' => 0]);
-            }
-        }
-        $left->addText('Up: ' . ($r->recipient_up ?: '-'), $font, ['spaceAfter' => 0]);
-
-        $right->addText('Pengirim:', $bold, ['spaceAfter' => 0]);
-        $right->addText(config('kjpp.company_name'), $font, ['spaceAfter' => 0]);
-        $right->addText(\Illuminate\Support\Str::after(config('kjpp.footer.lines.0'), 'Head Office: '), $font, ['spaceAfter' => 0]);
-
-        $section->addTextBreak(1, $font);
-        $section->addText('Telah diterima beberapa dokumen Penilaian Aset dengan rincian sebagai berikut:', $font, ['spaceAfter' => 120]);
-
-        $table = $section->addTable([
-            'borderSize' => 6, 'borderColor' => '000000', 'cellMargin' => 60,
-            'width' => 100 * 50, 'unit' => 'pct',
+        // ---------- Kotak utama ----------
+        $box = $section->addTable([
+            'borderSize' => 6, 'borderColor' => self::NAVY,
+            'width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => Converter::cmToTwip(0.25),
         ]);
-        $head = ['bgColor' => 'E8EEF7'];
-        $table->addRow(null, ['tblHeader' => true]);
-        $table->addCell(Converter::cmToTwip(1.2), $head)->addText('No.', $bold, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-        $table->addCell(Converter::cmToTwip(8.6), $head)->addText('Nama Dokumen', $bold, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-        $table->addCell(Converter::cmToTwip(3.2), $head)->addText('Qty', $bold, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-        $table->addCell(Converter::cmToTwip(2.5), $head)->addText('Jenis', $bold, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+        $box->addRow();
+        $cell = $box->addCell($w);
 
-        foreach ($r->documentRows() as $i => $row) {
-            $table->addRow();
-            $table->addCell(Converter::cmToTwip(1.2))->addText((string) ($i + 1), $font, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-            $table->addCell(Converter::cmToTwip(8.6))->addText($row['label'], $font, ['spaceAfter' => 0]);
-            $table->addCell(Converter::cmToTwip(3.2))->addText($row['qty'] . ' ' . $row['unit'], $font, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
-            $table->addCell(Converter::cmToTwip(2.5))->addText($row['kind'], $font, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+        $logo = public_path('images/logo-spr-short.png');
+        if (is_file($logo)) {
+            $cell->addImage($logo, ['width' => Converter::cmToPoint(8.3), 'alignment' => Jc::START]);
         }
+
+        // Bar judul.
+        $bar = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 60]);
+        $bar->addRow();
+        $bar->addCell($w, ['bgColor' => self::NAVY])
+            ->addText('TANDA TERIMA', $this->fWhite + ['size' => 11], ['alignment' => Jc::CENTER] + $this->p0);
+
+        $cell->addTextBreak(1, $this->f);
+
+        // Nomor/tanggal + penerima.
+        $meta = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        $meta->addRow();
+        $left  = $meta->addCell(Converter::cmToTwip(8));
+        $right = $meta->addCell(Converter::cmToTwip(8));
+
+        $this->labelValue($left, 'Nomor Pengiriman', $r->number);
+        $this->labelValue($left, 'Tanggal Pengiriman', $r->delivery_date->translatedFormat('d F Y'));
+        $left->addTextBreak(1, $this->f);
+        $left->addText('Pengirim:', $this->fB, $this->p0);
+        $left->addText('KJPP Sugianto Prasodjo dan Rekan', $this->f, $this->p0);
+
+        $right->addText('Penerima:', $this->fB, $this->p0);
+        $right->addText($name, $this->fB, $this->p0);
+        foreach ($lines as $line) {
+            $right->addText($line, $this->f, $this->p0);
+        }
+        $this->labelValue($right, 'Up:', $up, 1.2);
+
+        $cell->addTextBreak(1, $this->f);
+        $cell->addText('Telah diterima beberapa dokumen Penilaian Aset dengan rincian sebagai berikut:', $this->fB, $this->p0);
 
         if ($r->note) {
-            $section->addTextBreak(1, $font);
-            $run = $section->addTextRun(['alignment' => Jc::BOTH]);
-            $run->addText('Keterangan: ', $bold);
-            $run->addText($r->note, $font);
+            $noteTbl = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+            $noteTbl->addRow();
+            $noteTbl->addCell(Converter::cmToTwip(0.8))->addText('-', $this->f, ['spaceBefore' => 80] + $this->p0);
+            $noteTbl->addCell(Converter::cmToTwip(15))->addText($r->note, $this->f, ['alignment' => Jc::BOTH, 'spaceBefore' => 80] + $this->p0);
         }
 
-        $section->addTextBreak(2, $font);
-        $sign = $section->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
-        $sign->addRow();
-        $sign->addCell(Converter::cmToTwip(9))->addText('', $font);
-        $cell = $sign->addCell(Converter::cmToTwip(7));
-        $cell->addText('Diterima Oleh,', $font, ['spaceAfter' => 0]);
-        $cell->addTextBreak(3, $font);
-        $cell->addText('( _______________________ )', $font, ['spaceAfter' => 0]);
+        $cell->addTextBreak(1, $this->f);
 
-        $section->addTextBreak(1, $font);
-        $section->addText('Perhatian.', $bold + ['size' => 9.5], ['spaceAfter' => 0]);
-        $section->addText('Mohon sertakan nama jelas penerima dan tanggal penerimaan berkas. Terima kasih.',
-            $font + ['size' => 9.5], ['spaceAfter' => 0]);
+        // Tabel dokumen: hanya baris header yang berwarna.
+        $cols = [Converter::cmToTwip(1), Converter::cmToTwip(7.4), Converter::cmToTwip(1.6), Converter::cmToTwip(3), Converter::cmToTwip(3)];
+        $docs = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 60]);
+        $docs->addRow(null, ['tblHeader' => true]);
+        $head = ['bgColor' => self::NAVY];
+        $docs->addCell($cols[0], $head)->addText('No.', $this->fWhite, $this->p0);
+        $docs->addCell($cols[1], $head)->addText('Nama Dokumen', $this->fWhite, $this->p0);
+        $docs->addCell($cols[2], $head)->addText('', $this->fWhite, $this->p0);
+        $docs->addCell($cols[3], $head)->addText('Qty', $this->fWhite, $this->p0);
+        $docs->addCell($cols[4], $head)->addText('Jenis', $this->fWhite, $this->p0);
+
+        foreach ($r->documentRows() as $i => $row) {
+            $docs->addRow();
+            $docs->addCell($cols[0])->addText((string) ($i + 1), $this->f, ['alignment' => Jc::CENTER] + $this->p0);
+            $docs->addCell($cols[1])->addText($row['label'], $this->f, $this->p0);
+            $docs->addCell($cols[2])->addText("\u{2611}", $this->f, ['alignment' => Jc::CENTER] + $this->p0);
+            $docs->addCell($cols[3])->addText($row['qty'] . ' ' . $row['unit'], $this->f, $this->p0);
+            $docs->addCell($cols[4])->addText($row['kind'], $this->f, $this->p0);
+        }
+
+        $cell->addTextBreak(1, $this->f);
+
+        // Tanda tangan + kotak "Perhatian".
+        $sign = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        $sign->addRow();
+        $sc = $sign->addCell(Converter::cmToTwip(8.5));
+        $sc->addText('Diterima Oleh,', $this->fB, ['indentation' => ['left' => Converter::cmToTwip(0.6)]] + $this->p0);
+        $sc->addTextBreak(3, $this->f);
+        $sc->addText('( ________________ )', $this->f, $this->p0);
+
+        $nc = $sign->addCell(Converter::cmToTwip(7.5));
+        $warn = $nc->addTable([
+            'borderSize' => 6, 'borderColor' => '9AA4B8',
+            'width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 80,
+        ]);
+        $warn->addRow();
+        $wc = $warn->addCell(Converter::cmToTwip(7.5));
+        $small = ['name' => 'Arial', 'size' => 8, 'italic' => true, 'color' => '5B6478'];
+        foreach (['Perhatian.', 'Mohon sertakan nama jelas penerima dan tanggal penerimaan berkas.', 'Terima kasih.'] as $t) {
+            $wc->addText($t, $small, $this->p0);
+        }
+
+        $section->addTextBreak(1, $this->f);
+
+        // ---------- Potongan "Kepada Yth." ----------
+        $slip = $section->addTable([
+            'borderSize' => 6, 'borderColor' => self::NAVY,
+            'width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 80,
+        ]);
+        $slip->addRow();
+        $slip->addCell($w)->addText('Kepada Yth.', $this->fB, $this->p0);
+
+        $slip->addRow();
+        $slip->addCell($w, ['bgColor' => self::NAVY])
+            ->addText(mb_strtoupper($name), $this->fWhite + ['size' => 12], ['alignment' => Jc::CENTER] + $this->p0);
+
+        $slip->addRow();
+        $body = $slip->addCell($w);
+        foreach ($lines as $line) {
+            $body->addText($line, $this->f, $this->p0);
+        }
+        $this->labelValue($body, 'Up:', $up, 1.2);
+        if ($r->note) {
+            $noteTbl = $body->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+            $noteTbl->addRow();
+            $noteTbl->addCell(Converter::cmToTwip(2.2))->addText('Keterangan:', $this->fB, $this->p0);
+            $noteTbl->addCell(Converter::cmToTwip(13))->addText($r->note, $this->f, ['alignment' => Jc::BOTH] + $this->p0);
+        }
+
+        $slip->addRow(Converter::cmToTwip(0.4));
+        $slip->addCell($w, ['bgColor' => self::NAVY])->addText('', $this->f, $this->p0);
 
         $path = storage_path('app/tmp/tanda-terima-' . uniqid() . '.docx');
         @mkdir(dirname($path), 0775, true);
-        \PhpOffice\PhpWord\IOFactory::createWriter($this->word, 'Word2007')->save($path);
+        IOFactory::createWriter($word, 'Word2007')->save($path);
 
         return $path;
+    }
+
+    /** Baris "Label   Nilai" dengan lebar label tetap. */
+    private function labelValue($container, string $label, string $value, float $labelCm = 3.4): void
+    {
+        $t = $container->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        $t->addRow();
+        $t->addCell(Converter::cmToTwip($labelCm))->addText($label, $this->fB, $this->p0);
+        $t->addCell(Converter::cmToTwip(4.5))->addText($value, $this->f, $this->p0);
     }
 }

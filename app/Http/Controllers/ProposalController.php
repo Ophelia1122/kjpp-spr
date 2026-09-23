@@ -121,8 +121,10 @@ class ProposalController extends Controller
      */
     public function edit(Project $project)
     {
-        if ($project->isDone() || $project->isCancelled()) {
-            abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
+        // Administrator tetap boleh memperbaiki proyek yang sudah selesai
+        // (2026-09-23, feedback user); peran lain terkunci seperti biasa.
+        if (($project->isDone() && ! auth()->user()->isAdministrator()) || $project->isCancelled()) {
+            abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal. Minta Administrator bila perlu diperbaiki.');
         }
 
         $project->load('instructingClient', 'intendedUsers', 'valuationObjects', 'signedBy', 'approverClient', 'namedClient');
@@ -145,8 +147,10 @@ class ProposalController extends Controller
 
     public function update(Request $request, Project $project)
     {
-        if ($project->isDone() || $project->isCancelled()) {
-            abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
+        // Administrator tetap boleh memperbaiki proyek yang sudah selesai
+        // (2026-09-23, feedback user); peran lain terkunci seperti biasa.
+        if (($project->isDone() && ! auth()->user()->isAdministrator()) || $project->isCancelled()) {
+            abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal. Minta Administrator bila perlu diperbaiki.');
         }
 
         if ($request->has('psak_classification') && is_array($request->psak_classification)) {
