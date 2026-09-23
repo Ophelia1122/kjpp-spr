@@ -9,7 +9,7 @@
         {{-- Kotak cari ikut kartu header (2026-09-20) — halaman ini pendek,
              tiga blok bertumpuk terasa boros. --}}
         <form id="searchForm" method="GET" action="{{ route('users.index') }}" class="w-full sm:w-64">
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau email..."
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau username..."
                    class="h-[34px] w-full rounded-md border-gray-300 py-0 text-sm shadow-sm dark:border-gray-600">
         </form>
         <a href="{{ route('users.create') }}" title="Tambah pengguna" aria-label="Tambah pengguna"

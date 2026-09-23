@@ -200,6 +200,17 @@ class ProjectController extends Controller
         return back()->with($isReturn ? 'warning' : ($stays ? 'info' : 'success'), $def['flash']);
     }
 
+    /** Halaman baca-saja seluruh data proyek (2026-09-23, feedback user). */
+    public function lengkap(Project $project)
+    {
+        $project->load([
+            'instructingClient', 'namedClient', 'intendedUsers', 'approverClient', 'signedBy',
+            'valuationObjects', 'invoices', 'bank', 'deliveryReceipts.recipient',
+        ]);
+
+        return view('proposals.lengkap', compact('project'));
+    }
+
     /**
      * Export PDF "Surat Tugas Penilaian".
      */

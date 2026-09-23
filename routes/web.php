@@ -127,6 +127,7 @@ Route::middleware('auth')->group(function () {
     // --- Proposal: lihat ---
     Route::middleware('permission:proposals.view')->group(function () {
         Route::get('/proposals/{project}', [ProjectController::class, 'show'])->name('proposals.show');
+        Route::get('/proposals/{project}/lengkap', [ProjectController::class, 'lengkap'])->name('proposals.lengkap');
         Route::get('/proposals/{project}/pdf', [ProposalController::class, 'exportPdf'])->name('proposals.exportPdf');
         Route::get('/proposals/{project}/word', [ProposalController::class, 'exportWord'])->name('proposals.exportWord');
         Route::get('/proposals/{project}/representatif', [ProposalController::class, 'exportRepresentatif'])->name('proposals.exportRepresentatif');

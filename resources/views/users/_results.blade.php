@@ -5,7 +5,7 @@
             <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
                 <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
                     <th class="px-4 py-3">@include('partials.sort-link', ['key' => 'name', 'label' => 'Nama'])</th>
-                    <th class="px-4 py-3">Email</th>
+                    <th class="px-4 py-3">Username</th>
                     {{-- Keterangan singkat supaya Role vs Jabatan tidak tertukar (2026-09-14). --}}
                     <th class="px-4 py-3">@include('partials.sort-link', ['key' => 'role', 'label' => 'Role']) <span class="block text-[10px] font-normal normal-case tracking-normal text-gray-500 dark:text-gray-400">menu yang bisa dibuka</span></th>
                     <th class="px-4 py-3">Jabatan <span class="block text-[10px] font-normal normal-case tracking-normal text-gray-500 dark:text-gray-400">tugas &amp; tanda tangan</span></th>
@@ -23,7 +23,7 @@
                                 <span class="text-xs text-gray-500 dark:text-gray-400">(Anda)</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-gray-500 dark:text-gray-500">{{ $user->email }}</td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-500">{{ $user->username ?: '—' }}</td>
                         <td class="px-4 py-3 text-gray-500 dark:text-gray-500">{{ $user->role->name ?? '-' }}</td>
                         <td class="px-4 py-3 text-gray-500 dark:text-gray-500">{{ $user->jabatan ?? '-' }}</td>
                         <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap dark:text-gray-500"
@@ -100,7 +100,7 @@
                                 <span class="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">Nonaktif</span>
                             @endif
                         </div>
-                        <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $user->email }}</p>
+                        <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $user->username ?: '—' }}</p>
 
                         <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                             <div>

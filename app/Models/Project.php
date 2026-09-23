@@ -970,10 +970,17 @@ class Project extends Model
      * DP di awal -> setelah invoice DP dibayar; Bayar Nanti -> setelah tombol
      * "Mulai Tanpa DP" ditekan. Draft/Menunggu Klien/Selesai/Batal: terkunci.
      */
-    public function canPrepareFieldwork(): bool
+    public function canPrepareFieldwork(?User $user = null): bool
     {
         // Masih boleh diubah sampai tahap Finalisasi (2026-09-23) — mis.
         // tanggal survei per objek dikoreksi setelah nilai disetujui.
+        // Administrator boleh mengubah kapan saja selama proyek tidak batal
+        // (2026-09-23, feedback user).
+        $user ??= auth()->user();
+        if ($user?->isAdministrator() && ! $this->isCancelled()) {
+            return true;
+        }
+
         return in_array($this->status, [self::STATUS_IN_PROGRESS, self::STATUS_FINALISASI], true);
     }
 

@@ -56,7 +56,9 @@
                 {{ $project->status }}
             </span>
             {{-- Pekerjaan bisa Selesai sebelum tagihan lunas (2026-09-15, feedback user). --}}
-            @if ($project->isDone() && ! $project->is_fully_paid)
+            {{-- Status "Selesai - Belum Lunas" sudah menyebut pelunasan, jadi
+                 badge tambahan hanya untuk status "Selesai" (2026-09-23). --}}
+            @if ($project->status === \App\Models\Project::STATUS_SELESAI && ! $project->is_fully_paid)
                 <span class="px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">Belum Lunas</span>
             @endif
             @can('proposals.manage')
@@ -173,8 +175,10 @@
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Informasi Proyek</h2>
             <div class="flex items-center gap-1">
+                {{-- Edit: selama proyek belum selesai untuk Admin Produksi; setelah
+                     selesai hanya Administrator (2026-09-23, feedback user). --}}
                 @can('proposals.manage')
-                    @if (! $project->isDone())
+                    @if (! $project->isDone() || auth()->user()->isAdministrator())
                         <a href="{{ route('proposals.edit', $project) }}" title="Edit Proposal" aria-label="Edit Proposal"
                            class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                             @include('partials.icon-pencil')
@@ -195,16 +199,13 @@
                         @endif
                     </a>
                 @endcan
-                <button type="button" id="infoProjectToggle" title="Sembunyikan/Tampilkan Informasi Proyek" aria-label="Sembunyikan/Tampilkan Informasi Proyek"
-                        class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
-                    <svg aria-hidden="true" id="infoProjectEyeIcon" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                <a href="{{ route('proposals.lengkap', $project) }}" title="Lihat seluruh data proyek" aria-label="Lihat seluruh data proyek"
+                   class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
+                    <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
                     </svg>
-                    <svg aria-hidden="true" id="infoProjectEyeSlashIcon" hidden class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/>
-                    </svg>
-                </button>
+                </a>
             </div>
         </div>
 
@@ -336,20 +337,7 @@
             </div>
         </dl>
 
-        <script>
-            (function () {
-                var btn = document.getElementById('infoProjectToggle');
-                var body = document.getElementById('infoProjectBody');
-                var eyeIcon = document.getElementById('infoProjectEyeIcon');
-                var eyeSlashIcon = document.getElementById('infoProjectEyeSlashIcon');
-                if (!btn || !body) return;
-                btn.addEventListener('click', function () {
-                    body.hidden = !body.hidden;
-                    eyeIcon.hidden = body.hidden;
-                    eyeSlashIcon.hidden = !body.hidden;
-                });
-            })();
-        </script>
+        
     </div>
 
     {{-- ===================== CARD PENILAI LAPANGAN & TANGGAL SURVEI =====================
@@ -396,6 +384,20 @@
                             Penilai: <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->assigned_appraiser }}</span>
                             &middot; Survei: <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->survey_date->translatedFormat('d F Y') }}</span>
                         </p>
+                        {{-- Rincian tanggal survei per objek tetap bisa dibaca walau terkunci (2026-09-23). --}}
+                        @if ($project->valuationObjects->isNotEmpty())
+                            <ul class="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                                @foreach ($project->valuationObjects as $obj)
+                                    <li>
+                                        {{ $loop->iteration }}. {{ $obj->short_label }} —
+                                        {{ $obj->survey_start_date?->translatedFormat('d M Y') ?: '(belum diisi)' }}
+                                        @if ($obj->survey_end_date && $obj->survey_end_date->ne($obj->survey_start_date))
+                                            s/d {{ $obj->survey_end_date->translatedFormat('d M Y') }}
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
                     @endif
                 @else
                 {{-- Daftar Penilai Lapangan HANYA akun berperan Administrator atau
@@ -608,6 +610,32 @@
 
             @unless ($suratOpen)
                 @include('partials.fieldwork-lock')
+                {{-- Terkunci tetap bisa dibaca & diunduh (2026-09-23, feedback user). --}}
+                <dl class="mt-3 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt class="text-gray-500 dark:text-gray-400">Nomor Surat Tugas</dt>
+                        <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->assignment_letter_number ?: '(belum diisi)' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500 dark:text-gray-400">Tanggal Surat Tugas</dt>
+                        <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->assignment_letter_date?->translatedFormat('d F Y') ?: '(belum diisi)' }}</dd>
+                    </div>
+                </dl>
+                @can('survey.view')
+                    @if ($project->assigned_appraiser && $project->survey_date)
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <a href="{{ route('projects.exportSuratTugas', $project) }}"
+                               class="inline-flex items-center rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-900">
+                                📄 Cetak PDF Surat Tugas
+                            </a>
+                            <a href="{{ route('projects.exportSuratTugasWord', $project) }}"
+                               class="inline-flex items-center gap-1.5 rounded-md border border-blue-300 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/30">
+                                <span class="rounded border border-current px-1 text-[10px] font-bold leading-4">W</span>
+                                Unduh Word Surat Tugas
+                            </a>
+                        </div>
+                    @endif
+                @endcan
             @else
             @can('assignment_letter.manage')
                 <form action="{{ route('projects.updateAssignmentLetter', $project) }}" method="POST" enctype="multipart/form-data" id="suratTugasForm">
