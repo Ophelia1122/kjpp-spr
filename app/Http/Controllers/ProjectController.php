@@ -504,6 +504,11 @@ class ProjectController extends Controller
             ->orderBy('id')
             ->get();
 
-        return view('proposals.show', compact('project', 'activeUsers', 'activityLogs'));
+        // Tanda Terima Pengiriman Buku (2026-09-23).
+        $project->load('deliveryReceipts.recipient');
+        $clients = \App\Models\Client::orderBy('client_name')->get(['id', 'client_name']);
+        $nextReceiptNumber = app(\App\Services\DocumentNumbering::class)->next('tanda_terima');
+
+        return view('proposals.show', compact('project', 'activeUsers', 'activityLogs', 'clients', 'nextReceiptNumber'));
     }
 }

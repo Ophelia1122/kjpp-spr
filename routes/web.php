@@ -130,6 +130,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/proposals/{project}/pdf', [ProposalController::class, 'exportPdf'])->name('proposals.exportPdf');
         Route::get('/proposals/{project}/word', [ProposalController::class, 'exportWord'])->name('proposals.exportWord');
         Route::get('/proposals/{project}/representatif', [ProposalController::class, 'exportRepresentatif'])->name('proposals.exportRepresentatif');
+        // Tanda Terima Pengiriman Buku (2026-09-23)
+        Route::get('/proposals/{project}/tanda-terima/{receipt}/pdf', [\App\Http\Controllers\DeliveryReceiptController::class, 'exportPdf'])->name('receipts.pdf');
+        Route::get('/proposals/{project}/tanda-terima/{receipt}/word', [\App\Http\Controllers\DeliveryReceiptController::class, 'exportWord'])->name('receipts.word');
+        Route::post('/proposals/{project}/tanda-terima', [\App\Http\Controllers\DeliveryReceiptController::class, 'store'])->name('receipts.store');
+        Route::delete('/proposals/{project}/tanda-terima/{receipt}', [\App\Http\Controllers\DeliveryReceiptController::class, 'destroy'])->name('receipts.destroy');
     });
 
     // --- Survei Lapangan: lihat (termasuk cetak Surat Tugas — dokumen hasil, bukan aksi ubah data) ---

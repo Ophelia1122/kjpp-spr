@@ -281,7 +281,7 @@
 <div id="numberingModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-2">
-            <h2 class="text-lg font-semibold">Penomoran Invoice &amp; Kwitansi</h2>
+            <h2 class="text-lg font-semibold">Penomoran Dokumen</h2>
             <button type="button" onclick="closeNumberingModal()" class="text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200" aria-label="Tutup">&times;</button>
         </div>
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-500">
@@ -291,7 +291,7 @@
         <form method="POST" action="{{ route('dashboard.pembayaran.numbering') }}" class="space-y-4">
             @csrf
             @method('PUT')
-            @foreach (['invoice' => 'invoice_last', 'kwitansi' => 'kwitansi_last'] as $type => $field)
+            @foreach (['invoice' => 'invoice_last', 'kwitansi' => 'kwitansi_last', 'tanda_terima' => 'tanda_terima_last'] as $type => $field)
                 @php $n = $numbering[$type]; @endphp
                 <div>
                     <label for="{{ $field }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor terakhir {{ $n['label'] }}</label>

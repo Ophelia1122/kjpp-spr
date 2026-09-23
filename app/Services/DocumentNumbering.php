@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AppSetting;
+use App\Models\DeliveryReceipt;
 use App\Models\Invoice;
 
 /**
@@ -38,6 +39,15 @@ class DocumentNumbering
             'suffix' => 'KJPPSPR-KEU-JK',
             'date'   => 'COALESCE(payment_date, invoice_date, created_at)',
         ],
+        // Tanda Terima Pengiriman Buku (2026-09-23, feedback user). Formatnya
+        // beda: "214/09/2026" (urut/bulan/tahun), mengikuti contoh kantor.
+        'tanda_terima' => [
+            'label'  => 'Tanda Terima',
+            'model'  => DeliveryReceipt::class,
+            'column' => 'number',
+            'format' => 'short',
+            'date'   => 'delivery_date',
+        ],
     ];
 
     /** Hasil hitung per instance — summary() memanggil tiap fungsi berulang (2026-09-15). */
@@ -50,11 +60,12 @@ class DocumentNumbering
         if (isset($this->issuedCache[$type])) {
             return $this->issuedCache[$type];
         }
-        $cfg = self::TYPES[$type];
+        $cfg   = self::TYPES[$type];
+        $model = $cfg['model'] ?? Invoice::class;
 
         // Ambil nomor TERBESAR (bukan baris id terakhir) — kwitansi bisa terbit
         // tidak berurutan dengan id invoice-nya.
-        return $this->issuedCache[$type] = (int) Invoice::whereRaw("YEAR({$cfg['date']}) = ?", [now()->year])
+        return $this->issuedCache[$type] = (int) $model::whereRaw("YEAR({$cfg['date']}) = ?", [now()->year])
             ->whereNotNull($cfg['column'])
             ->pluck($cfg['column'])
             ->map(fn ($n) => (int) explode('/', $n)[0])
@@ -95,12 +106,21 @@ class DocumentNumbering
 
     public function format(string $type, int $sequence): string
     {
+        // Tanda Terima: "214/09/2026" tanpa nol di depan (format kantor).
+        if ((self::TYPES[$type]['format'] ?? null) === 'short') {
+            return $sequence . '/' . $this->tail($type);
+        }
+
         return sprintf('%03d/%s', $sequence, $this->tail($type));
     }
 
-    /** Bagian setelah nomor urut, mis. "KJPPSPR-INV-JKT/IX/2026". */
+    /** Bagian setelah nomor urut, mis. "KJPPSPR-INV-JKT/IX/2026" atau "09/2026". */
     public function tail(string $type): string
     {
+        if ((self::TYPES[$type]['format'] ?? null) === 'short') {
+            return now()->format('m/Y');
+        }
+
         return self::TYPES[$type]['suffix'] . '/' . self::ROMAN_MONTHS[now()->month - 1] . '/' . now()->year;
     }
 

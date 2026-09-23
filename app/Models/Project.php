@@ -849,6 +849,12 @@ class Project extends Model
         return $this->hasMany(Invoice::class);
     }
 
+    /** Tanda Terima Pengiriman Buku (2026-09-23, boleh lebih dari satu). */
+    public function deliveryReceipts()
+    {
+        return $this->hasMany(DeliveryReceipt::class)->latest('delivery_date')->latest('id');
+    }
+
     /**
      * =========================================================================
      * TAGIHAN & PEMBAYARAN — model FLEKSIBEL: proyek boleh punya berapa

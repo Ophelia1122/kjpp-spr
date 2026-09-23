@@ -1157,6 +1157,11 @@
         @endif
     @endcanany
 
+    {{-- Tanda Terima Pengiriman Buku (2026-09-23): mulai tahap pengiriman. --}}
+    @if (in_array($project->status, [\App\Models\Project::STATUS_PENGIRIMAN, \App\Models\Project::STATUS_SELESAI, \App\Models\Project::STATUS_SELESAI_BELUM_LUNAS], true) || $project->deliveryReceipts->isNotEmpty())
+        @include('proposals._delivery_receipts')
+    @endif
+
     {{-- ===================== CATATAN & LANGKAH BERIKUTNYA =====================
          Paling bawah halaman, tampil di semua status: panduan langkah per
          status + Riwayat Proyek. Tombol aksinya ada di floating action bar. --}}

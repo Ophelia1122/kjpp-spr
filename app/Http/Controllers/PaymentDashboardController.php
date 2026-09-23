@@ -189,22 +189,25 @@ class PaymentDashboardController extends Controller
     public function updateNumbering(Request $request, DocumentNumbering $numbering)
     {
         $validated = $request->validate([
-            'invoice_last'  => 'required|integer|min:0|max:999999',
-            'kwitansi_last' => 'required|integer|min:0|max:999999',
+            'invoice_last'      => 'required|integer|min:0|max:999999',
+            'kwitansi_last'     => 'required|integer|min:0|max:999999',
+            'tanda_terima_last' => 'required|integer|min:0|max:999999',
         ], [], [
-            'invoice_last'  => 'nomor terakhir invoice',
-            'kwitansi_last' => 'nomor terakhir kwitansi',
+            'invoice_last'      => 'nomor terakhir invoice',
+            'kwitansi_last'     => 'nomor terakhir kwitansi',
+            'tanda_terima_last' => 'nomor terakhir tanda terima',
         ]);
 
         $numbering->setManualLast('invoice', (int) $validated['invoice_last']);
         $numbering->setManualLast('kwitansi', (int) $validated['kwitansi_last']);
+        $numbering->setManualLast('tanda_terima', (int) $validated['tanda_terima_last']);
 
         $nextInvoice  = $numbering->next('invoice');
         $nextKwitansi = $numbering->next('kwitansi');
 
         AuditLogger::record(
             'numbering.updated',
-            'Mengatur nomor terakhir tahun ' . now()->year . ": Invoice {$validated['invoice_last']}, Kwitansi {$validated['kwitansi_last']}. "
+            'Mengatur nomor terakhir tahun ' . now()->year . ": Invoice {$validated['invoice_last']}, Kwitansi {$validated['kwitansi_last']}, Tanda Terima {$validated['tanda_terima_last']}. "
                 . "Nomor berikutnya: {$nextInvoice} dan {$nextKwitansi}"
         );
 
