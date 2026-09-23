@@ -18,8 +18,8 @@ class TandaTerimaDocxBuilder
 {
     private const NAVY = '001F60';
 
-    private array $f     = ['name' => 'Arial', 'size' => 9.5];
-    private array $fB    = ['name' => 'Arial', 'size' => 9.5, 'bold' => true];
+    private array $f     = ['name' => 'Arial', 'size' => 11];
+    private array $fB    = ['name' => 'Arial', 'size' => 11, 'bold' => true];
     private array $fWhite;
     private array $p0    = ['spaceAfter' => 0, 'spaceBefore' => 0];
 
@@ -57,14 +57,14 @@ class TandaTerimaDocxBuilder
 
         $logo = public_path('images/logo-spr-short.png');
         if (is_file($logo)) {
-            $cell->addImage($logo, ['width' => Converter::cmToPoint(8.3), 'alignment' => Jc::START]);
+            $cell->addImage($logo, ['width' => Converter::cmToPoint(10.4), 'alignment' => Jc::START]);
         }
 
         // Bar judul.
         $bar = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 60]);
         $bar->addRow();
         $bar->addCell($w, ['bgColor' => self::NAVY])
-            ->addText('TANDA TERIMA', $this->fWhite + ['size' => 11], ['alignment' => Jc::CENTER] + $this->p0);
+            ->addText('TANDA TERIMA', $this->fWhite + ['size' => 13], ['alignment' => Jc::CENTER] + $this->p0);
 
         $cell->addTextBreak(1, $this->f);
 
@@ -126,7 +126,7 @@ class TandaTerimaDocxBuilder
         $sign->addRow();
         $sc = $sign->addCell(Converter::cmToTwip(8.5));
         $sc->addText('Diterima Oleh,', $this->fB, ['indentation' => ['left' => Converter::cmToTwip(0.6)]] + $this->p0);
-        $sc->addTextBreak(3, $this->f);
+        $sc->addTextBreak(4, $this->f);
         $sc->addText('( ________________ )', $this->f, $this->p0);
 
         $nc = $sign->addCell(Converter::cmToTwip(7.5));
@@ -136,7 +136,7 @@ class TandaTerimaDocxBuilder
         ]);
         $warn->addRow();
         $wc = $warn->addCell(Converter::cmToTwip(7.5));
-        $small = ['name' => 'Arial', 'size' => 8, 'italic' => true, 'color' => '5B6478'];
+        $small = ['name' => 'Arial', 'size' => 9.5, 'italic' => true, 'color' => '5B6478'];
         foreach (['Perhatian.', 'Mohon sertakan nama jelas penerima dan tanggal penerimaan berkas.', 'Terima kasih.'] as $t) {
             $wc->addText($t, $small, $this->p0);
         }
@@ -153,7 +153,7 @@ class TandaTerimaDocxBuilder
 
         $slip->addRow();
         $slip->addCell($w, ['bgColor' => self::NAVY])
-            ->addText(mb_strtoupper($name), $this->fWhite + ['size' => 12], ['alignment' => Jc::CENTER] + $this->p0);
+            ->addText(mb_strtoupper($name), $this->fWhite + ['size' => 14], ['alignment' => Jc::CENTER] + $this->p0);
 
         $slip->addRow();
         $body = $slip->addCell($w);

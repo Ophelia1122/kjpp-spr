@@ -93,6 +93,22 @@
         .lift:hover { box-shadow: 0 10px 25px -12px rgba(0,0,0,.18); transform: translateY(-2px); }
 
         /* Hargai preferensi kurangi animasi. */
+
+        /* ===== Modal global (2026-09-23, feedback user) =====
+           1) Muncul halus: overlay memudar, kartu naik sedikit.
+           2) Di layar lebar, overlay digeser selebar sidebar supaya kartu
+              benar-benar di tengah AREA ISI, bukan di tengah layar. */
+        @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalPop  { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+        div.fixed.inset-0.justify-center.flex { animation: modalFade .14s ease-out both; }
+        div.fixed.inset-0.justify-center.flex > * { animation: modalPop .18s cubic-bezier(.16,.84,.44,1) both; }
+        @media (min-width: 1024px) {
+            div.fixed.inset-0.justify-center { padding-left: 16rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            div.fixed.inset-0.justify-center.flex,
+            div.fixed.inset-0.justify-center.flex > * { animation: none; }
+        }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
         }
@@ -391,6 +407,33 @@
             </main>
         </div>
     </div>
+
+
+    {{-- Semua modal: klik di luar kartu atau tekan Esc untuk menutup
+         (2026-09-23, feedback user). Modal = div.fixed.inset-0 yang dibuka
+         dengan menambah kelas "flex". --}}
+    <script>
+        (function () {
+            function isModal(el) {
+                return el instanceof HTMLElement
+                    && el.classList.contains('fixed') && el.classList.contains('inset-0')
+                    && el.classList.contains('flex') && el.classList.contains('justify-center');
+            }
+            function close(el) {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+            document.addEventListener('mousedown', function (e) {
+                if (isModal(e.target)) {
+                    close(e.target);
+                }
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'Escape') return;
+                document.querySelectorAll('div.fixed.inset-0.flex.justify-center').forEach(close);
+            });
+        })();
+    </script>
 
     {{-- ===================== MODAL KONFIRMASI GLOBAL (2026-09-15) =====================
          Menggantikan dialog confirm() bawaan browser. Pakai: <form data-confirm="Pesan">. --}}
