@@ -89,7 +89,7 @@ class TimelineController extends Controller
 
         $unscheduled = $scoped()
             ->limit(100)
-            ->where('status', Project::STATUS_IN_PROGRESS)
+            ->whereIn('status', Project::WORK_STATUSES)
             ->where(function ($q) {
                 $q->whereNull('survey_date')->orWhereNull('sla_draft_days');
             })

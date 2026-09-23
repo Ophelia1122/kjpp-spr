@@ -210,6 +210,12 @@ class InvoiceController extends Controller
             $project->update(['status' => Project::STATUS_IN_PROGRESS]);
         }
 
+        // Proyek yang bukunya sudah dikirim tapi menunggu pelunasan berubah
+        // menjadi "Selesai" begitu seluruh tagihan lunas (2026-09-23).
+        if ($project->status === Project::STATUS_SELESAI_BELUM_LUNAS && $project->is_fully_paid) {
+            $project->update(['status' => Project::STATUS_SELESAI]);
+        }
+
         \App\Helpers\AuditLogger::record(
             'invoice.paid',
             "Mengubah status invoice {$invoice->invoice_number} menjadi Paid — kwitansi {$invoice->kwitansi_number} diterbitkan",

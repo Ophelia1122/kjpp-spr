@@ -100,6 +100,7 @@
             'review_draft'          => ['icon' => 'badge',     'tone' => 'emerald'],
             'return_draft_reviewer' => ['icon' => 'uturn',     'tone' => 'rose'],
             'mark_printed'          => ['icon' => 'book',      'tone' => 'emerald'],
+            'mark_signed'           => ['icon' => 'badge',     'tone' => 'emerald'],
         ];
 
         foreach ($project->availableWorkflowSteps(auth()->user()) as $stepKey => $step) {

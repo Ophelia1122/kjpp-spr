@@ -455,13 +455,60 @@
                             @error('appraiser_ids.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Survei</label>
-                            <input type="date" name="survey_date" id="survey_date" required @disabled($hasSurvey) lang="id"
+                            {{-- Tanggal Penilaian boleh diisi manual (2026-09-23);
+                                 kosong = tanggal survei terakhir. --}}
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Tanggal Penilaian
+                                @include('partials.icon-info', ['tip' => 'Kosongkan untuk memakai tanggal survei paling akhir. Isi manual bila tanggal penilaian berbeda.'])
+                            </label>
+                            <input type="date" name="valuation_date" lang="id" @disabled($hasSurvey)
                                    data-survey-field
                                    @if ($hasSurvey) title="Terkunci — klik ikon Edit untuk mengubah." @endif
-                                   value="{{ old('survey_date', $project->survey_date?->toDateString()) }}"
+                                   value="{{ old('valuation_date', $project->valuation_date_manual?->toDateString()) }}"
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                                Tanggal survei terakhir: {{ $project->survey_date?->translatedFormat('d F Y') ?: '—' }}
+                            </p>
                         </div>
+                    </div>
+
+                    {{-- Tanggal survei per objek (2026-09-23, feedback user): objek bisa
+                         disurvei di hari berbeda & lebih dari sehari. Selesai kosong =
+                         survei satu hari. --}}
+                    <div class="mt-4 rounded-md border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between gap-2 px-4 py-2.5">
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Survei per Objek</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Selesai boleh kosong = survei 1 hari</p>
+                        </div>
+                        <div class="divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-700 dark:border-gray-700">
+                            @forelse ($project->valuationObjects as $obj)
+                                <div class="grid grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $loop->iteration }}. {{ $obj->short_label }}</p>
+                                        <p class="truncate text-xs text-gray-500 dark:text-gray-400" title="{{ $obj->location }}">{{ $obj->location }}</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">Mulai</label>
+                                        <input type="date" name="surveys[{{ $obj->id }}][start]" lang="id" required @disabled($hasSurvey)
+                                               data-survey-field
+                                               value="{{ old('surveys.' . $obj->id . '.start', $obj->survey_start_date?->toDateString()) }}"
+                                               class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-40 dark:border-gray-600">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">Selesai</label>
+                                        <input type="date" name="surveys[{{ $obj->id }}][end]" lang="id" @disabled($hasSurvey)
+                                               data-survey-field
+                                               value="{{ old('surveys.' . $obj->id . '.end', $obj->survey_end_date?->toDateString()) }}"
+                                               class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-40 dark:border-gray-600">
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="px-4 py-4 text-sm text-gray-400 dark:text-gray-500">Proyek belum punya objek penilaian.</p>
+                            @endforelse
+                        </div>
+                        @error('surveys') <p class="px-4 pb-3 text-xs text-red-600">{{ $message }}</p> @enderror
+                        @error('surveys.*.start') <p class="px-4 pb-3 text-xs text-red-600">{{ $message }}</p> @enderror
+                        @error('surveys.*.end') <p class="px-4 pb-3 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
                 </form>
                 <script>

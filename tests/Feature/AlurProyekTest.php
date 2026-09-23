@@ -142,6 +142,53 @@ class AlurProyekTest extends TestCase
         \Illuminate\Support\Facades\Storage::disk('public')->assertExists($proyek->signature_barcode);
     }
 
+    public function test_tanggal_survei_per_objek_menentukan_sla_dan_tanggal_penilaian(): void
+    {
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->dataProposal([
+            'objects' => [
+                ['asset_category' => 'Real Properti - Tanah dan Bangunan', 'location' => 'Objek A', 'ownership_form' => 'SHM', 'owner_name' => 'A'],
+                ['asset_category' => 'Real Properti - Tanah dan Bangunan', 'location' => 'Objek B', 'ownership_form' => 'SHM', 'owner_name' => 'B'],
+            ],
+        ]));
+        $proyek = Project::with('valuationObjects')->first();
+        $proyek->update(['status' => Project::STATUS_IN_PROGRESS]);
+        [$a, $b] = $proyek->valuationObjects->all();
+
+        $this->actingAs($this->admin)
+            ->post(route('projects.inputSurveyData', $proyek), [
+                'appraiser_ids' => [$this->admin->id],
+                'surveys' => [
+                    // Objek A: 2 hari; objek B: 1 hari (selesai kosong).
+                    $a->id => ['start' => '2026-09-07', 'end' => '2026-09-08'],
+                    $b->id => ['start' => '2026-09-09', 'end' => ''],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $proyek->refresh()->load('valuationObjects');
+        $this->assertSame('2026-09-09', $proyek->survey_date->toDateString(), 'Tanggal survei proyek = tanggal terakhir.');
+        $this->assertSame('2026-09-08', $proyek->valuationObjects->firstWhere('id', $a->id)->survey_end_date->toDateString());
+        // Tanggal Penilaian kosong = ikut tanggal survei terakhir.
+        $this->assertSame('2026-09-09', $proyek->valuation_date->toDateString());
+        // SLA Draft mulai H+1: 9 Sep + 1 + 5 hari kerja = 17 Sep 2026.
+        $this->assertSame('2026-09-17', $proyek->estimated_completion_date->toDateString());
+    }
+
+    public function test_tanggal_survei_selesai_tidak_boleh_sebelum_mulai(): void
+    {
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->dataProposal());
+        $proyek = Project::with('valuationObjects')->first();
+        $proyek->update(['status' => Project::STATUS_IN_PROGRESS]);
+
+        $this->actingAs($this->admin)
+            ->post(route('projects.inputSurveyData', $proyek), [
+                'appraiser_ids' => [$this->admin->id],
+                'surveys' => [$proyek->valuationObjects->first()->id => ['start' => '2026-09-10', 'end' => '2026-09-09']],
+            ])
+            ->assertSessionHasErrors();
+    }
+
     public function test_nomor_proposal_tidak_boleh_kembar(): void
     {
         $this->actingAs($this->admin)->post(route('proposals.store'), $this->dataProposal());
@@ -312,6 +359,7 @@ class AlurProyekTest extends TestCase
             'assigned_appraiser'    => $this->admin->name,
             'review_status'         => Project::STAGE_DRAFT_REVIEWED,
             'final_report_number'   => '00045/LAP/KJPPSPR/IX/2026',
+            'status'                => Project::STATUS_FINALISASI,
         ]);
 
         $this->actingAs($this->admin)
@@ -320,9 +368,16 @@ class AlurProyekTest extends TestCase
 
         $proyek->refresh();
 
+        // Buku dicetak -> proses tanda tangan, lalu proses pengiriman buku.
         $this->assertSame(Project::STAGE_PRINTED, $proyek->review_status);
-        $this->assertSame(Project::STATUS_SELESAI, $proyek->status);
+        $this->assertSame(Project::STATUS_TANDA_TANGAN, $proyek->status);
         $this->assertNotNull($proyek->printed_at);
+
+        $this->actingAs($this->admin)->post(route('projects.workflow', [$proyek, 'mark_signed']))->assertRedirect();
+        $proyek->refresh();
+        $this->assertSame(Project::STAGE_SIGNED, $proyek->review_status);
+        $this->assertSame(Project::STATUS_PENGIRIMAN, $proyek->status);
+        $this->assertNotNull($proyek->signed_at);
     }
 
     public function test_buku_tidak_bisa_dicetak_tanpa_nomor_laporan_final(): void

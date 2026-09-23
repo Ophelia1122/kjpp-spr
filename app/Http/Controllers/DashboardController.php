@@ -65,14 +65,14 @@ class DashboardController extends Controller
                 'surveyMonthCount' => $mine()->where('status', '!=', Project::STATUS_BATAL)
                     ->whereBetween('survey_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
                     ->count(),
-                'doneCount'        => $mine()->where('status', Project::STATUS_SELESAI)->count(),
+                'doneCount'        => $mine()->whereIn('status', Project::DONE_STATUSES)->count(),
             ];
             $data['notes'] = $this->latestNotes($active->pluck('id'));
         }
 
         if ($mode === 'reviewer') {
             $queue = Project::with([...$with, 'reviewSubmittedBy'])
-                ->where('status', Project::STATUS_IN_PROGRESS)
+                ->whereIn('status', Project::WORK_STATUSES)
                 ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED, Project::STAGE_DRAFT_CONFIRMED])
                 ->get()
                 ->sortBy(fn ($p) => $p->stage_since?->timestamp ?? 0)
@@ -92,7 +92,7 @@ class DashboardController extends Controller
 
         if ($mode === 'kantor') {
             $inProgress = Project::with($with)
-                ->where('status', Project::STATUS_IN_PROGRESS)
+                ->whereIn('status', Project::WORK_STATUSES)
                 ->whereNotNull('review_status')
                 ->get();
 
@@ -132,7 +132,7 @@ class DashboardController extends Controller
                 // Dibatasi 200 pekerjaan selesai terbaru (2026-09-20, audit skala):
                 // daftar ini hanya pengingat tagih, bukan arsip lengkap.
                 $unpaidDone = Project::with([...$with, 'invoices'])
-                    ->where('status', Project::STATUS_SELESAI)
+                    ->whereIn('status', Project::DONE_STATUSES)
                     ->orderByDesc('printed_at')
                     ->limit(200)
                     ->get()
@@ -431,7 +431,7 @@ class DashboardController extends Controller
             // nyelip di tengah hanya karena tanggal surveinya kebetulan cocok.
             $query->orderByRaw(
                 '(survey_date IS NULL OR assigned_appraiser IS NULL OR status IN (?, ?)) asc',
-                [Project::STATUS_SELESAI, Project::STATUS_BATAL]
+                array_merge(Project::DONE_STATUSES, [Project::STATUS_BATAL])
             )->orderByRaw($deadlineExpr . ' ' . $dir);
         } else {
             $column = match ($sort) {
@@ -581,7 +581,7 @@ class DashboardController extends Controller
     {
         $today = now()->startOfDay();
         $active = Project::with('appraisers:id')
-            ->where('status', Project::STATUS_IN_PROGRESS)
+            ->whereIn('status', Project::WORK_STATUSES)
             ->get(['id', 'survey_date', 'review_status', 'assigned_appraiser_id']);
         $doneMonth = Project::with('appraisers:id')
             ->whereBetween('printed_at', [now()->startOfMonth(), now()->endOfMonth()])

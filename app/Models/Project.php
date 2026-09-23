@@ -18,8 +18,30 @@ class Project extends Model
     public const STATUS_WAITING_APPROVAL  = 'Menunggu Persetujuan Klien';
     public const STATUS_DP_INVOICING      = 'DP Invoicing';
     public const STATUS_IN_PROGRESS       = 'In-Progress / Scheduled';
+    // Tahap lanjutan (2026-09-23, feedback user): Finalisasi = Draft Resume
+    // disetujui s/d buku dicetak; lalu tanda tangan buku; lalu pengiriman buku
+    // (dibuktikan Tanda Terima). Selesai - Belum Lunas dipakai bila buku sudah
+    // dikirim tetapi pelunasan belum masuk (skema Bayar Nanti).
+    public const STATUS_FINALISASI        = 'Finalisasi';
+    public const STATUS_TANDA_TANGAN      = 'Tanda Tangan';
+    public const STATUS_PENGIRIMAN        = 'Pengiriman Buku';
+    public const STATUS_SELESAI_BELUM_LUNAS = 'Selesai - Belum Lunas';
     public const STATUS_SELESAI           = 'Selesai';
     public const STATUS_BATAL             = 'Batal';
+
+    /** Status yang berarti "pekerjaan sedang berjalan" (alur produksi aktif). */
+    public const WORK_STATUSES = [
+        self::STATUS_IN_PROGRESS,
+        self::STATUS_FINALISASI,
+        self::STATUS_TANDA_TANGAN,
+        self::STATUS_PENGIRIMAN,
+    ];
+
+    /** Status yang berarti pekerjaan sudah selesai (lunas maupun belum). */
+    public const DONE_STATUSES = [
+        self::STATUS_SELESAI_BELUM_LUNAS,
+        self::STATUS_SELESAI,
+    ];
 
     /**
      * Label PENDEK status untuk badge di tabel daftar proyek (2026-09-14,
@@ -35,6 +57,10 @@ class Project extends Model
         self::STATUS_WAITING_APPROVAL => 'Menunggu Klien',
         self::STATUS_DP_INVOICING     => 'Invoice DP',
         self::STATUS_IN_PROGRESS      => 'In-Progress',
+        self::STATUS_FINALISASI       => 'Finalisasi',
+        self::STATUS_TANDA_TANGAN     => 'Tanda Tangan',
+        self::STATUS_PENGIRIMAN       => 'Pengiriman',
+        self::STATUS_SELESAI_BELUM_LUNAS => 'Selesai, Belum Lunas',
         self::STATUS_SELESAI          => 'Selesai',
         self::STATUS_BATAL            => 'Batal',
     ];
@@ -109,7 +135,10 @@ class Project extends Model
         self::STATUS_WAITING_APPROVAL,
         self::STATUS_DP_INVOICING,
         self::STATUS_IN_PROGRESS,
-        // Pelunasan dihapus dari alur (2026-09-15) — Selesai = buku dicetak.
+        self::STATUS_FINALISASI,
+        self::STATUS_TANDA_TANGAN,
+        self::STATUS_PENGIRIMAN,
+        self::STATUS_SELESAI_BELUM_LUNAS,
         self::STATUS_SELESAI,
         self::STATUS_BATAL,
     ];
@@ -144,7 +173,9 @@ class Project extends Model
     public const STAGE_DRAFT_SUBMITTED = 'draft_submitted';  // menunggu konfirmasi Admin Produksi
     public const STAGE_DRAFT_CONFIRMED = 'draft_confirmed';  // menunggu Reviewer me-review draft laporan
     public const STAGE_DRAFT_REVIEWED  = 'draft_reviewed';   // proses cetak buku (Admin Produksi)
-    public const STAGE_PRINTED         = 'printed';          // buku dicetak, proyek Selesai
+    public const STAGE_PRINTED         = 'printed';          // buku dicetak -> proses tanda tangan
+    public const STAGE_SIGNED          = 'signed';           // buku ditandatangani -> proses pengiriman
+    public const STAGE_DELIVERED       = 'delivered';        // buku dikirim (ada Tanda Terima)
 
     /**
      * Tombol alur produksi. actor: surveyor (izin survey.manage), reviewer
@@ -224,10 +255,17 @@ class Project extends Model
         ],
         'mark_printed' => [
             'from' => self::STAGE_DRAFT_REVIEWED, 'to' => self::STAGE_PRINTED, 'actor' => 'admin', 'note' => 'optional',
-            'title' => 'Buku Selesai Dicetak', 'button' => 'Buku Dicetak', 'tip' => 'Konfirmasi buku laporan selesai dicetak — proyek Selesai',
-            'hint' => 'SLA Laporan Final dinyatakan selesai dan status proyek berubah menjadi Selesai.',
-            'action' => 'project.book_printed', 'desc' => 'Mengonfirmasi buku laporan selesai dicetak. SLA Laporan Final selesai, proyek Selesai',
-            'flash' => 'Buku laporan selesai dicetak. Proyek berstatus Selesai.',
+            'title' => 'Buku Selesai Dicetak', 'button' => 'Buku Dicetak', 'tip' => 'Konfirmasi buku laporan selesai dicetak — lanjut proses tanda tangan',
+            'hint' => 'SLA Laporan Final dihentikan dan proyek masuk proses tanda tangan.',
+            'action' => 'project.book_printed', 'desc' => 'Mengonfirmasi buku laporan selesai dicetak. SLA Laporan Final selesai, lanjut proses tanda tangan',
+            'flash' => 'Buku laporan selesai dicetak. Lanjut proses tanda tangan.',
+        ],
+        // Tanda tangan & pengiriman buku (2026-09-23, feedback user).
+        'mark_signed' => [
+            'from' => self::STAGE_PRINTED, 'to' => self::STAGE_SIGNED, 'actor' => 'admin_or_keuangan', 'note' => 'optional',
+            'title' => 'Buku Selesai Ditandatangani', 'button' => 'Buku Ditandatangani', 'tip' => 'Buku sudah ditandatangani — lanjut proses pengiriman',
+            'action' => 'project.book_signed', 'desc' => 'Menandai buku laporan selesai ditandatangani, lanjut proses pengiriman',
+            'flash' => 'Buku ditandatangani. Lanjut proses pengiriman buku.',
         ],
     ];
 
@@ -291,6 +329,9 @@ class Project extends Model
         'assignment_letter_recipient_client_id',
         'assignment_letter_barcode',
         'survey_date',
+        'valuation_date_manual',
+        'signed_at',
+        'delivered_at',
         'final_report_number',
         'final_report_date',
         'final_report_notes',
@@ -326,6 +367,9 @@ class Project extends Model
         'sla_final_days'           => 'integer',
         'proposal_date'             => 'date',
         'survey_date'               => 'date',
+        'valuation_date_manual'     => 'date',
+        'signed_at'                 => 'datetime',
+        'delivered_at'              => 'datetime',
         'payment_terms'             => 'array',
         'financial_reporting_date'  => 'date',
         'tax_invoice_date'          => 'date',
@@ -347,6 +391,41 @@ class Project extends Model
     public function isCancelled(): bool
     {
         return $this->status === self::STATUS_BATAL;
+    }
+
+    /**
+     * Tanggal survei terakhir dari seluruh objek (selesai, atau mulai bila
+     * selesai kosong = survei 1 hari). Null bila objek belum punya tanggal.
+     */
+    public function lastSurveyDate(): ?\Carbon\Carbon
+    {
+        $dates = $this->valuationObjects
+            ->map(fn ($o) => $o->survey_end_date ?: $o->survey_start_date)
+            ->filter();
+
+        return $dates->isEmpty() ? null : $dates->max();
+    }
+
+    /** Pekerjaan sedang berjalan (In-Progress s/d Pengiriman Buku). */
+    public function isWorkActive(): bool
+    {
+        return in_array($this->status, self::WORK_STATUSES, true);
+    }
+
+    /** Pekerjaan sudah selesai — termasuk "Selesai - Belum Lunas". */
+    public function isDone(): bool
+    {
+        return in_array($this->status, self::DONE_STATUSES, true);
+    }
+
+    /**
+     * Status akhir setelah buku dikirim: "Selesai" bila sudah lunas, selain
+     * itu "Selesai - Belum Lunas" (dipanggil saat Tanda Terima dibuat dan
+     * saat invoice ditandai lunas).
+     */
+    public function finalStatusAfterDelivery(): string
+    {
+        return $this->is_fully_paid ? self::STATUS_SELESAI : self::STATUS_SELESAI_BELUM_LUNAS;
     }
 
     /**
@@ -840,7 +919,9 @@ class Project extends Model
             return null;
         }
 
-        return $this->survey_date->copy()->addWeekdays($this->sla_draft_days);
+        // Mulai dihitung hari kerja BERIKUTNYA setelah survei terakhir
+        // (H+1, 2026-09-23 feedback user).
+        return $this->survey_date->copy()->addWeekdays(1 + $this->sla_draft_days);
     }
 
     /**
@@ -885,14 +966,18 @@ class Project extends Model
      */
     public function canPrepareFieldwork(): bool
     {
-        return $this->status === self::STATUS_IN_PROGRESS;
+        // Masih boleh diubah sampai tahap Finalisasi (2026-09-23) — mis.
+        // tanggal survei per objek dikoreksi setelah nilai disetujui.
+        return in_array($this->status, [self::STATUS_IN_PROGRESS, self::STATUS_FINALISASI], true);
     }
 
     /** Nomor Laporan Final boleh diisi mulai draft laporan telah direview. */
     public function isFinalReportStage(): bool
     {
-        return in_array($this->review_status, [self::STAGE_DRAFT_REVIEWED, self::STAGE_PRINTED], true)
-            || $this->status === self::STATUS_SELESAI;
+        return in_array($this->review_status, [
+                self::STAGE_DRAFT_REVIEWED, self::STAGE_PRINTED, self::STAGE_SIGNED, self::STAGE_DELIVERED,
+            ], true)
+            || $this->isDone();
     }
 
     /** Apakah $user boleh bertindak sebagai "actor" langkah alur produksi. */
@@ -903,6 +988,8 @@ class Project extends Model
 
         return match ($actor) {
             'surveyor'          => $user->hasPermission('survey.manage'),
+            // Tahap tanda tangan & kirim buku: Admin Produksi atau General Admin.
+            'admin_or_keuangan' => $admin || $user->hasPermission('invoices.manage'),
             'reviewer'          => $reviewer,
             'admin'             => $admin,
             'reviewer_or_admin' => $reviewer || $admin,
@@ -913,7 +1000,7 @@ class Project extends Model
     /** Langkah alur produksi yang bisa ditekan $user saat ini (key => definisi). */
     public function availableWorkflowSteps(User $user): array
     {
-        if ($this->status !== self::STATUS_IN_PROGRESS || ! $this->assigned_appraiser || ! $this->survey_date) {
+        if (! $this->isWorkActive() || ! $this->assigned_appraiser || ! $this->survey_date) {
             return [];
         }
 
@@ -930,7 +1017,7 @@ class Project extends Model
 
         return match (true) {
             $this->status === self::STATUS_BATAL   => $stage('Dibatalkan'),
-            $this->status === self::STATUS_SELESAI => $stage('Selesai'),
+            $this->isDone()                        => $stage($this->status === self::STATUS_SELESAI ? 'Selesai' : 'Selesai, menunggu pelunasan'),
             $this->status === self::STATUS_DRAFT            => $stage('Draft proposal', 'Admin Produksi'),
             $this->status === self::STATUS_WAITING_APPROVAL => $stage('Menunggu persetujuan klien', 'General Admin'),
             $this->status === self::STATUS_DP_INVOICING => $stage('Menunggu pembayaran DP', 'General Admin'),
@@ -942,6 +1029,8 @@ class Project extends Model
                 self::STAGE_DRAFT_SUBMITTED => $stage('Konfirmasi draft laporan', 'Admin Produksi'),
                 self::STAGE_DRAFT_CONFIRMED => $stage('Review draft laporan', 'Reviewer'),
                 self::STAGE_DRAFT_REVIEWED  => $stage('Proses cetak buku', 'Admin Produksi'),
+                self::STAGE_PRINTED         => $stage('Proses tanda tangan buku', 'Admin Produksi / General Admin'),
+                self::STAGE_SIGNED          => $stage('Proses pengiriman buku', 'Admin Produksi / General Admin'),
                 default                     => $stage('Survei & penilaian', 'Surveyor'),
             },
         };
@@ -958,6 +1047,8 @@ class Project extends Model
             self::STAGE_DRAFT_CONFIRMED => $this->draft_confirmed_at,
             self::STAGE_DRAFT_REVIEWED  => $this->draft_reviewed_at,
             self::STAGE_PRINTED         => $this->printed_at,
+            self::STAGE_SIGNED          => $this->signed_at,
+            self::STAGE_DELIVERED       => $this->delivered_at,
             default                     => $this->review_rejected_at,
         };
     }
@@ -1029,6 +1120,10 @@ class Project extends Model
             self::STATUS_DP_INVOICING     => 'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
             // Indigo, selaras dengan badge tahapan di Beranda (2026-09-19, feedback user).
             self::STATUS_IN_PROGRESS      => 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800',
+            self::STATUS_FINALISASI       => 'bg-sky-100 text-sky-700 border border-sky-300 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800',
+            self::STATUS_TANDA_TANGAN     => 'bg-violet-100 text-violet-700 border border-violet-300 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800',
+            self::STATUS_PENGIRIMAN       => 'bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800',
+            self::STATUS_SELESAI_BELUM_LUNAS => 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
             self::STATUS_SELESAI          => 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
             self::STATUS_BATAL           => 'bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800',
             default                       => 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
@@ -1108,9 +1203,12 @@ class Project extends Model
      */
     public function getValuationDateAttribute(): ?\Carbon\Carbon
     {
-        return $this->proposal_purpose === self::PURPOSE_LK_PROPERTI
-            ? $this->financial_reporting_date
-            : $this->survey_date;
+        if ($this->proposal_purpose === self::PURPOSE_LK_PROPERTI) {
+            return $this->financial_reporting_date;
+        }
+
+        // Isian manual menang; kosong = tanggal survei terakhir (2026-09-23).
+        return $this->valuation_date_manual ?: $this->survey_date;
     }
 
 }

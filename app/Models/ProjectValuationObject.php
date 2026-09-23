@@ -30,9 +30,13 @@ class ProjectValuationObject extends Model
         'ownership_form',
         'owner_name',
         'notes',
+        'survey_start_date',
+        'survey_end_date',
     ];
 
     protected $casts = [
+        'survey_start_date' => 'date',
+        'survey_end_date'   => 'date',
         'land_area'     => 'decimal:2',
         'building_area' => 'decimal:2',
         'unit_quantity' => 'integer',

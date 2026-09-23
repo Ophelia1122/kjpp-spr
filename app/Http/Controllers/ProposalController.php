@@ -121,7 +121,7 @@ class ProposalController extends Controller
      */
     public function edit(Project $project)
     {
-        if ($project->status === Project::STATUS_SELESAI || $project->isCancelled()) {
+        if ($project->isDone() || $project->isCancelled()) {
             abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
         }
 
@@ -145,7 +145,7 @@ class ProposalController extends Controller
 
     public function update(Request $request, Project $project)
     {
-        if ($project->status === Project::STATUS_SELESAI || $project->isCancelled()) {
+        if ($project->isDone() || $project->isCancelled()) {
             abort(403, 'Proposal tidak dapat diedit lagi setelah berstatus Selesai atau Batal.');
         }
 

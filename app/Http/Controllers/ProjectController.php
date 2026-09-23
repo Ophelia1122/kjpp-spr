@@ -21,7 +21,7 @@ class ProjectController extends Controller
             $project->canPrepareFieldwork(),
             403,
             match (true) {
-                in_array($project->status, [Project::STATUS_SELESAI, Project::STATUS_BATAL], true)
+                $project->isDone() || $project->isCancelled()
                     => 'Proyek sudah Selesai/Batal — data penilai & Surat Tugas tidak dapat diubah.',
                 $project->isPaymentDeferred()
                     => 'Penilai lapangan & Surat Tugas baru bisa diisi setelah tombol "Mulai Tanpa DP" ditekan.',
@@ -41,8 +41,16 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'appraiser_ids'   => 'required|array|min:1|max:' . Project::MAX_APPRAISERS,
             'appraiser_ids.*' => 'distinct|exists:users,id',
-            'survey_date'     => 'required|date',
+            // Tanggal survei per OBJEK (2026-09-23, feedback user): objek bisa
+            // disurvei di hari berbeda, bahkan lebih dari satu hari. Tanggal
+            // selesai boleh kosong = survei satu hari.
+            'surveys'           => 'required|array|min:1',
+            'surveys.*.start'   => 'required|date',
+            'surveys.*.end'     => 'nullable|date|after_or_equal:surveys.*.start',
+            'valuation_date'    => 'nullable|date',
         ], [
+            'surveys.*.start.required'      => 'Tanggal mulai survei tiap objek wajib diisi.',
+            'surveys.*.end.after_or_equal'  => 'Tanggal selesai survei tidak boleh sebelum tanggal mulai.',
             'appraiser_ids.required' => 'Pilih minimal satu penilai lapangan.',
             'appraiser_ids.max'      => 'Maksimal ' . Project::MAX_APPRAISERS . ' penilai lapangan.',
             'appraiser_ids.*.distinct' => 'Penilai lapangan tidak boleh dipilih dua kali.',
@@ -57,16 +65,31 @@ class ProjectController extends Controller
             $project->appraisers()->sync(
                 collect($ids)->mapWithKeys(fn ($id, $i) => [$id => ['sort_order' => $i]])->all()
             );
+
+            // Simpan tanggal per objek, lalu tanggal survei proyek = tanggal
+            // selesai paling akhir (dipakai SLA Draft & Tanggal Penilaian).
+            $objects = $project->valuationObjects()->get()->keyBy('id');
+            foreach ($validated['surveys'] as $objectId => $range) {
+                if ($obj = $objects->get((int) $objectId)) {
+                    $obj->update([
+                        'survey_start_date' => $range['start'],
+                        'survey_end_date'   => $range['end'] ?? null,
+                    ]);
+                }
+            }
+            $project->load('valuationObjects');
+
             $project->update([
                 'assigned_appraiser_id' => $appraisers->first()->id,
                 'assigned_appraiser'    => $names, // ringkasan teks untuk tabel/export/PDF
-                'survey_date'           => $validated['survey_date'],
+                'survey_date'           => $project->lastSurveyDate(),
+                'valuation_date_manual' => $validated['valuation_date'] ?? null,
             ]);
         });
 
         \App\Helpers\AuditLogger::record(
             'survey.input',
-            "Menetapkan {$names} sebagai penilai lapangan untuk proyek {$project->proposal_number}, tanggal survei {$validated['survey_date']}",
+            "Menetapkan {$names} sebagai penilai lapangan untuk proyek {$project->proposal_number}, tanggal survei terakhir " . $project->fresh()->survey_date?->format('Y-m-d'),
             $project
         );
 
@@ -123,7 +146,7 @@ class ProjectController extends Controller
         $def = Project::WORKFLOW_STEPS[$step] ?? abort(404);
 
         abort_unless(
-            $project->status === Project::STATUS_IN_PROGRESS && $project->assigned_appraiser && $project->survey_date,
+            $project->isWorkActive() && $project->assigned_appraiser && $project->survey_date,
             403,
             'Alur produksi hanya berjalan untuk proyek In-Progress yang sudah memiliki penilai lapangan & tanggal survei.'
         );
@@ -156,11 +179,13 @@ class ProjectController extends Controller
         $changes += match ($step) {
             'submit_value'   => ['review_submitted_at' => $now, 'review_submitted_by_user_id' => $uid],
             'release_resume' => ['reviewed_at' => $now, 'reviewed_by_user_id' => $uid],
-            'approve_value'  => ['review_approved_at' => $now, 'review_approved_by_user_id' => $uid],
+            'approve_value'  => ['review_approved_at' => $now, 'review_approved_by_user_id' => $uid,
+                                 'status' => Project::STATUS_FINALISASI],
             'submit_draft'  => ['draft_submitted_at' => $now],
             'confirm_draft' => ['draft_confirmed_at' => $now],
             'review_draft'  => ['draft_reviewed_at' => $now],
-            'mark_printed'  => ['printed_at' => $now, 'status' => Project::STATUS_SELESAI],
+            'mark_printed'  => ['printed_at' => $now, 'status' => Project::STATUS_TANDA_TANGAN],
+            'mark_signed'   => ['signed_at' => $now, 'status' => Project::STATUS_PENGIRIMAN],
             default         => [],
         };
 
