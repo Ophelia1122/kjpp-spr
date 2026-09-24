@@ -136,13 +136,6 @@ class SuratTugasDocxBuilder
             $cellRun->addText($head . ',', $this->f(true, true));
             $cellRun->addText(' ' . ($rest ? implode(', ', $rest) . ' ' : '') . 'yang berlokasi di ' . $object->location, $this->f());
 
-            // Penilai yang turun ke objek ini (2026-09-25, feedback user).
-            // Ditulis menempel pada barisnya; daftar "Adapun petugas kami"
-            // di bawah tetap daftar manual dan tidak terpengaruh.
-            $penilai = $object->surveyors()->pluck('name')->filter();
-            if ($penilai->isNotEmpty() && $penilai->count() < $p->appraisers->count()) {
-                $cellRun->addText(' (disurvei oleh ' . $penilai->implode(', ') . ')', $this->f(false, true));
-            }
         }
 
         $s->addText('dilaksanakan pada tanggal, '

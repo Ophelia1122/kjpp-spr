@@ -249,8 +249,7 @@ class ProjectController extends Controller
             'project' => $project,
         ])->setPaper('a4', 'portrait');
 
-        $safeFilename = str_replace(['/', '\\'], '-', $project->proposal_number);
-        return $pdf->download("Surat-Tugas-{$safeFilename}.pdf");
+        return $pdf->download($project->suratTugasFileName() . '.pdf');
     }
 
     /**
@@ -265,9 +264,9 @@ class ProjectController extends Controller
 
         $path = (new \App\Services\SuratTugasDocxBuilder($project))->save();
 
-        $safeFilename = str_replace(['/', '\\'], '-', $project->proposal_number);
+
         return response()
-            ->download($path, "Surat-Tugas-{$safeFilename}.docx")
+            ->download($path, $project->suratTugasFileName() . '.docx')
             ->deleteFileAfterSend(true);
     }
 

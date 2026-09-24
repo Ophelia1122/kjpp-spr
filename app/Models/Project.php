@@ -653,6 +653,20 @@ class Project extends Model
             ?: optional($this->instructingClient)->client_name);
     }
 
+    /**
+     * Nama berkas unduhan Surat Tugas: "077 - Surat Tugas an PT Bank UOB
+     * Indonesia" (2026-09-25, feedback user). Angka di depan diambil dari
+     * nomor Surat Tugas sebelum garis miring.
+     */
+    public function suratTugasFileName(): string
+    {
+        $nomor  = explode('/', (string) $this->assignment_letter_number)[0];
+        $klien  = preg_replace('#[\\/:*?"<>|]+#', ' ', (string) $this->effective_client_name);
+        $klien  = trim(preg_replace('/\s+/', ' ', $klien));
+
+        return trim(($nomor !== '' ? $nomor . ' - ' : '') . 'Surat Tugas an ' . ($klien ?: 'Klien'));
+    }
+
     /** Surat Tugas: "Kepada Yth" (2026-09-14, feedback user). */
     public function assignmentLetterRecipientClient()
     {
