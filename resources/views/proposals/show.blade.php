@@ -695,15 +695,15 @@
                             </select>
                         </div>
                         <div class="sm:col-span-2">
-                            <label for="surat_request_basis" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {{-- Baca-saja: Surat Tugas selalu memakai Dasar Permintaan
+                                 dari proposal (2026-09-24, feedback user). --}}
+                            <p class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Dasar Permintaan Penilaian
-                                @include('partials.icon-info', ['tip' => 'Dicetak di Surat Tugas tepat setelah nama klien. Awalnya sama dengan Dasar Permintaan di Identitas Proposal, dan bisa diubah khusus untuk Surat Tugas.'])
-                            </label>
-                            <textarea name="assignment_letter_request_basis" id="surat_request_basis" rows="2"
-                                      placeholder="Contoh: yang kami terima melalui Pesan WhatsApp permintaan penilaian tanggal 07 September 2026"
-                                      @disabled($hasSurat)
-                                      @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
-                                      class="mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">{{ old('assignment_letter_request_basis', $project->assignment_letter_request_basis ?? $project->request_basis) }}</textarea>
+                                @include('partials.icon-info', ['tip' => 'Selalu sama dengan Dasar Permintaan di Identitas Proposal. Ubah di Edit Proposal bila perlu.'])
+                            </p>
+                            <p class="mt-1 whitespace-pre-line rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
+                                {{ $project->request_basis ?: 'Belum diisi di proposal.' }}
+                            </p>
                         </div>
                     </div>
                 </form>

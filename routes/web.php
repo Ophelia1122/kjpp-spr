@@ -115,6 +115,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/proposals/{project}/cancel', [ProposalController::class, 'cancel'])->name('proposals.cancel');
         // Batalkan beberapa proyek sekaligus dari List Project (2026-09-24).
         Route::post('/proposals/cancel-many', [ProposalController::class, 'cancelMany'])->name('proposals.cancelMany');
+        // Urutan petugas Surat Tugas diubah dengan digeser (2026-09-24).
+        Route::post('/projects/{project}/assignment-staff/reorder', [ProjectController::class, 'reorderAssignmentStaff'])->name('projects.assignmentStaff.reorder');
         Route::post('/proposals/{project}/reactivate', [ProposalController::class, 'reactivate'])->name('proposals.reactivate');
 
         // --- Skema "Bayar Nanti": mulai kerja lapangan tanpa DP (2026-09-14) ---

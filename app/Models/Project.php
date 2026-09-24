@@ -682,7 +682,10 @@ class Project extends Model
     /** Dasar Permintaan di Surat Tugas — belum diisi = Dasar Permintaan di Identitas Proposal. */
     public function getAssignmentLetterRequestBasisTextAttribute(): string
     {
-        return trim((string) ($this->assignment_letter_request_basis ?? $this->request_basis));
+        // Selalu sama dengan Dasar Permintaan di proposal (2026-09-24, feedback
+        // user): isian khusus Surat Tugas dihapus supaya keduanya tidak bisa
+        // berbeda. Kolom lamanya dibiarkan demi data lama.
+        return trim((string) $this->request_basis);
     }
 
     /** "Nama Klien" — dipilih dari Database Klien (2026-09-14, feedback user). */

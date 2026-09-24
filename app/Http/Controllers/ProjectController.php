@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Models\ProjectAssignmentStaff;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -282,7 +283,6 @@ class ProjectController extends Controller
             // "Penilaian Aset atas nama" — hanya pihak terkait proyek ini (2026-09-14).
             'assignment_letter_recipient_client_id' => ['nullable', \Illuminate\Validation\Rule::in($project->receivedFromOptions()->pluck('id')->all())],
             'assignment_letter_on_behalf_client_id' => ['nullable', \Illuminate\Validation\Rule::in($project->receivedFromOptions()->pluck('id')->all())],
-            'assignment_letter_request_basis'       => 'nullable|string|max:1000',
         ]);
 
         $project->update([
@@ -290,7 +290,6 @@ class ProjectController extends Controller
             'assignment_letter_date'   => $validated['assignment_letter_date'] ?: null,
             'assignment_letter_recipient_client_id' => $validated['assignment_letter_recipient_client_id'] ?? null,
             'assignment_letter_on_behalf_client_id' => $validated['assignment_letter_on_behalf_client_id'] ?? null,
-            'assignment_letter_request_basis'       => trim((string) ($validated['assignment_letter_request_basis'] ?? '')) ?: null,
         ]);
 
         \App\Helpers\AuditLogger::record(
@@ -432,6 +431,36 @@ class ProjectController extends Controller
         }
 
         return back()->withFragment('section-surat-tugas')->with('success', 'Petugas dihapus.');
+
+    }
+
+    /**
+     * Simpan urutan petugas hasil geser (2026-09-24, feedback user): sebelumnya
+     * urutan hanya bisa diubah dengan menghapus lalu menambah ulang. Dipanggil
+     * lewat fetch, jadi jawabannya JSON.
+     */
+    public function reorderAssignmentStaff(Request $request, Project $project)
+    {
+        $data = $request->validate([
+            'ids'   => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $milikProyek = $project->assignmentStaff()->pluck('id')->all();
+
+        foreach ($data['ids'] as $urutan => $id) {
+            if (in_array((int) $id, $milikProyek, true)) {
+                ProjectAssignmentStaff::whereKey($id)->update(['sort_order' => $urutan + 1]);
+            }
+        }
+
+        \App\Helpers\AuditLogger::record(
+            'project.assignment_staff_reordered',
+            "Mengubah urutan petugas Surat Tugas proyek {$project->proposal_number}",
+            $project
+        );
+
+        return response()->json(['ok' => true]);
     }
 
     /**
