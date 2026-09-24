@@ -41,9 +41,19 @@
     @elseif ($mode === 'reviewer')
         @include('dashboard.home._reviewer')
     @else
-        @include('dashboard.home._produksi')
-        @if ($canFinance)
+        {{-- General Admin memegang keuangan lebih dulu, jadi kartu keuangan naik
+             ke atas dan panel produksi turun (2026-09-24, feedback user).
+             Administrator tetap melihat produksi dulu. --}}
+        @php $keuanganDuluan = $canFinance && ! auth()->user()->isAdministrator(); @endphp
+
+        @if ($keuanganDuluan)
             @include('dashboard.home._keuangan')
+            @include('dashboard.home._produksi')
+        @else
+            @include('dashboard.home._produksi')
+            @if ($canFinance)
+                @include('dashboard.home._keuangan')
+            @endif
         @endif
     @endif
 </div>

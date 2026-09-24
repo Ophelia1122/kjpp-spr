@@ -5,7 +5,72 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-8 space-y-6">
 
-    <x-page-header title="Log Aktivitas" subtitle="{{ $logs->total() }} aktivitas tercatat" />
+    {{-- Tombol unduh & kosongkan log (2026-09-24, permintaan user).
+         Mengosongkan log hanya untuk Administrator dan meminta kata sandi. --}}
+    <x-page-header title="Log Aktivitas" subtitle="{{ $logs->total() }} aktivitas tercatat">
+        <a href="{{ route('audit.export', request()->query()) }}"
+           class="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
+            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+            </svg>
+            Export Excel
+        </a>
+        @if (auth()->user()->isAdministrator())
+            <button type="button" onclick="openClearLogModal()"
+                    class="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-rose-300 px-4 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-900/30">
+                <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                </svg>
+                Kosongkan Log
+            </button>
+        @endif
+    </x-page-header>
+
+    @if (auth()->user()->isAdministrator())
+        <div id="clearLogModal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-gray-900/60 p-4" role="dialog" aria-modal="true"
+             onclick="if (event.target === this) closeClearLogModal()">
+            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Kosongkan Log Aktivitas</h2>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    Seluruh <b>{{ number_format($logs->total(), 0, ',', '.') }}</b> baris log akan dihapus permanen dan
+                    <b>tidak bisa dikembalikan</b>. Unduh Export Excel lebih dulu bila masih diperlukan.
+                </p>
+                <form method="POST" action="{{ route('audit.clear') }}" class="mt-4 space-y-3">
+                    @csrf
+                    <div>
+                        <label for="clear_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Kata sandi Anda</label>
+                        <input type="password" name="password" id="clear_password" required autocomplete="current-password"
+                               class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                        @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="flex justify-end gap-2 pt-1">
+                        <button type="button" onclick="closeClearLogModal()"
+                                class="inline-flex h-[38px] items-center rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
+                        <button type="submit"
+                                class="inline-flex h-[38px] items-center rounded-md bg-rose-600 px-4 text-sm font-medium text-white hover:bg-rose-700">Hapus Semua Log</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            const clearLogModal = document.getElementById('clearLogModal');
+            document.body.appendChild(clearLogModal);
+
+            function openClearLogModal() {
+                clearLogModal.classList.remove('hidden');
+                clearLogModal.classList.add('flex');
+                document.getElementById('clear_password').focus();
+            }
+            function closeClearLogModal() {
+                clearLogModal.classList.add('hidden');
+                clearLogModal.classList.remove('flex');
+            }
+            @if ($errors->has('password'))
+                openClearLogModal();
+            @endif
+        </script>
+    @endif
 
     {{-- Filter langsung diterapkan saat diubah, tanpa tombol (seragam, 2026-09-15). --}}
     <form id="auditFilter" method="GET" action="{{ route('audit.index') }}" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 flex flex-wrap gap-3 items-end dark:bg-gray-800 dark:border-gray-700">

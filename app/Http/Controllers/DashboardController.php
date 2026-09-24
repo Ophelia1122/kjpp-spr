@@ -7,12 +7,40 @@ use App\Models\Invoice;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardController extends Controller
 {
     /** Batas penagihan pekerjaan Selesai yang belum lunas: N hari sejak buku dicetak. */
     public const BILLING_DUE_DAYS = 3;
+
+    /**
+     * Jumlah baris per panel Beranda (2026-09-24, feedback user). Panel-panel
+     * itu dulu menggambar SELURUH baris, jadi Beranda memanjang tanpa batas
+     * begitu proyek bertambah.
+     */
+    public const PANEL_ROWS = 5;
+
+    /**
+     * Ubah koleksi jadi satu halaman berisi PANEL_ROWS baris. Tiap panel
+     * memakai nama parameter halaman sendiri, jadi berpindah halaman di satu
+     * panel tidak menggeser panel lain.
+     */
+    private function panelPage($items, string $pageName): LengthAwarePaginator
+    {
+        $items = collect($items)->values();
+        $page  = max(1, (int) Paginator::resolveCurrentPage($pageName));
+
+        return new LengthAwarePaginator(
+            $items->slice(($page - 1) * self::PANEL_ROWS, self::PANEL_ROWS)->values(),
+            $items->count(),
+            self::PANEL_ROWS,
+            $page,
+            ['path' => Paginator::resolveCurrentPath(), 'pageName' => $pageName, 'query' => request()->query()]
+        );
+    }
 
     /**
      * Beranda = PR utama hari ini, dibedakan per peran (2026-09-15, feedback user):
@@ -55,17 +83,28 @@ class DashboardController extends Controller
 
         if ($mode === 'penilai') {
             $mine   = fn () => Project::forAppraiser($user->id);
+            // Urut dari tanggal survei paling lama, lalu tenggat SLA terdekat
+            // (2026-09-24, feedback user).
             $active = $mine()->with($with)->active()->get()
-                ->sortBy(fn ($p) => ($p->active_sla['date'] ?? null)?->timestamp ?? PHP_INT_MAX)
+                ->sortBy([
+                    fn ($a, $b) => ($a->survey_date?->timestamp ?? PHP_INT_MAX) <=> ($b->survey_date?->timestamp ?? PHP_INT_MAX),
+                    fn ($a, $b) => (($a->active_sla['date'] ?? null)?->timestamp ?? PHP_INT_MAX)
+                        <=> (($b->active_sla['date'] ?? null)?->timestamp ?? PHP_INT_MAX),
+                ])
                 ->values();
 
             $data['penilai'] = [
-                'active'           => $active,
-                'activeCount'      => $active->count(),
-                'surveyMonthCount' => $mine()->where('status', '!=', Project::STATUS_BATAL)
-                    ->whereBetween('survey_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
-                    ->count(),
-                'doneCount'        => $mine()->whereIn('status', Project::DONE_STATUSES)->count(),
+                'active'      => $this->panelPage($active, 'p_aktif'),
+                'activeCount' => $active->count(),
+                // Sudah disurvei tetapi nilainya belum diajukan ke Reviewer.
+                'awaitingSubmitCount' => $mine()->active()
+                    ->whereNotNull('survey_date')->whereNull('review_status')->count(),
+                // Nilai sudah disetujui: giliran Surveyor menyusun draft laporan.
+                'draftNeededCount'    => $mine()->active()
+                    ->where('review_status', Project::REVIEW_APPROVED)->count(),
+                // Selesai TAHUN INI, dihitung dari tanggal buku dicetak.
+                'doneYearCount'       => $mine()->whereIn('status', Project::DONE_STATUSES)
+                    ->whereYear('printed_at', now()->year)->count(),
             ];
             $data['notes'] = $this->latestNotes($active->pluck('id'));
         }
@@ -84,7 +123,8 @@ class DashboardController extends Controller
                 ->values();
 
             $data['reviewer'] = [
-                'queue'              => $queue,
+                'queue'              => $this->panelPage($queue, 'p_antrean'),
+                'queueCount'         => $queue->count(),
                 'valueCount'         => $queue->where('review_status', Project::REVIEW_SUBMITTED)->count(),
                 'draftCount'         => $queue->where('review_status', Project::STAGE_DRAFT_CONFIRMED)->count(),
                 'reviewedMonthCount' => \App\Models\AuditLog::where('user_id', $user->id)
@@ -114,8 +154,10 @@ class DashboardController extends Controller
                 ->values();
 
             $data['produksi'] = [
-                'actions'        => $actions,
-                'finalSla'       => $finalSla,
+                'actions'        => $this->panelPage($actions, 'p_tindakan'),
+                'actionsCount'   => $actions->count(),
+                'finalSla'       => $this->panelPage($finalSla, 'p_sla'),
+                'finalSlaCount'  => $finalSla->count(),
                 'confirmCount'   => $inProgress->where('review_status', Project::STAGE_DRAFT_SUBMITTED)->count(),
                 'printCount'     => $inProgress->where('review_status', Project::STAGE_DRAFT_REVIEWED)->count(),
                 'signCount'      => Project::where('status', Project::STATUS_TANDA_TANGAN)->count(),
@@ -171,14 +213,17 @@ class DashboardController extends Controller
                     ->values();
 
                 $data['keuangan'] = [
-                    'overdue'       => $overdue,
-                    'overdueSum'    => $overdue->sum('amount'),
-                    'unpaidDone'    => $unpaidDone,
-                    'unpaidDoneSum' => $unpaidDone->sum(fn ($row) => $row['project']->remaining_balance),
-                    'overdueDays'   => PaymentDashboardController::OVERDUE_DAYS,
-                    'dueDays'       => self::BILLING_DUE_DAYS,
+                    'overdue'         => $this->panelPage($overdue, 'p_tagihan'),
+                    'overdueCount'    => $overdue->count(),
+                    'overdueSum'      => $overdue->sum('amount'),
+                    'unpaidDone'      => $this->panelPage($unpaidDone, 'p_belumlunas'),
+                    'unpaidDoneCount' => $unpaidDone->count(),
+                    'unpaidDoneSum'   => $unpaidDone->sum(fn ($row) => $row['project']->remaining_balance),
+                    'overdueDays'     => PaymentDashboardController::OVERDUE_DAYS,
+                    'dueDays'         => self::BILLING_DUE_DAYS,
                 ];
-                $data['followUps'] = $followUps;
+                $data['followUps']      = $this->panelPage($followUps, 'p_tindaklanjut');
+                $data['followUpsCount'] = $followUps->count();
             }
         }
 
@@ -554,42 +599,64 @@ class DashboardController extends Controller
      */
     public function overview()
     {
-        $projects = Project::query()
-            ->select([
-                'id', 'status', 'proposal_purpose', 'service_fee',
-                'transport_cost', 'transport_reimbursed', 'fee_ppn_included', 'created_at',
-            ])
-            ->withCount(['invoices as paid_invoices_count' => function ($q) {
-                $q->where('status', 'Paid');
-            }])
-            ->get();
+        // Dihitung di SQL, bukan dengan menarik seluruh baris ke PHP
+        // (2026-09-24, hasil audit): halaman ini hanya butuh angka ringkasan,
+        // jadi yang dikirim balik dari database cukup belasan baris hasil
+        // GROUP BY, bukan satu objek per proyek.
+        $rate     = (float) config('kjpp.ppn_rate', 0.11);
+        $totalFee = '(service_fee + IF(transport_reimbursed = 1, 0, COALESCE(transport_cost, 0)))'
+            . ' * IF(fee_ppn_included = 1, 1, ' . (1 + $rate) . ')';
 
-        $active    = $projects->reject->isCancelled();
-        $deal      = $active->filter(fn ($p) => $p->paid_invoices_count > 0);
-        $pending   = $active->filter(fn ($p) => $p->paid_invoices_count === 0);
-        $cancelled = $projects->filter->isCancelled();
+        // Satu query: jumlah proyek & nilai kontrak per status, plus pecahan
+        // "sudah ada invoice lunas" untuk membedakan deal & pending.
+        $byStatus = Project::query()
+            ->selectRaw('status, COUNT(*) AS jumlah')
+            ->selectRaw("SUM($totalFee) AS nilai")
+            ->selectRaw("SUM(CASE WHEN (SELECT COUNT(*) FROM invoices i WHERE i.project_id = projects.id AND i.status = 'Paid') > 0 THEN 1 ELSE 0 END) AS deal_jumlah")
+            ->selectRaw("SUM(CASE WHEN (SELECT COUNT(*) FROM invoices i WHERE i.project_id = projects.id AND i.status = 'Paid') > 0 THEN $totalFee ELSE 0 END) AS deal_nilai")
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
 
-        // Jumlah proyek per status, mengikuti urutan kanonik.
+        // reject(), bukan except(): pada koleksi Eloquent, except() menyaring
+        // berdasarkan PRIMARY KEY model, bukan kunci koleksi.
+        $aktifRows = $byStatus->reject(fn ($row) => $row->status === Project::STATUS_BATAL);
+
+        $totalProposals = (int) $byStatus->sum('jumlah');
+        $cancelledCount = (int) ($byStatus[Project::STATUS_BATAL]->jumlah ?? 0);
+        $dealCount      = (int) $aktifRows->sum('deal_jumlah');
+        $activeCount    = (int) $aktifRows->sum('jumlah');
+
         $statusCounts = collect(Project::STATUSES)
-            ->mapWithKeys(fn ($s) => [$s => $projects->where('status', $s)->count()]);
+            ->mapWithKeys(fn ($s) => [$s => (int) ($byStatus[$s]->jumlah ?? 0)]);
 
         // Jumlah proyek per jenis proposal (proyek aktif saja).
+        $purposeRows = Project::query()
+            ->where('status', '!=', Project::STATUS_BATAL)
+            ->selectRaw('proposal_purpose, COUNT(*) AS jumlah')
+            ->groupBy('proposal_purpose')
+            ->pluck('jumlah', 'proposal_purpose');
+
         $purposeCounts = collect([
             Project::PURPOSE_JUAL_BELI,
             Project::PURPOSE_PENJAMINAN_UTANG,
             Project::PURPOSE_LELANG,
             Project::PURPOSE_LK_PROPERTI,
-        ])->mapWithKeys(fn ($p) => [$p => $active->where('proposal_purpose', $p)->count()]);
+        ])->mapWithKeys(fn ($p) => [$p => (int) ($purposeRows[$p] ?? 0)]);
 
         // Proposal masuk per bulan — 6 bulan terakhir (termasuk bulan ini).
-        $monthly = collect(range(5, 0))->map(function ($back) use ($projects) {
+        $monthRows = Project::query()
+            ->where('created_at', '>=', now()->startOfMonth()->subMonths(5))
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') AS bulan, COUNT(*) AS jumlah")
+            ->groupBy('bulan')
+            ->pluck('jumlah', 'bulan');
+
+        $monthly = collect(range(5, 0))->map(function ($back) use ($monthRows) {
             $month = now()->startOfMonth()->subMonths($back);
 
             return [
                 'label' => $month->translatedFormat('M Y'),
-                'count' => $projects->filter(
-                    fn ($p) => $p->created_at->isSameMonth($month)
-                )->count(),
+                'count' => (int) ($monthRows[$month->format('Y-m')] ?? 0),
             ];
         });
 
@@ -601,12 +668,12 @@ class DashboardController extends Controller
         return view('dashboard.overview', [
             'workload'           => $this->appraiserWorkload(),
             'topBanks'           => $this->topBanks(),
-            'totalProposals'     => $projects->count(),
-            'pendingCount'       => $pending->count(),
-            'dealCount'          => $deal->count(),
-            'cancelledCount'     => $cancelled->count(),
-            'totalContractValue' => $active->sum('total_fee'),
-            'dealContractValue'  => $deal->sum('total_fee'),
+            'totalProposals'     => $totalProposals,
+            'pendingCount'       => $activeCount - $dealCount,
+            'dealCount'          => $dealCount,
+            'cancelledCount'     => $cancelledCount,
+            'totalContractValue' => round((float) $aktifRows->sum('nilai'), 2),
+            'dealContractValue'  => round((float) $aktifRows->sum('deal_nilai'), 2),
             'statusCounts'       => $statusCounts,
             'purposeCounts'      => $purposeCounts,
             'monthly'            => $monthly,

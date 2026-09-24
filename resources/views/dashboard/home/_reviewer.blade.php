@@ -75,5 +75,9 @@
                 </a>
             @endforeach
         </div>
+    {{-- Paginasi panel: maksimal 5 baris per halaman (2026-09-24). --}}
+    @if ($d['queue']->hasPages())
+        <div class="border-t border-gray-100 px-5 py-3 dark:border-gray-700">{{ $d['queue']->links() }}</div>
+    @endif
     @endif
 </div>

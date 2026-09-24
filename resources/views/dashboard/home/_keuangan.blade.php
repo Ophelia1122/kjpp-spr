@@ -6,10 +6,10 @@
 @endphp
 
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    @include('dashboard.home._tile', ['label' => 'Invoice tertunggak', 'value' => $d['overdue']->count(), 'tone' => $d['overdue']->count() ? 'rose' : null,
+    @include('dashboard.home._tile', ['label' => 'Invoice tertunggak', 'value' => $d['overdueCount'], 'tone' => $d['overdueCount'] ? 'rose' : null,
         'sub' => $rp($d['overdueSum']), 'hint' => 'Belum dibayar lebih dari ' . $d['overdueDays'] . ' hari sejak terbit',
         'href' => route('dashboard.pembayaran', ['status' => 'overdue'])])
-    @include('dashboard.home._tile', ['label' => 'Selesai, belum lunas', 'value' => $d['unpaidDone']->count(), 'tone' => $d['unpaidDone']->count() ? 'amber' : null,
+    @include('dashboard.home._tile', ['label' => 'Selesai, belum lunas', 'value' => $d['unpaidDoneCount'], 'tone' => $d['unpaidDoneCount'] ? 'amber' : null,
         'sub' => $rp($d['unpaidDoneSum']), 'hint' => 'Sisa pelunasan pekerjaan yang sudah selesai'])
 </div>
 
@@ -68,6 +68,10 @@
                 </a>
             @endforeach
         </div>
+    {{-- Paginasi panel: maksimal 5 baris per halaman (2026-09-24). --}}
+    @if ($d['overdue']->hasPages())
+        <div class="border-t border-gray-100 px-5 py-3 dark:border-gray-700">{{ $d['overdue']->links() }}</div>
+    @endif
     @endif
 </div>
 
@@ -141,5 +145,9 @@
                 </a>
             @endforeach
         </div>
+    {{-- Paginasi panel: maksimal 5 baris per halaman (2026-09-24). --}}
+    @if ($d['unpaidDone']->hasPages())
+        <div class="border-t border-gray-100 px-5 py-3 dark:border-gray-700">{{ $d['unpaidDone']->links() }}</div>
+    @endif
     @endif
 </div>

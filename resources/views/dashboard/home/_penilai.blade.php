@@ -1,12 +1,19 @@
 {{-- Beranda Surveyor/Penilai (juga tab "Sebagai Penilai" untuk Reviewer). --}}
 @php $d = $penilai; @endphp
 
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+{{-- Widget disusun ulang mengikuti pekerjaan Surveyor (2026-09-24, feedback
+     user): dua PR terdekat dulu, lalu ringkasan beban dan capaian. --}}
+<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    @include('dashboard.home._tile', ['label' => 'Belum submit review', 'value' => $d['awaitingSubmitCount'],
+        'tone' => $d['awaitingSubmitCount'] ? 'amber' : null, 'hint' => 'Sudah disurvei, nilai belum diajukan',
+        'href' => route('dashboard', ['mine' => 1, 'focus' => 'active'])])
+    @include('dashboard.home._tile', ['label' => 'Butuh draft laporan', 'value' => $d['draftNeededCount'],
+        'tone' => $d['draftNeededCount'] ? 'indigo' : null, 'hint' => 'Nilai disetujui, draft belum disusun',
+        'href' => route('dashboard', ['mine' => 1, 'focus' => 'active'])])
     @include('dashboard.home._tile', ['label' => 'Proyek aktif', 'value' => $d['activeCount'], 'hint' => 'Belum selesai & tidak dibatalkan',
         'href' => route('dashboard', ['mine' => 1, 'focus' => 'active'])])
-    @include('dashboard.home._tile', ['label' => 'Survei bulan ini', 'value' => $d['surveyMonthCount'], 'hint' => now()->translatedFormat('F Y'),
-        'href' => route('dashboard', ['mine' => 1, 'focus' => 'survey_month'])])
-    @include('dashboard.home._tile', ['label' => 'Proyek selesai', 'value' => $d['doneCount'], 'tone' => 'emerald', 'hint' => 'Yang Anda tangani sebagai penilai lapangan',
+    @include('dashboard.home._tile', ['label' => 'Proyek selesai', 'value' => $d['doneYearCount'], 'tone' => 'emerald',
+        'hint' => 'Tahun ' . now()->year,
         'href' => route('dashboard', ['mine' => 1, 'status' => \App\Models\Project::STATUS_SELESAI])])
 </div>
 
@@ -69,5 +76,9 @@
                 </a>
             @endforeach
         </div>
+    {{-- Paginasi panel: maksimal 5 baris per halaman (2026-09-24). --}}
+    @if ($d['active']->hasPages())
+        <div class="border-t border-gray-100 px-5 py-3 dark:border-gray-700">{{ $d['active']->links() }}</div>
+    @endif
     @endif
 </div>

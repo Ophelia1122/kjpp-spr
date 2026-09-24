@@ -87,6 +87,11 @@
                 </a>
             @endforeach
         </div>
+
+    {{-- Paginasi panel: maksimal 5 baris per halaman (2026-09-24). --}}
+    @if ($d['actions']->hasPages())
+        <div class="border-t border-gray-100 px-5 py-3 dark:border-gray-700">{{ $d['actions']->links() }}</div>
+    @endif
     @endif
 </div>
 
@@ -154,5 +159,10 @@
                 </a>
             @endforeach
         </div>
+
+    {{-- Paginasi panel: maksimal 5 baris per halaman (2026-09-24). --}}
+    @if ($d['finalSla']->hasPages())
+        <div class="border-t border-gray-100 px-5 py-3 dark:border-gray-700">{{ $d['finalSla']->links() }}</div>
+    @endif
     @endif
 </div>

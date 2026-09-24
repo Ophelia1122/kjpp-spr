@@ -193,8 +193,13 @@ Route::middleware('auth')->group(function () {
         Route::put('/roles', [RoleController::class, 'update'])->name('roles.update');
         
     });
-    Route::middleware('permission:audit.view')
-        ->get('/audit-log', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit.index');
+    Route::middleware('permission:audit.view')->group(function () {
+        Route::get('/audit-log', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit.index');
+        // Unduh log sesuai filter aktif (2026-09-24).
+        Route::get('/audit-log/export', [\App\Http\Controllers\AuditLogController::class, 'export'])->name('audit.export');
+        // Mengosongkan log: Administrator saja, diverifikasi kata sandi di controller.
+        Route::post('/audit-log/clear', [\App\Http\Controllers\AuditLogController::class, 'clear'])->name('audit.clear');
+    });
 
     // --- Pengaturan Sistem: Master Rekening Bank (izin 'banks.manage', default hanya Administrator) ---
     Route::middleware('permission:banks.manage')->group(function () {
