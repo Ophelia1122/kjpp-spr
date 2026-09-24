@@ -211,14 +211,14 @@ class Project extends Model
             'flash' => 'Draft Resume disetujui. SLA Laporan Final berjalan.',
         ],
         'appeal_resume' => [
-            'from' => self::REVIEW_RELEASED, 'to' => self::REVIEW_RELEASED, 'actor' => 'reviewer', 'note' => 'required',
+            'from' => self::REVIEW_RELEASED, 'to' => self::REVIEW_RELEASED, 'actor' => 'reviewer_or_admin', 'note' => 'required',
             'stay' => true,
             'title' => 'Draft Resume Banding', 'button' => 'Resume Banding', 'tip' => 'Catat banding atas Draft Resume beserta catatannya',
             'action' => 'review.resume_appealed', 'desc' => 'Mencatat banding atas Draft Resume',
             'flash' => 'Banding Draft Resume dicatat di riwayat proyek.',
         ],
         'return_value' => [
-            'from' => self::REVIEW_SUBMITTED, 'to' => null, 'actor' => 'reviewer_or_admin', 'note' => 'required',
+            'from' => self::REVIEW_SUBMITTED, 'to' => null, 'actor' => 'reviewer', 'note' => 'required',
             'title' => 'Kembalikan Nilai ke Surveyor', 'button' => 'Ke Surveyor', 'tip' => 'Kembalikan nilai ke Surveyor untuk revisi',
             'action' => 'review.rejected_to_surveyor', 'desc' => 'Mengembalikan nilai ke Surveyor untuk revisi',
             'flash' => 'Nilai dikembalikan ke Surveyor untuk revisi.',

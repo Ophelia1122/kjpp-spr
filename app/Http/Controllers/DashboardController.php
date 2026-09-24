@@ -71,16 +71,21 @@ class DashboardController extends Controller
         }
 
         if ($mode === 'reviewer') {
+            // Antrean review hanya berisi yang benar-benar MENUNGGU Reviewer:
+            // nilai yang baru diajukan Surveyor, dan draft laporan final yang
+            // sudah dikonfirmasi Admin Produksi. Draft Resume yang sudah
+            // dirilis tidak lagi masuk antrean — bolanya ada di Admin Produksi
+            // (2026-09-24, feedback user).
             $queue = Project::with([...$with, 'reviewSubmittedBy'])
                 ->whereIn('status', Project::WORK_STATUSES)
-                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED, Project::STAGE_DRAFT_CONFIRMED])
+                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::STAGE_DRAFT_CONFIRMED])
                 ->get()
                 ->sortBy(fn ($p) => $p->stage_since?->timestamp ?? 0)
                 ->values();
 
             $data['reviewer'] = [
                 'queue'              => $queue,
-                'valueCount'         => $queue->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED])->count(),
+                'valueCount'         => $queue->where('review_status', Project::REVIEW_SUBMITTED)->count(),
                 'draftCount'         => $queue->where('review_status', Project::STAGE_DRAFT_CONFIRMED)->count(),
                 'reviewedMonthCount' => \App\Models\AuditLog::where('user_id', $user->id)
                     ->whereIn('action', ['review.value_approved', 'draft.reviewed', 'review.approved_by_reviewer'])
@@ -96,8 +101,11 @@ class DashboardController extends Controller
                 ->whereNotNull('review_status')
                 ->get();
 
+            // Release Draft Resume & kembalikan nilai adalah hak Reviewer, jadi
+            // tidak ditampilkan di daftar tindakan Admin Produksi
+            // (2026-09-24, feedback user).
             $actions = $inProgress
-                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED, Project::STAGE_DRAFT_SUBMITTED, Project::STAGE_DRAFT_REVIEWED])
+                ->whereIn('review_status', [Project::REVIEW_RELEASED, Project::STAGE_DRAFT_SUBMITTED, Project::STAGE_DRAFT_REVIEWED])
                 ->sortBy(fn ($p) => $p->stage_since?->timestamp ?? 0)
                 ->values();
             $finalSla = $inProgress
@@ -106,12 +114,12 @@ class DashboardController extends Controller
                 ->values();
 
             $data['produksi'] = [
-                'actions'           => $actions,
-                'finalSla'          => $finalSla,
-                'valueCount'        => $inProgress->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED])->count(),
-                'confirmCount'      => $inProgress->where('review_status', Project::STAGE_DRAFT_SUBMITTED)->count(),
-                'printCount'        => $inProgress->where('review_status', Project::STAGE_DRAFT_REVIEWED)->count(),
-                'finalOverdueCount' => $finalSla->filter(fn ($p) => ($p->final_sla_days_remaining ?? 0) < 0)->count(),
+                'actions'        => $actions,
+                'finalSla'       => $finalSla,
+                'confirmCount'   => $inProgress->where('review_status', Project::STAGE_DRAFT_SUBMITTED)->count(),
+                'printCount'     => $inProgress->where('review_status', Project::STAGE_DRAFT_REVIEWED)->count(),
+                'signCount'      => Project::where('status', Project::STATUS_TANDA_TANGAN)->count(),
+                'finalDoneCount' => Project::whereIn('status', Project::DONE_STATUSES)->count(),
             ];
             $data['notes'] = $this->latestNotes($actions->pluck('id'));
 
@@ -289,11 +297,34 @@ class DashboardController extends Controller
             'month_done'   => $base()->whereBetween('printed_at', [$monthStart, $monthEnd])->count(),
             'review_queue' => null,
             'review_done'  => null,
+            'final_mode'   => false,
         ];
+
+        // Admin Produksi tidak turun survei, jadi angka SLA Draft & survei
+        // bulan ini tidak relevan untuknya. Yang dipakai SLA Laporan Final
+        // (2026-09-24, feedback user).
+        if ($mode === 'kantor') {
+            $finalDone = Project::whereNotNull('review_approved_at')
+                ->whereBetween('printed_at', [$monthStart, $monthEnd])
+                ->get();
+
+            $withFinalTarget = $finalDone->filter(fn ($p) => $p->estimated_final_completion_date !== null);
+            $finalOk = $withFinalTarget->filter(fn ($p) => $p->printed_at->lte($p->estimated_final_completion_date));
+
+            $profile['final_mode']       = true;
+            $profile['final_sample']     = $finalDone->count();
+            $profile['final_avg_days']   = $finalDone->isEmpty() ? null : round($finalDone->avg(
+                fn ($p) => $p->review_approved_at->diffInDays($p->printed_at)
+            ), 1);
+            $profile['final_on_time_pct'] = $withFinalTarget->isEmpty() ? null
+                : (int) round($finalOk->count() / $withFinalTarget->count() * 100);
+            $profile['final_ok']   = $finalOk->count();
+            $profile['final_late'] = $withFinalTarget->count() - $finalOk->count();
+        }
 
         if ($mode === 'reviewer') {
             $profile['review_queue'] = Project::whereIn('status', Project::WORK_STATUSES)
-                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::REVIEW_RELEASED, Project::STAGE_DRAFT_CONFIRMED])
+                ->whereIn('review_status', [Project::REVIEW_SUBMITTED, Project::STAGE_DRAFT_CONFIRMED])
                 ->count();
             $profile['review_done'] = Project::where('review_approved_by_user_id', $user->id)
                 ->whereBetween('review_approved_at', [$monthStart, $monthEnd])

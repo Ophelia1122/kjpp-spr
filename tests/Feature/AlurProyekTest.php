@@ -323,7 +323,7 @@ class AlurProyekTest extends TestCase
         $this->assertNotNull($proyek->review_approved_at);
     }
 
-    public function test_admin_produksi_hanya_bisa_menyetujui_draft_resume(): void
+    public function test_admin_produksi_boleh_menyetujui_atau_banding_tetapi_tidak_mereview_nilai(): void
     {
         $adminProduksi = User::create([
             'name'      => 'Admin Produksi Uji',
@@ -340,12 +340,22 @@ class AlurProyekTest extends TestCase
             'review_status'         => Project::REVIEW_SUBMITTED,
         ]);
 
+        // Me-review nilai adalah hak Reviewer: Admin Produksi tidak boleh
+        // merilis Draft Resume maupun mengembalikan nilai ke Surveyor
+        // (2026-09-24, feedback user).
         $this->actingAs($adminProduksi)->post(route('projects.workflow', [$proyek, 'release_resume']))->assertForbidden();
+        $this->actingAs($adminProduksi)
+            ->post(route('projects.workflow', [$proyek, 'return_value']), ['note' => 'Revisi.'])
+            ->assertForbidden();
 
+        // Setelah Draft Resume dirilis, Admin Produksi boleh menyetujui MAUPUN
+        // mencatat banding.
         $proyek->update(['review_status' => Project::REVIEW_RELEASED]);
         $this->actingAs($adminProduksi)
             ->post(route('projects.workflow', [$proyek, 'appeal_resume']), ['note' => 'Banding.'])
-            ->assertForbidden();
+            ->assertRedirect();
+        $this->assertSame(Project::REVIEW_RELEASED, $proyek->fresh()->review_status);
+
         $this->actingAs($adminProduksi)->post(route('projects.workflow', [$proyek, 'approve_value']))->assertRedirect();
         $this->assertSame(Project::REVIEW_APPROVED, $proyek->fresh()->review_status);
     }

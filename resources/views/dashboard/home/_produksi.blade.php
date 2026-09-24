@@ -1,8 +1,9 @@
 {{-- Beranda Admin Produksi (juga dilihat General Admin & Administrator). --}}
 @php
     $d = $produksi;
+    // Release Draft Resume & kembalikan nilai adalah hak Reviewer, jadi tidak
+    // pernah muncul di daftar ini (2026-09-24, feedback user).
     $actionLabel = [
-        \App\Models\Project::REVIEW_SUBMITTED      => 'Release Draft Resume / kembalikan nilai',
         \App\Models\Project::REVIEW_RELEASED       => 'Draft Resume disetujui / banding',
         \App\Models\Project::STAGE_DRAFT_SUBMITTED => 'Konfirmasi draft laporan',
         \App\Models\Project::STAGE_DRAFT_REVIEWED  => 'Cetak buku & konfirmasi',
@@ -10,11 +11,14 @@
     $waitText = fn ($wait) => $wait === null ? '' : ($wait === 0 ? 'hari ini' : $wait . ' hari');
 @endphp
 
+{{-- Urutan kartu mengikuti alur kerja Admin Produksi: konfirmasi draft,
+     cetak buku, tanda tangan, lalu jumlah laporan final yang sudah selesai
+     (2026-09-24, feedback user). --}}
 <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    @include('dashboard.home._tile', ['label' => 'Review nilai', 'value' => $d['valueCount'], 'tone' => $d['valueCount'] ? 'indigo' : null, 'hint' => 'Bisa disetujui Admin Produksi'])
     @include('dashboard.home._tile', ['label' => 'Konfirmasi draft', 'value' => $d['confirmCount'], 'tone' => $d['confirmCount'] ? 'amber' : null, 'hint' => 'Draft laporan dari Surveyor'])
     @include('dashboard.home._tile', ['label' => 'Proses cetak buku', 'value' => $d['printCount'], 'tone' => $d['printCount'] ? 'amber' : null, 'hint' => 'Draft telah direview Reviewer'])
-    @include('dashboard.home._tile', ['label' => 'SLA Final lewat', 'value' => $d['finalOverdueCount'], 'tone' => $d['finalOverdueCount'] ? 'rose' : null, 'hint' => 'Melewati target Laporan Final'])
+    @include('dashboard.home._tile', ['label' => 'Proses tanda tangan', 'value' => $d['signCount'], 'tone' => $d['signCount'] ? 'indigo' : null, 'hint' => 'Buku menunggu ditandatangani'])
+    @include('dashboard.home._tile', ['label' => 'Jumlah laporan selesai', 'value' => $d['finalDoneCount'], 'tone' => null, 'hint' => 'Total laporan final'])
 </div>
 
 {{-- ---------- Perlu tindakan Admin Produksi ---------- --}}

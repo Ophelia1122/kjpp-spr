@@ -3,6 +3,22 @@
      di kanan. Tinggi dijaga tetap rendah supaya konten di bawahnya tidak turun.
      Butuh $profile dari DashboardController@miniProfile. --}}
 @php
+    // Admin Produksi (mode kantor) memakai angka SLA Laporan Final; peran lain
+    // memakai SLA Draft & survei (2026-09-24, feedback user).
+    if ($profile['final_mode'] ?? false) {
+        $stats = [
+            ['label' => 'SLA Final', 'value' => $profile['final_avg_days'] !== null ? $profile['final_avg_days'] . ' hr' : '—',
+             'sub' => $profile['final_on_time_pct'] !== null ? $profile['final_on_time_pct'] . '% tepat' : 'belum ada data',
+             'tone' => ($profile['final_on_time_pct'] ?? 100) >= 80 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400',
+             'tip' => 'Rata-rata hari dari resume disetujui sampai buku dicetak (buku dicetak bulan ini, ' . $profile['final_sample'] . ' proyek)'],
+            ['label' => 'SLA Final sesuai', 'value' => $profile['final_ok'], 'sub' => 'proyek',
+             'tone' => 'text-emerald-600 dark:text-emerald-400',
+             'tip' => 'Buku dicetak bulan ini dan tidak melewati target Laporan Final'],
+            ['label' => 'SLA Final lewat', 'value' => $profile['final_late'], 'sub' => 'proyek',
+             'tone' => $profile['final_late'] > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-gray-100',
+             'tip' => 'Buku dicetak bulan ini tetapi melewati target Laporan Final'],
+        ];
+    } else {
     $stats = [
         ['label' => 'SLA Draft', 'value' => $profile['avg_days'] !== null ? $profile['avg_days'] . ' hr' : '—',
          'sub' => $profile['on_time_pct'] !== null ? $profile['on_time_pct'] . '% tepat' : 'belum ada data',
@@ -13,6 +29,7 @@
         ['label' => 'Selesai bulan ini', 'value' => $profile['month_done'], 'sub' => 'buku cetak', 'tone' => 'text-gray-900 dark:text-gray-100',
          'tip' => 'Proyek yang bukunya dicetak di bulan berjalan'],
     ];
+    }
 
     if ($profile['review_queue'] !== null) {
         $stats[] = ['label' => 'Antre review', 'value' => $profile['review_queue'], 'sub' => 'proyek',
