@@ -8,9 +8,32 @@
     $canManage = Project::userCanActAs(auth()->user(), 'admin_or_keuangan');
     $fld = 'mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900';
     // Keterangan baku mengikuti contoh kantor.
-    $noteDefault = 'Laporan Penilaian an ' . $project->effective_client_name
-        . ($project->final_report_number ? ' dengan No. Laporan ' . $project->final_report_number : '')
-        . ' berikut Kwitansi, Invoice dan Faktur Pajak';
+    // Isian awal rincian dokumen mengikuti apa yang memang dimiliki proyek:
+    // buku laporan selalu ikut, invoice & kwitansi bila sudah terbit, faktur
+    // pajak bila nomornya sudah ada (2026-09-24, feedback user).
+    $docDefaults = [
+        'laporan'      => 1,
+        'invoice'      => $project->invoices->isNotEmpty() ? 1 : 0,
+        'kwitansi'     => $project->invoices->whereNotNull('kwitansi_number')->isNotEmpty() ? 1 : 0,
+        'faktur_pajak' => $project->tax_invoice_number ? 1 : 0,
+    ];
+
+    // Kalimat keterangan mengikuti dokumen yang dicentang, bukan daftar tetap
+    // (2026-09-24, feedback user). Skrip di bawah memperbaruinya saat centang
+    // diubah, selama staf belum mengetik keterangan sendiri.
+    $noteBase  = 'Laporan Penilaian an ' . $project->effective_client_name
+        . ($project->final_report_number ? ' dengan No. Laporan ' . $project->final_report_number : '');
+    $noteExtra = collect($docDefaults)->filter(fn ($q, $k) => $q > 0 && $k !== 'laporan')
+        ->keys()->map(fn ($k) => DeliveryReceipt::DOCUMENT_TYPES[$k][0])->values()->all();
+    $noteDefault = $noteBase . (count($noteExtra)
+        ? ' berikut ' . (count($noteExtra) > 1
+            ? implode(', ', array_slice($noteExtra, 0, -1)) . ' dan ' . end($noteExtra)
+            : $noteExtra[0])
+        : '');
+
+    // Formulir disembunyikan kalau sudah ada tanda terima — daftar yang lama
+    // tampil lebih dulu, formulir dibuka lewat tombol (2026-09-24).
+    $openForm = $receipts->isEmpty() || $errors->any();
 @endphp
 
 <div id="section-tanda-terima" class="scroll-mt-24 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -19,9 +42,18 @@
             <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Tanda Terima Pengiriman Buku</h2>
             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Bukti serah terima buku laporan &amp; dokumen pendukung ke klien. Boleh lebih dari satu.</p>
         </div>
-        @if ($receipts->isNotEmpty())
-            <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{{ $receipts->count() }} tanda terima</span>
-        @endif
+        <div class="flex items-center gap-2">
+            @if ($receipts->isNotEmpty())
+                <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{{ $receipts->count() }} tanda terima</span>
+            @endif
+            @if ($canManage && $receipts->isNotEmpty())
+                <button type="button" id="ttToggleForm" aria-expanded="{{ $openForm ? 'true' : 'false' }}" aria-controls="ttFormWrap"
+                        class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+                    <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                    <span id="ttToggleLabel">{{ $openForm ? 'Tutup Formulir' : 'Tanda Terima Baru' }}</span>
+                </button>
+            @endif
+        </div>
     </div>
 
     @if ($receipts->isNotEmpty())
@@ -59,16 +91,20 @@
     @endif
 
     @if ($canManage)
+        <div id="ttFormWrap" @class(['hidden' => ! $openForm])>
         <form action="{{ route('receipts.store', $project) }}" method="POST"
               class="space-y-4 border-t border-gray-100 bg-gray-50/60 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/30">
             @csrf
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nomor Tanda Terima</label>
-                    <input type="text" value="{{ $nextReceiptNumber }}" disabled
-                           title="Nomor dibuat otomatis saat disimpan"
-                           class="{{ $fld }} bg-gray-100 text-gray-500 dark:bg-gray-800">
-                </div>
+            {{-- Nomor otomatis dulu tampil sebagai kolom isian mati yang memakan
+                 sepertiga baris; sekarang jadi keterangan kecil saja
+                 (2026-09-24, feedback user). --}}
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                Nomor tanda terima berikutnya:
+                <span class="font-semibold tabular-nums text-gray-700 dark:text-gray-200">{{ $nextReceiptNumber }}</span>
+                &middot; dibuat otomatis saat disimpan.
+            </p>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                     <label for="tt_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Pengiriman</label>
                     <input type="date" id="tt_date" name="delivery_date" lang="id" required
@@ -117,19 +153,45 @@
                 <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Rincian dokumen</p>
                 <div class="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     @foreach (DeliveryReceipt::DOCUMENT_TYPES as $key => [$label, $unit])
-                        <div class="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-                            <input type="checkbox" id="tt_chk_{{ $key }}" class="rounded border-gray-300"
-                                   onchange="document.getElementById('tt_qty_{{ $key }}').value = this.checked ? 1 : 0"
-                                   @checked(old('documents.' . $key))>
+                        @php $qty = (int) old('documents.' . $key, $docDefaults[$key] ?? 0); @endphp
+                        <div data-tt-row="{{ $key }}"
+                             class="flex items-center gap-2 rounded-md border px-3 py-2 {{ $qty > 0 ? 'border-blue-300 bg-blue-50/60 dark:border-blue-800 dark:bg-blue-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800' }}">
+                            <input type="checkbox" id="tt_chk_{{ $key }}" class="rounded border-gray-300" @checked($qty > 0)>
                             <label for="tt_chk_{{ $key }}" class="flex-1 text-sm text-gray-700 dark:text-gray-300">{{ $label }}</label>
                             <input type="number" id="tt_qty_{{ $key }}" name="documents[{{ $key }}]" min="0" max="999" step="1"
-                                   value="{{ old('documents.' . $key, 0) }}"
+                                   value="{{ $qty }}" aria-label="Jumlah {{ $label }}"
                                    class="w-16 rounded-md border-gray-300 text-sm shadow-sm tabular-nums dark:border-gray-600 dark:bg-gray-900">
                             <span class="w-12 text-xs text-gray-400 dark:text-gray-500">{{ $unit }}</span>
                         </div>
                     @endforeach
                 </div>
                 <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jenis dokumen selalu tercetak &ldquo;Asli&rdquo;. Jumlah 0 = tidak ikut dikirim.</p>
+
+                <script>
+                (function () {
+                    // Centang dan jumlah saling mengikuti dua arah, dan baris yang
+                    // ikut dikirim disorot (2026-09-24, feedback user).
+                    document.querySelectorAll('[data-tt-row]').forEach(function (row) {
+                        const key = row.dataset.ttRow;
+                        const chk = document.getElementById('tt_chk_' + key);
+                        const qty = document.getElementById('tt_qty_' + key);
+                        const ON  = ['border-blue-300', 'bg-blue-50/60', 'dark:border-blue-800', 'dark:bg-blue-900/20'];
+                        const OFF = ['border-gray-200', 'bg-white', 'dark:border-gray-700', 'dark:bg-gray-800'];
+
+                        function paint() {
+                            const on = (+qty.value || 0) > 0;
+                            chk.checked = on;
+                            row.classList.remove(...(on ? OFF : ON));
+                            row.classList.add(...(on ? ON : OFF));
+                        }
+                        chk.addEventListener('change', function () {
+                            qty.value = this.checked ? Math.max(1, +qty.value || 0) : 0;
+                            paint();
+                        });
+                        qty.addEventListener('input', paint);
+                    });
+                })();
+                </script>
                 @error('documents') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -138,12 +200,63 @@
                 <textarea id="tt_note" name="note" rows="2" class="{{ $fld }}">{{ old('note', $noteDefault) }}</textarea>
             </div>
 
-            <div class="flex justify-end">
+            <div class="flex justify-end gap-2">
+                @if ($receipts->isNotEmpty())
+                    <button type="button" id="ttCancelForm"
+                            class="inline-flex h-[38px] items-center rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
+                @endif
                 <button type="submit" class="inline-flex h-[38px] items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
                     Simpan Tanda Terima
                 </button>
             </div>
         </form>
+        </div>
+
+        <script>
+        (function () {
+            // --- Buka/tutup formulir -------------------------------------
+            const wrap   = document.getElementById('ttFormWrap');
+            const toggle = document.getElementById('ttToggleForm');
+            const label  = document.getElementById('ttToggleLabel');
+            const cancel = document.getElementById('ttCancelForm');
+
+            function setOpen(open) {
+                wrap.classList.toggle('hidden', ! open);
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    label.textContent = open ? 'Tutup Formulir' : 'Tanda Terima Baru';
+                }
+                if (open) wrap.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+            if (toggle) toggle.addEventListener('click', () => setOpen(wrap.classList.contains('hidden')));
+            if (cancel) cancel.addEventListener('click', () => setOpen(false));
+
+            // --- Keterangan mengikuti dokumen yang dicentang --------------
+            const note  = document.getElementById('tt_note');
+            const BASE  = @json($noteBase);
+            const NAMES = @json(collect(App\Models\DeliveryReceipt::DOCUMENT_TYPES)->map(fn ($d) => $d[0]));
+            let auto = true;                       // berhenti otomatis begitu staf mengetik sendiri
+            note.addEventListener('input', () => { auto = false; });
+
+            function susunKeterangan() {
+                if (! auto) return;
+                const ikut = [...document.querySelectorAll('[data-tt-row]')]
+                    .map(r => r.dataset.ttRow)
+                    .filter(k => k !== 'laporan' && (+document.getElementById('tt_qty_' + k).value || 0) > 0)
+                    .map(k => NAMES[k]);
+                note.value = BASE + (ikut.length
+                    ? ' berikut ' + (ikut.length > 1
+                        ? ikut.slice(0, -1).join(', ') + ' dan ' + ikut[ikut.length - 1]
+                        : ikut[0])
+                    : '');
+            }
+            document.querySelectorAll('[data-tt-row]').forEach(row => {
+                const key = row.dataset.ttRow;
+                document.getElementById('tt_chk_' + key).addEventListener('change', susunKeterangan);
+                document.getElementById('tt_qty_' + key).addEventListener('input', susunKeterangan);
+            });
+        })();
+        </script>
     @endif
 </div>
 
