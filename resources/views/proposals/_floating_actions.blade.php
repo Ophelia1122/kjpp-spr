@@ -47,15 +47,16 @@
         // terpisah (2026-09-24, feedback user) — pola yang sama dengan menu
         // unduh invoice di partials/invoice-download-menu.blade.php.
         $unduhItems = [
-            ['group' => 'Proposal'],
+            ['group' => 'Proposal & Representatif'],
             ['label' => 'Proposal', 'format' => 'PDF',  'url' => route('proposals.exportPdf', $project)],
             ['label' => 'Proposal', 'format' => 'Word', 'url' => route('proposals.exportWord', $project)],
-            ['group' => 'Dokumen Pendukung'],
-            ['label' => 'Surat Representasi', 'format' => 'Word', 'url' => route('proposals.exportRepresentatif', $project)],
+            ['label' => 'Surat Representatif', 'format' => 'Word', 'url' => route('proposals.exportRepresentatif', $project)],
         ];
 
-        // Surat Tugas hanya muncul setelah nomornya diisi.
-        if ($project->assignment_letter_number && auth()->user()->can('survey.view')) {
+        // Surat Tugas hanya muncul setelah penilai & tanggal survei terisi —
+        // syarat yang sama dengan tombol lama di kartu Surat Tugas.
+        if ($project->assigned_appraiser && $project->survey_date && auth()->user()->can('survey.view')) {
+            $unduhItems[] = ['group' => 'Surat Tugas'];
             $unduhItems[] = ['label' => 'Surat Tugas', 'format' => 'PDF',  'url' => route('projects.exportSuratTugas', $project)];
             $unduhItems[] = ['label' => 'Surat Tugas', 'format' => 'Word', 'url' => route('projects.exportSuratTugasWord', $project)];
         }

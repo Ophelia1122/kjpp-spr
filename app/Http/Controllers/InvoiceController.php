@@ -164,7 +164,7 @@ class InvoiceController extends Controller
             $invoice
         );
 
-        return back()->with('success', "Invoice {$invoice->invoice_number} berhasil diperbarui.");
+        return back()->withFragment('section-tagihan')->with('success', "Invoice {$invoice->invoice_number} berhasil diperbarui.");
     }
 
     /**
@@ -222,7 +222,7 @@ class InvoiceController extends Controller
             $invoice
         );
 
-        return back()->with('success', "Invoice {$invoice->invoice_number} ditandai Paid. Kwitansi {$invoice->kwitansi_number} diterbitkan.");
+        return back()->withFragment('section-tagihan')->with('success', "Invoice {$invoice->invoice_number} ditandai Paid. Kwitansi {$invoice->kwitansi_number} diterbitkan.");
     }
 
     /**

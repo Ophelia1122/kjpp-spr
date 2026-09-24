@@ -47,6 +47,11 @@ class ProjectsExport implements FromQuery, WithHeadings, WithMapping, ShouldAuto
             $query->whereDate($dateField, '<=', $f['to']);
         }
 
+        // Hanya baris yang dicentang di List Project (2026-09-24, feedback user).
+        if (! empty($f['ids'])) {
+            $query->whereIn('projects.id', $f['ids']);
+        }
+
         if (! empty($f['status'])) {
             $query->where('status', $f['status']);
         }

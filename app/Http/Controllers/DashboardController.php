@@ -793,6 +793,9 @@ class DashboardController extends Controller
             'appraiser'  => 'nullable|integer',
             'q'          => 'nullable|string|max:255',
             'mine'       => 'nullable|boolean',
+            // Baris yang dicentang staf di List Project (2026-09-24).
+            'ids'        => 'nullable|array|max:500',
+            'ids.*'      => 'integer',
         ], ['to.after_or_equal' => 'Tanggal "Sampai" harus sama atau setelah tanggal "Dari".']);
 
         if (auth()->user()->seesOfficeWide()) {

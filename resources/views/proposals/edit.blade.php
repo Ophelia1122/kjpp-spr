@@ -565,9 +565,16 @@
     </form>
 </div>
 
+@php
+    // Halaman ini dibuka tepat setelah "Duplikat": Batal berarti membuang
+    // salinannya, bukan sekadar kembali (2026-09-24, feedback user).
+    $salinanBaru = request()->boolean('baru') && $project->status === \App\Models\Project::STATUS_DRAFT;
+@endphp
 @include('proposals._form_actions', [
-    'cancelUrl' => route('proposals.show', $project),
-    'cancelTip' => 'Batalkan dan kembali ke Detail Proyek',
+    'cancelUrl'     => route('proposals.show', $project),
+    'cancelForm'    => $salinanBaru ? route('proposals.discardDuplicate', $project) : null,
+    'cancelConfirm' => 'Batalkan duplikat? Salinan ini dihapus permanen dan tidak masuk Sampah.',
+    'cancelTip' => $salinanBaru ? 'Batalkan duplikat & hapus salinannya' : 'Batalkan dan kembali ke Detail Proyek',
     'saveLabel' => 'Simpan',
     'saveTip'   => 'Simpan Perubahan',
     'saveTone'  => 'blue',

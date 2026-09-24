@@ -496,7 +496,9 @@
 </div>
 
 @include('proposals._form_actions', [
-    'cancelUrl' => route('dashboard'),
+    'cancelUrl'     => route('dashboard'),
+    'cancelForm'    => null,
+    'cancelConfirm' => null,
     'cancelTip' => 'Batalkan dan kembali ke List Project',
     'saveLabel' => 'Simpan',
     'saveTip'   => 'Simpan & Generate Proposal',

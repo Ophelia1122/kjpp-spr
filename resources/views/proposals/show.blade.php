@@ -185,20 +185,6 @@
                         </a>
                     @endif
                 @endcan
-                {{-- Duplikat: menyalin isian proposal untuk klien langganan
-                     (2026-09-24, feedback user). --}}
-                @can('proposals.manage')
-                    <form action="{{ route('proposals.duplicate', $project) }}" method="POST"
-                          data-confirm="Duplikat proposal {{ $project->proposal_number }}? Salinan dibuat sebagai Draft dengan nomor sementara yang harus Anda ganti.">
-                        @csrf
-                        <button type="submit" title="Duplikat proposal" aria-label="Duplikat proposal"
-                                class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
-                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"/>
-                            </svg>
-                        </button>
-                    </form>
-                @endcan
                 <a href="{{ route('proposals.lengkap', $project) }}" title="Lihat seluruh data proyek" aria-label="Lihat seluruh data proyek"
                    class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                     <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
@@ -221,6 +207,20 @@
                             <span class="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 rounded-full bg-amber-500 text-white text-[10px] leading-4 text-center dark:bg-amber-600">{{ $project->section_texts_count }}</span>
                         @endif
                     </a>
+                @endcan
+                {{-- Duplikat: menyalin isian proposal untuk klien langganan
+                     (2026-09-24, feedback user). --}}
+                @can('proposals.manage')
+                    <form action="{{ route('proposals.duplicate', $project) }}" method="POST"
+                          data-confirm="Duplikat proposal {{ $project->proposal_number }}? Salinan dibuat sebagai Draft dengan nomor sementara yang harus Anda ganti.">
+                        @csrf
+                        <button type="submit" title="Duplikat proposal" aria-label="Duplikat proposal"
+                                class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"/>
+                            </svg>
+                        </button>
+                    </form>
                 @endcan
             </div>
         </div>
@@ -639,21 +639,8 @@
                         <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->assignment_letter_date?->translatedFormat('d F Y') ?: '(belum diisi)' }}</dd>
                     </div>
                 </dl>
-                @can('survey.view')
-                    @if ($project->assigned_appraiser && $project->survey_date)
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <a href="{{ route('projects.exportSuratTugas', $project) }}"
-                               class="inline-flex items-center rounded-md bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-900">
-                                📄 Cetak PDF Surat Tugas
-                            </a>
-                            <a href="{{ route('projects.exportSuratTugasWord', $project) }}"
-                               class="inline-flex items-center gap-1.5 rounded-md border border-blue-300 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/30">
-                                <span class="rounded border border-current px-1 text-[10px] font-bold leading-4">W</span>
-                                Unduh Word Surat Tugas
-                            </a>
-                        </div>
-                    @endif
-                @endcan
+                {{-- Tombol unduh dipindah ke menu "Unduh" di bilah mengambang
+                     (2026-09-24, feedback user) supaya tidak kembar. --}}
             @else
             @can('assignment_letter.manage')
                 <form action="{{ route('projects.updateAssignmentLetter', $project) }}" method="POST" enctype="multipart/form-data" id="suratTugasForm">
@@ -855,26 +842,14 @@
                 })();
             </script>
 
-            {{-- ---------- CETAK PDF ---------- --}}
+            {{-- Tombol cetak dipindah ke menu "Unduh" di bilah mengambang
+                 (2026-09-24, feedback user). --}}
             @can('survey.view')
-                <div class="mt-4">
-                    @if ($project->assigned_appraiser && $project->survey_date)
-                        <div class="flex flex-wrap gap-2">
-                            <a href="{{ route('projects.exportSuratTugas', $project) }}"
-                               class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-gray-800 text-white hover:bg-gray-900">
-                                📄 Cetak PDF Surat Tugas
-                            </a>
-                            {{-- Unduh versi Word (2026-09-14, feedback user). --}}
-                            <a href="{{ route('projects.exportSuratTugasWord', $project) }}"
-                               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/30">
-                                <span class="rounded border border-current px-1 text-[10px] font-bold leading-4">W</span>
-                                Unduh Word Surat Tugas
-                            </a>
-                        </div>
-                    @else
-                        <p class="text-xs text-gray-400 dark:text-gray-500">Cetak tersedia setelah data penilai lapangan &amp; tanggal survei diisi.</p>
-                    @endif
-                </div>
+                @if (! $project->assigned_appraiser || ! $project->survey_date)
+                    <p class="mt-4 text-xs text-gray-400 dark:text-gray-500">
+                        Surat Tugas bisa diunduh lewat tombol <b>Unduh</b> setelah penilai lapangan &amp; tanggal survei diisi.
+                    </p>
+                @endif
             @endcan
             @endunless
         </div>
@@ -1339,7 +1314,9 @@
 
 {{-- ===================== MODAL 1: BUAT INVOICE (PERSENTASE / NOMINAL SALING SINKRON) ===================== --}}
 <div id="invoiceModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 dark:bg-gray-800">
+    {{-- Dilebarkan dari max-w-sm (2026-09-24, feedback user) supaya baris termin
+         muat satu baris dan modal tidak terlalu jangkung. --}}
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Buat Invoice</h2>
             <button type="button" onclick="closeInvoiceModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
@@ -1389,14 +1366,20 @@
                 $terminTerpakai = $project->invoices->count();
             @endphp
             @if (count($terminChips) > 1)
+                {{-- Satu baris, nominal ditulis ringkas (2026-09-24, feedback user):
+                     sekali klik mengisi nominal, persentase, DAN keterangan. --}}
                 <div>
                     <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Isi cepat dari termin proposal</p>
-                    <div class="mt-1.5 flex flex-wrap gap-2">
+                    <div class="mt-1.5 grid gap-2" style="grid-template-columns: repeat({{ count($terminChips) }}, minmax(0, 1fr));">
                         @foreach ($terminChips as $i => $chip)
-                            <button type="button" onclick="isiDariTermin({{ $chip['nominal'] }})"
-                                    class="rounded-md border px-2.5 py-1 text-xs font-medium {{ $i === $terminTerpakai ? 'border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60' }}">
+                            @php $ringkas = $chip['nominal'] >= 1000000
+                                ? rtrim(rtrim(number_format($chip['nominal'] / 1000000, 1, ',', '.'), '0'), ',') . ' jt'
+                                : number_format($chip['nominal'] / 1000, 0, ',', '.') . ' rb'; @endphp
+                            <button type="button" onclick="isiDariTermin({{ $chip['nominal'] }}, 'Termin {{ $chip['no'] }}')"
+                                    title="Termin {{ $chip['no'] }} — Rp {{ number_format($chip['nominal'], 0, ',', '.') }}"
+                                    class="rounded-md border px-2 py-1.5 text-center text-xs font-medium leading-tight {{ $i === $terminTerpakai ? 'border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60' }}">
                                 Termin {{ $chip['no'] }} &middot; {{ rtrim(rtrim(number_format($chip['pct'], 2, ',', '.'), '0'), ',') }}%
-                                &middot; Rp {{ number_format($chip['nominal'], 0, ',', '.') }}
+                                <span class="block text-[11px] font-normal opacity-80">Rp {{ $ringkas }}</span>
                             </button>
                         @endforeach
                     </div>
@@ -1544,12 +1527,14 @@
     const INVOICE_MODAL_TOTAL_FEE = {{ (float) $project->total_fee }};
     const INVOICE_MODAL_REMAINING = {{ (float) $project->uninvoiced_balance }};
 
-    /** Isi nominal & persentase dari satu termin proposal (2026-09-24). */
-    function isiDariTermin(nominal) {
+    /** Isi nominal, persentase, dan keterangan dari satu termin (2026-09-24). */
+    function isiDariTermin(nominal, keterangan) {
         const amountInput = document.getElementById('inv_amount');
         amountInput.value = Math.round(nominal);
         amountInput.dispatchEvent(new Event('input', { bubbles: true }));
-        amountInput.focus();
+
+        const catatan = document.querySelector('#invoiceModal input[name="term_description"]');
+        if (catatan && keterangan) catatan.value = keterangan;
     }
 
     function openInvoiceModal() {

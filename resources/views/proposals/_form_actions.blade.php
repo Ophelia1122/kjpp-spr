@@ -40,16 +40,32 @@
             </button>
         </div>
 
-        {{-- Batal --}}
+        {{-- Batal. Pada salinan yang baru dibuat, Batal sekaligus MEMBUANG
+             salinannya ($cancelForm) supaya tidak menumpuk di Sampah
+             (2026-09-24, feedback user). --}}
         <div class="group relative flex-1 lg:flex-none">
             <span class="{{ $formActionTip }}">{{ $cancelTip }}</span>
-            <a href="{{ $cancelUrl }}" id="cancelProposalLink"
-               class="{{ $formActionBtn }} text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
-                <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                </svg>
-                <span class="lg:hidden">Batal</span>
-            </a>
+            @if (! empty($cancelForm))
+                <form action="{{ $cancelForm }}" method="POST" data-confirm="{{ $cancelConfirm }}">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" id="cancelProposalLink"
+                            class="{{ $formActionBtn }} text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-900/30">
+                        <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                        </svg>
+                        <span class="lg:hidden">Batal</span>
+                    </button>
+                </form>
+            @else
+                <a href="{{ $cancelUrl }}" id="cancelProposalLink"
+                   class="{{ $formActionBtn }} text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
+                    <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                    </svg>
+                    <span class="lg:hidden">Batal</span>
+                </a>
+            @endif
         </div>
     </div>
 </div>

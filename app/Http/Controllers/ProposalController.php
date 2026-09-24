@@ -109,8 +109,36 @@ class ProposalController extends Controller
         );
 
         return redirect()
-            ->route('proposals.edit', $salinan)
+            ->route('proposals.edit', [$salinan, 'baru' => 1])
             ->with('success', 'Proposal disalin. Ganti Nomor Proposal dan periksa isinya sebelum disimpan.');
+    }
+
+    /**
+     * Buang salinan yang baru dibuat (tombol Batal pada halaman Edit sesudah
+     * Duplikat, 2026-09-24 feedback user). Dihapus permanen supaya tidak
+     * menumpuk di Sampah. Dijaga ketat: hanya Draft bertanda SALINAN-, belum
+     * punya invoice, dan belum pernah masuk alur produksi.
+     */
+    public function discardDuplicate(Project $project)
+    {
+        abort_unless(
+            $project->status === Project::STATUS_DRAFT
+                && str_starts_with((string) $project->proposal_number, 'SALINAN-')
+                && $project->review_status === null
+                && $project->invoices()->count() === 0,
+            403,
+            'Hanya salinan proposal yang baru dibuat yang bisa dibuang lewat tombol ini.'
+        );
+
+        $nomor = $project->proposal_number;
+
+        $project->valuationObjects()->delete();
+        $project->intendedUsers()->detach();
+        $project->forceDelete();
+
+        \App\Helpers\AuditLogger::record('proposal.duplicate_discarded', "Membatalkan salinan proposal {$nomor}");
+
+        return redirect()->route('dashboard')->with('info', 'Salinan proposal dibatalkan dan dihapus.');
     }
 
     /** Nomor sementara untuk salinan; wajib diganti staf sebelum dipakai. */

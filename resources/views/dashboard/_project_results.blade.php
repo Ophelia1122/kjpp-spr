@@ -45,15 +45,31 @@
     {{-- min-w diturunkan 1180 -> 1040px (2026-09-13): nomor proposal kini
          diringkas, sehingga tabel muat di layar laptop tanpa geser samping. --}}
     {{-- Font dinaikkan 11 -> 12px (2026-09-13, feedback user, uji coba). --}}
-        <div class="flex flex-wrap items-center justify-end gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
             {{-- Jumlah hasil tampil di caption header; nilai ini dipakai live search. --}}
             <span id="resultsCount" hidden>{{ $projects->total() }}</span>
+
+            {{-- Mode pilih-banyak MATI secara bawaan: selama mati, kolom centang
+                 tidak dirender sama sekali sehingga tampilan persis seperti
+                 sebelumnya (2026-09-24, feedback user). --}}
+            <button type="button" id="bulkToggle" aria-pressed="false"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
+                <svg aria-hidden="true" class="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                <span id="bulkToggleLabel">Pilih</span>
+            </button>
+
             @include('partials.per-page', ['paginator' => $projects])
         </div>
     {{-- Isi tabel 13px (2026-09-20, hasil audit UI) — 12px terasa kecil di laptop. --}}
     <table class="min-w-[1040px] w-full text-[13px]">
         <thead class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
             <tr class="text-center text-[12px] font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
+                <th class="bulk-col hidden px-3 py-3 w-[36px]">
+                    <input type="checkbox" id="bulkAll" aria-label="Pilih semua baris di halaman ini"
+                           class="rounded border-gray-300 dark:border-gray-600">
+                </th>
                 @php
                     $cols = [
                         ['key' => 'proposal_number', 'label' => 'No. Proposal',  'class' => 'px-3 py-3'],
@@ -102,6 +118,10 @@
                      Ikon aksi di kolom terakhir menghentikan propagasi klik. --}}
                 <tr data-href="{{ route('proposals.show', $project) }}"
                     class="project-row cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-900/20 {{ $project->status === \App\Models\Project::STATUS_BATAL ? 'opacity-60' : '' }}">
+                    <td class="bulk-col hidden px-3 py-3" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="bulk-row rounded border-gray-300 dark:border-gray-600"
+                               value="{{ $project->id }}" aria-label="Pilih {{ $project->proposal_number }}">
+                    </td>
                     {{-- Nomor proposal 1 baris & diringkas (5 karakter awal …
                          bulan/tahun) supaya tabel tidak perlu digeser ke samping.
                          Nomor lengkap muncul sebagai tooltip. --}}
@@ -277,3 +297,82 @@
 <div>
     {{ $projects->links() }}
 </div>
+
+{{-- Bilah aksi untuk baris terpilih; hanya muncul saat mode pilih menyala. --}}
+<div id="bulkBar" class="fixed inset-x-0 bottom-4 z-40 hidden justify-center px-4">
+    <div class="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-2 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+        <span id="bulkCount" class="text-sm font-medium text-gray-700 dark:text-gray-200">0 dipilih</span>
+        <button type="button" id="bulkExport"
+                class="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
+            <svg aria-hidden="true" class="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+            </svg>
+            Export Excel
+        </button>
+        <button type="button" id="bulkClear" class="text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">Batal</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    const toggle = document.getElementById('bulkToggle');
+    if (! toggle || toggle.dataset.siap) return;     // live search merender ulang partial ini
+    toggle.dataset.siap = '1';
+
+    const label   = document.getElementById('bulkToggleLabel');
+    const bar     = document.getElementById('bulkBar');
+    const hitung  = document.getElementById('bulkCount');
+    const semua   = document.getElementById('bulkAll');
+    const EXPORT  = @json(route('dashboard.exportExcel'));
+    const QUERY   = @json(request()->except(['page', 'ids']));
+    let aktif = false;
+
+    const baris = () => [...document.querySelectorAll('.bulk-row')];
+    const terpilih = () => baris().filter(c => c.checked).map(c => c.value);
+
+    function gambar() {
+        document.querySelectorAll('.bulk-col').forEach(el => el.classList.toggle('hidden', ! aktif));
+        label.textContent = aktif ? 'Selesai' : 'Pilih';
+        toggle.setAttribute('aria-pressed', aktif ? 'true' : 'false');
+        perbaruiJumlah();
+    }
+
+    function perbaruiJumlah() {
+        const n = terpilih().length;
+        hitung.textContent = n + ' dipilih';
+        bar.classList.toggle('hidden', ! aktif || n === 0);
+        bar.classList.toggle('flex', aktif && n > 0);
+        if (semua) semua.checked = n > 0 && n === baris().length;
+    }
+
+    toggle.addEventListener('click', function () {
+        aktif = ! aktif;
+        if (! aktif) baris().forEach(c => { c.checked = false; });
+        gambar();
+    });
+
+    document.addEventListener('change', function (e) {
+        if (e.target.classList.contains('bulk-row')) perbaruiJumlah();
+        if (e.target === semua) {
+            baris().forEach(c => { c.checked = semua.checked; });
+            perbaruiJumlah();
+        }
+    });
+
+    document.getElementById('bulkClear').addEventListener('click', function () {
+        baris().forEach(c => { c.checked = false; });
+        perbaruiJumlah();
+    });
+
+    document.getElementById('bulkExport').addEventListener('click', function () {
+        const ids = terpilih();
+        if (! ids.length) return;
+        const url = new URL(EXPORT, window.location.origin);
+        Object.entries(QUERY).forEach(([k, v]) => url.searchParams.set(k, v));
+        ids.forEach(id => url.searchParams.append('ids[]', id));
+        window.location.href = url.toString();
+    });
+
+    gambar();
+})();
+</script>

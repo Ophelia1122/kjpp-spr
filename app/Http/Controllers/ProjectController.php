@@ -93,7 +93,7 @@ class ProjectController extends Controller
             $project
         );
 
-        return back()->with('success', 'Data penilai lapangan & tanggal survei berhasil disimpan.');
+        return back()->withFragment('section-penilai')->with('success', 'Data penilai lapangan & tanggal survei berhasil disimpan.');
     }
 
     /**
@@ -301,7 +301,7 @@ class ProjectController extends Controller
             $project
         );
 
-        return back()->with('success', 'Data Surat Tugas berhasil disimpan.');
+        return back()->withFragment('section-surat-tugas')->with('success', 'Data Surat Tugas berhasil disimpan.');
     }
 
     /**
@@ -344,7 +344,7 @@ class ProjectController extends Controller
             return view('proposals._assignment_letter_barcode', compact('project'));
         }
 
-        return back()->with('success', 'Barcode berhasil diunggah.');
+        return back()->withFragment('section-surat-tugas')->with('success', 'Barcode berhasil diunggah.');
     }
 
     /** Hapus barcode Surat Tugas (izin assignment_letter.manage). */
@@ -367,7 +367,7 @@ class ProjectController extends Controller
             return view('proposals._assignment_letter_barcode', compact('project'));
         }
 
-        return back()->with('success', 'Barcode dihapus.');
+        return back()->withFragment('section-surat-tugas')->with('success', 'Barcode dihapus.');
     }
 
     /**
@@ -405,7 +405,7 @@ class ProjectController extends Controller
             return $this->assignmentStaffPartial($project);
         }
 
-        return back()->with('success', 'Petugas ditambahkan.');
+        return back()->withFragment('section-surat-tugas')->with('success', 'Petugas ditambahkan.');
     }
 
     /**
@@ -431,7 +431,7 @@ class ProjectController extends Controller
             return $this->assignmentStaffPartial($project);
         }
 
-        return back()->with('success', 'Petugas dihapus.');
+        return back()->withFragment('section-surat-tugas')->with('success', 'Petugas dihapus.');
     }
 
     /**
@@ -484,7 +484,7 @@ class ProjectController extends Controller
                 . (!empty($validated['final_report_date']) ? ", tanggal final {$validated['final_report_date']}" : ''),
             $project
         );
-        return back()->with('success', 'Nomor Laporan Final berhasil disimpan.');
+        return back()->withFragment('section-laporan-resmi')->with('success', 'Nomor Laporan Final berhasil disimpan.');
     }
 
         public function show(Project $project)

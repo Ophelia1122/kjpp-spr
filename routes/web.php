@@ -103,6 +103,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/proposals/{project}/edit', [ProposalController::class, 'edit'])->name('proposals.edit');
         // Duplikat proposal untuk klien langganan (2026-09-24).
         Route::post('/proposals/{project}/duplicate', [ProposalController::class, 'duplicate'])->name('proposals.duplicate');
+        // Batal tepat setelah duplikat: salinan dibuang permanen.
+        Route::delete('/proposals/{project}/duplicate', [ProposalController::class, 'discardDuplicate'])->name('proposals.discardDuplicate');
         Route::put('/proposals/{project}', [ProposalController::class, 'update'])->name('proposals.update');
         Route::delete('/proposals/{project}', [ProposalController::class, 'destroy'])->name('proposals.destroy');
         // Draft -> Menunggu Persetujuan Klien (2026-09-15).

@@ -33,19 +33,23 @@
 
 @can('assignment_letter.manage')
     @php $availableStaffUsers = $activeUsers->whereNotIn('id', $project->assignmentStaff->pluck('user_id')); @endphp
-    @if ($availableStaffUsers->count())
+    @if ($availableStaffUsers->isEmpty())
+        {{-- Semua pengguna aktif sudah masuk daftar: kolom pilih disembunyikan
+             supaya tidak ada kotak kosong menggantung (2026-09-24, feedback user). --}}
+        <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Semua pengguna aktif sudah ada di daftar petugas.</p>
+    @else
         {{-- min-w-0 + flex-wrap: nama petugas yang panjang membuat <select> selebar
              teks terpanjang dan melebarkan halaman di HP, sehingga bar tombol bawah
              tidak pas dengan halaman (2026-09-14, feedback user). --}}
         <form action="{{ route('projects.assignmentStaff.store', $project) }}" method="POST" class="flex flex-wrap gap-2 mt-3" id="assignmentStaffAddForm">
             @csrf
-            <select name="user_id" required class="min-w-0 flex-1 basis-48 rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
+            <select name="user_id" required class="min-w-0 flex-1 basis-48 h-[38px] rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600 dark:bg-gray-900">
                 <option value="">-- Pilih petugas --</option>
                 @foreach ($availableStaffUsers as $u)
                     <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->jabatan ?: 'jabatan belum diisi' }})</option>
                 @endforeach
             </select>
-            <button type="submit" class="px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">
+            <button type="submit" class="inline-flex h-[38px] items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 whitespace-nowrap">
                 + Tambah
             </button>
         </form>
