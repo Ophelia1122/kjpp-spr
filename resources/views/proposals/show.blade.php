@@ -520,7 +520,8 @@
                                                 @foreach ($project->appraisers as $penilai)
                                                     @php $aktif = $penilaiObjek->contains($penilai->id); @endphp
                                                     <label class="cursor-pointer select-none">
-                                                        <input type="checkbox" class="peer sr-only" @disabled($hasSurvey)
+                                                        {{-- data-survey-field: ikut dibuka tombol Edit kartu ini. --}}
+                                                        <input type="checkbox" class="peer sr-only" @disabled($hasSurvey) data-survey-field
                                                                name="surveys[{{ $obj->id }}][appraisers][]" value="{{ $penilai->id }}"
                                                                @checked(collect(old('surveys.' . $obj->id . '.appraisers', $penilaiObjek->all()))->contains($penilai->id))>
                                                         <span class="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 text-[11px] font-medium text-gray-500 peer-checked:border-blue-400 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-disabled:opacity-60 dark:border-gray-600 dark:text-gray-400 dark:peer-checked:border-blue-700 dark:peer-checked:bg-blue-900/30 dark:peer-checked:text-blue-300">
