@@ -325,7 +325,6 @@ class Project extends Model
         'assignment_letter_number',
         'assignment_letter_date',
         'assignment_letter_on_behalf_client_id',
-        'assignment_letter_request_basis',
         'assignment_letter_recipient_client_id',
         'assignment_letter_barcode',
         'survey_date',

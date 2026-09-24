@@ -72,7 +72,7 @@ class ProposalController extends Controller
             // Penomoran & tanggal: wajib diisi ulang.
             'proposal_number', 'proposal_date',
             'assignment_letter_number', 'assignment_letter_date', 'assignment_letter_barcode',
-            'assignment_letter_request_basis', 'assignment_letter_on_behalf_client_id',
+            'assignment_letter_on_behalf_client_id',
             'assignment_letter_recipient_client_id',
             'tax_invoice_number', 'tax_invoice_date',
             'final_report_number', 'final_report_date', 'final_report_notes',

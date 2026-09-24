@@ -133,6 +133,46 @@
             ];
         }
     }
+
+    // ---------- Tiga lapis (2026-09-24, feedback user) ----------
+    // Lapis 1: satu aksi utama sesuai tahap proyek — langkah alur MAJU yang
+    //          paling mungkin ditekan sekarang; tampil sebagai tombol terisi.
+    // Lapis 2: aksi pendukung yang sering dipakai (Unduh & pengembalian).
+    // Lapis 3: sisanya masuk menu "Aksi lain".
+    // Lebar bilah tidak berubah: pembedanya warna & isian, bukan ukuran.
+    $fabUtama     = null;
+    $fabPendukung = [];
+    $fabLainnya   = [];
+
+    foreach ($fabActions as $action) {
+        $isLangkahMaju = ($action['type'] ?? '') === 'modal'
+            && ! in_array($action['tone'], ['rose', 'orange'], true);
+
+        if ($fabUtama === null && $isLangkahMaju) {
+            $fabUtama = $action;
+            continue;
+        }
+        if (($action['type'] ?? '') === 'menu' || in_array($action['tone'], ['rose', 'orange'], true)) {
+            $fabPendukung[] = $action;
+            continue;
+        }
+        $fabLainnya[] = $action;
+    }
+
+    // Kalau tidak ada langkah alur sama sekali (mis. proyek sudah selesai),
+    // biarkan tanpa aksi utama — tombol Unduh tidak perlu ditonjolkan.
+    if ($fabUtama === null) {
+        foreach ($fabPendukung as $i => $calon) {
+            if (in_array($calon['type'] ?? '', ['modal', 'form'], true)) {
+                $fabUtama = $calon;
+                unset($fabPendukung[$i]);
+                break;
+            }
+        }
+        $fabPendukung = array_values($fabPendukung);
+    }
+
+    $fabTerurut = array_values(array_filter([$fabUtama, ...$fabPendukung]));
 @endphp
 
 @if (count($fabActions) > 0)
@@ -143,8 +183,19 @@
         <div class="flex flex-row items-stretch justify-center gap-1 border-t border-gray-200 bg-white/95 p-2 shadow-lg backdrop-blur
                     lg:flex-col lg:gap-1.5 lg:rounded-xl lg:border lg:p-1.5
                     dark:border-gray-700 dark:bg-gray-800/95">
-            @foreach ($fabActions as $action)
-                @php $btnClass = 'flex w-full flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-[10px] font-medium leading-tight lg:h-10 lg:w-10 lg:gap-0 lg:px-0 lg:py-0 ' . ($fabTones[$action['tone']] ?? $fabTones['neutral']); @endphp
+            @foreach ($fabTerurut as $action)
+                @php
+                    $isUtama  = $fabUtama !== null && $action === $fabUtama;
+                    $fabSolid = [
+                        'emerald' => 'bg-emerald-600 text-white hover:bg-emerald-700',
+                        'indigo'  => 'bg-indigo-600 text-white hover:bg-indigo-700',
+                        'blue'    => 'bg-blue-600 text-white hover:bg-blue-700',
+                    ];
+                    $btnClass = 'flex w-full flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-[10px] font-medium leading-tight lg:h-10 lg:w-10 lg:gap-0 lg:px-0 lg:py-0 '
+                        . ($isUtama
+                            ? ($fabSolid[$action['tone']] ?? $fabSolid['emerald'])
+                            : ($fabTones[$action['tone']] ?? $fabTones['neutral']));
+                @endphp
                 <div class="group relative flex-1 lg:flex-none">
                     {{-- Tooltip: hanya desktop (mobile pakai label teks di bawah ikon). --}}
                     <span class="pointer-events-none absolute right-full top-1/2 z-10 mr-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg lg:group-hover:block dark:bg-gray-900">
@@ -207,6 +258,41 @@
                     @endif
                 </div>
             @endforeach
+
+            @if ($fabLainnya)
+                {{-- Lapis 3: aksi yang jarang dipakai di tahap ini. --}}
+                <div class="group relative flex-1 lg:flex-none">
+                    <span class="pointer-events-none absolute right-full top-1/2 z-10 mr-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg lg:group-hover:block dark:bg-gray-900">Aksi lain</span>
+                    <div data-dropdown class="h-full">
+                        <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false"
+                                class="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-[10px] font-medium leading-tight text-gray-500 hover:bg-gray-100 hover:text-gray-800 lg:h-10 lg:w-10 lg:gap-0 lg:px-0 lg:py-0 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
+                            </svg>
+                            <span class="lg:hidden">Aksi lain</span>
+                        </button>
+
+                        <div data-dropdown-menu role="menu" style="display: none;"
+                             class="z-50 w-60 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                            @foreach ($fabLainnya as $lain)
+                                @php $itemClass = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/60'; @endphp
+                                @if ($lain['type'] === 'link')
+                                    <a href="{{ $lain['url'] }}" role="menuitem" class="{{ $itemClass }}">{{ $lain['label'] }}</a>
+                                @elseif ($lain['type'] === 'modal')
+                                    <button type="button" role="menuitem" class="{{ $itemClass }}"
+                                            onclick="openReviewRejectModal('{{ $lain['url'] }}', '{{ $lain['modal_title'] }}', {{ \Illuminate\Support\Js::from($lain['modal_opts'] ?? (object) []) }})">{{ $lain['label'] }}</button>
+                                @else
+                                    <form action="{{ $lain['url'] }}" method="POST"
+                                          @if (!empty($lain['confirm'])) data-confirm="{{ $lain['confirm'] }}" @endif>
+                                        @csrf
+                                        <button type="submit" role="menuitem" class="{{ $itemClass }}">{{ $lain['label'] }}</button>
+                                    </form>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 @endif
