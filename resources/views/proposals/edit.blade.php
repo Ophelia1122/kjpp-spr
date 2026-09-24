@@ -607,6 +607,9 @@
                     <option value="Real Properti - Tanah">Real Properti - Tanah</option>
                     <option value="Real Properti - Tanah dan Bangunan">Real Properti - Tanah dan Bangunan</option>
                     <option value="Real Properti - Tanah, Bangunan dan Sarana Pelengkap">Real Properti - Tanah, Bangunan dan Sarana Pelengkap</option>
+                    <option value="Real Properti - Ruko">Real Properti - Ruko</option>
+                    <option value="Real Properti - Office Space">Real Properti - Office Space</option>
+                    <option value="Real Properti - Unit Apartemen">Real Properti - Unit Apartemen</option>
                     <option value="Personal Properti - Mesin dan Peralatan">Personal Properti - Mesin dan Peralatan</option>
                     <option value="Personal Properti - Kendaraan">Personal Properti - Kendaraan</option>
                     <option value="Personal Properti - Alat Berat">Personal Properti - Alat Berat</option>

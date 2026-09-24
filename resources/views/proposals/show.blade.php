@@ -496,29 +496,57 @@
                          survei satu hari. --}}
                     <div class="mt-4 rounded-md border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between gap-2 px-4 py-2.5">
-                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Survei per Objek</p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500">Selesai boleh kosong = survei 1 hari</p>
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Survei per Objek</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Selesai kosong = survei 1 hari &middot; semua penilai terpilih = semua turun</p>
                         </div>
                         <div class="divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-700 dark:border-gray-700">
                             @forelse ($project->valuationObjects as $obj)
-                                <div class="grid grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                                @php
+                                    // Penilai objek ini: pilihan tersimpan, kalau kosong berarti semua.
+                                    $dipilihObjek = $obj->appraisers->pluck('id');
+                                    $penilaiObjek = $dipilihObjek->isEmpty()
+                                        ? $project->appraisers->pluck('id')
+                                        : $dipilihObjek;
+                                @endphp
+                                <div class="grid grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-start">
                                     <div class="min-w-0">
                                         <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $loop->iteration }}. {{ $obj->short_label }}</p>
                                         <p class="truncate text-xs text-gray-500 dark:text-gray-400" title="{{ $obj->location }}">{{ $obj->location }}</p>
+
+                                        {{-- Penilai per objek (2026-09-25, feedback user): nama dipilih
+                                             langsung, tiap nama terpilih dapat SPJ penuh untuk objek ini. --}}
+                                        @if ($project->appraisers->isNotEmpty())
+                                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                                @foreach ($project->appraisers as $penilai)
+                                                    @php $aktif = $penilaiObjek->contains($penilai->id); @endphp
+                                                    <label class="cursor-pointer select-none">
+                                                        <input type="checkbox" class="peer sr-only" @disabled($hasSurvey)
+                                                               name="surveys[{{ $obj->id }}][appraisers][]" value="{{ $penilai->id }}"
+                                                               @checked(collect(old('surveys.' . $obj->id . '.appraisers', $penilaiObjek->all()))->contains($penilai->id))>
+                                                        <span class="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 text-[11px] font-medium text-gray-500 peer-checked:border-blue-400 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-disabled:opacity-60 dark:border-gray-600 dark:text-gray-400 dark:peer-checked:border-blue-700 dark:peer-checked:bg-blue-900/30 dark:peer-checked:text-blue-300">
+                                                            {{ \Illuminate\Support\Str::of($penilai->name)->explode(' ')->take(2)->implode(' ') }}
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     </div>
+
+                                    {{-- Tanggal mulai & selesai jadi satu baris berlabel tunggal
+                                         (2026-09-25, feedback user) supaya tidak makan tempat. --}}
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">Mulai</label>
-                                        <input type="date" name="surveys[{{ $obj->id }}][start]" lang="id" required @disabled($hasSurvey)
-                                               data-survey-field
-                                               value="{{ old('surveys.' . $obj->id . '.start', $obj->survey_start_date?->toDateString()) }}"
-                                               class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-40 dark:border-gray-600">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">Selesai</label>
-                                        <input type="date" name="surveys[{{ $obj->id }}][end]" lang="id" @disabled($hasSurvey)
-                                               data-survey-field
-                                               value="{{ old('surveys.' . $obj->id . '.end', $obj->survey_end_date?->toDateString()) }}"
-                                               class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-40 dark:border-gray-600">
+                                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">Tanggal survei</label>
+                                        <div class="mt-1 flex items-center gap-1.5">
+                                            <input type="date" name="surveys[{{ $obj->id }}][start]" lang="id" required @disabled($hasSurvey)
+                                                   data-survey-field aria-label="Tanggal mulai survei objek {{ $loop->iteration }}"
+                                                   value="{{ old('surveys.' . $obj->id . '.start', $obj->survey_start_date?->toDateString()) }}"
+                                                   class="w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-[150px] dark:border-gray-600">
+                                            <span class="text-xs text-gray-400 dark:text-gray-500">s/d</span>
+                                            <input type="date" name="surveys[{{ $obj->id }}][end]" lang="id" @disabled($hasSurvey)
+                                                   data-survey-field aria-label="Tanggal selesai survei objek {{ $loop->iteration }}"
+                                                   value="{{ old('surveys.' . $obj->id . '.end', $obj->survey_end_date?->toDateString()) }}"
+                                                   class="w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-[150px] dark:border-gray-600">
+                                        </div>
                                     </div>
                                 </div>
                             @empty

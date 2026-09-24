@@ -48,6 +48,10 @@ class ProjectController extends Controller
             'surveys'           => 'required|array|min:1',
             'surveys.*.start'   => 'required|date',
             'surveys.*.end'     => 'nullable|date|after_or_equal:surveys.*.start',
+            // Penilai per objek (2026-09-25, feedback user). Kosong = seluruh
+            // penilai proyek dianggap turun ke objek itu.
+            'surveys.*.appraisers'   => 'nullable|array',
+            'surveys.*.appraisers.*' => 'integer',
             'valuation_date'    => 'nullable|date',
         ], [
             'surveys.*.start.required'      => 'Tanggal mulai survei tiap objek wajib diisi.',
@@ -71,12 +75,24 @@ class ProjectController extends Controller
             // selesai paling akhir (dipakai SLA Draft & Tanggal Penilaian).
             $objects = $project->valuationObjects()->get()->keyBy('id');
             foreach ($validated['surveys'] as $objectId => $range) {
-                if ($obj = $objects->get((int) $objectId)) {
-                    $obj->update([
-                        'survey_start_date' => $range['start'],
-                        'survey_end_date'   => $range['end'] ?? null,
-                    ]);
+                if (! $obj = $objects->get((int) $objectId)) {
+                    continue;
                 }
+
+                $obj->update([
+                    'survey_start_date' => $range['start'],
+                    'survey_end_date'   => $range['end'] ?? null,
+                ]);
+
+                // Hanya nama yang memang penilai proyek ini yang disimpan.
+                // Kalau semuanya dipilih, baris pilihan dikosongkan supaya
+                // objek itu otomatis ikut bila daftar penilai proyek berubah.
+                $pilihan = array_values(array_intersect(
+                    array_map('intval', (array) ($range['appraisers'] ?? [])),
+                    $ids
+                ));
+
+                $obj->appraisers()->sync(count($pilihan) === count($ids) ? [] : $pilihan);
             }
             $project->load('valuationObjects');
 
@@ -519,8 +535,8 @@ class ProjectController extends Controller
         public function show(Project $project)
     {
         $project->load(
-            'instructingClient', 'intendedUsers', 'invoices', 'valuationObjects', 'signedBy', 'bank',
-            'reviewRejectedBy'
+            'instructingClient', 'intendedUsers', 'invoices', 'valuationObjects.appraisers',
+            'appraisers', 'signedBy', 'bank', 'reviewRejectedBy'
         )->loadCount('sectionTexts');
 
         // role di-eager-load: daftar petugas difilter per role (lihat blade),

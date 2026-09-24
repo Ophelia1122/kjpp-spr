@@ -13,8 +13,10 @@ use Illuminate\Http\Request;
  * surat pertanggungjawaban bulanan.
  *
  * Satu proyek bisa punya beberapa penilai; proyek itu muncul di setiap
- * penilainya, dan seluruh objek proyek dihitung untuk masing-masing
- * (pembagian objek per penilai belum dicatat — keputusan user 2026-09-19).
+ * penilainya. Sejak 2026-09-25 objek dihitung sesuai penilai yang benar-benar
+ * turun ke objek tersebut (lihat ProjectValuationObject::surveyors()); objek
+ * tanpa pilihan khusus dihitung untuk seluruh penilai proyek. Satu objek yang
+ * disurvei dua orang memberi SPJ penuh bagi keduanya.
  */
 class SurveyReportController extends Controller
 {
@@ -33,7 +35,7 @@ class SurveyReportController extends Controller
         // dipasang sebagai jaga-jaga bila staf memilih rentang panjang
         // (2026-09-20, feedback user).
         $paginator = Project::query()
-            ->with(['appraisers', 'assignedAppraiser', 'valuationObjects', 'instructingClient', 'namedClient'])
+            ->with(['appraisers', 'assignedAppraiser', 'valuationObjects.appraisers', 'instructingClient', 'namedClient'])
             ->where('status', '!=', Project::STATUS_BATAL)
             ->whereNotNull('survey_date')
             ->whereBetween('survey_date', [$from->toDateString(), $to->toDateString()])
@@ -55,16 +57,27 @@ class SurveyReportController extends Controller
                 if ($request->filled('appraiser') && (int) $request->appraiser !== $person->id) {
                     continue;
                 }
+                // Objek yang benar-benar jadi tanggung jawab orang ini.
+                $objekOrangIni = $project->valuationObjects
+                    ->filter(fn ($obj) => $obj->surveyors()->contains('id', $person->id));
+
+                if ($objekOrangIni->isEmpty()) {
+                    continue;
+                }
+
                 $groups[$person->id]['user'] = $person;
                 $groups[$person->id]['projects'][] = $project;
+                $groups[$person->id]['objects'][$project->id] = $objekOrangIni;
             }
         }
 
         $rows = collect($groups)
             ->map(fn ($g) => [
-                'user'     => $g['user'],
-                'projects' => collect($g['projects']),
-                'objects'  => collect($g['projects'])->sum(fn ($p) => $p->valuationObjects->count()),
+                'user'       => $g['user'],
+                'projects'   => collect($g['projects']),
+                'objects'    => collect($g['objects'])->sum(fn ($objek) => $objek->count()),
+                // Objek per proyek untuk orang ini — dipakai daftar di bawah kartu.
+                'objectsPer' => collect($g['objects']),
             ])
             ->sortByDesc(fn ($g) => $g['projects']->count())
             ->values();

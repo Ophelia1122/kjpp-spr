@@ -13,6 +13,10 @@ class ProjectValuationObject extends Model
     public const CATEGORY_TANAH                = 'Real Properti - Tanah';
     public const CATEGORY_TANAH_BANGUNAN       = 'Real Properti - Tanah dan Bangunan';
     public const CATEGORY_TANAH_BANGUNAN_SARANA = 'Real Properti - Tanah, Bangunan dan Sarana Pelengkap';
+    // Tambahan 2026-09-25 (feedback user).
+    public const CATEGORY_RUKO                 = 'Real Properti - Ruko';
+    public const CATEGORY_OFFICE_SPACE         = 'Real Properti - Office Space';
+    public const CATEGORY_UNIT_APARTEMEN       = 'Real Properti - Unit Apartemen';
     public const CATEGORY_MESIN                = 'Personal Properti - Mesin dan Peralatan';
     public const CATEGORY_KENDARAAN            = 'Personal Properti - Kendaraan';
     public const CATEGORY_ALAT_BERAT           = 'Personal Properti - Alat Berat';
@@ -45,6 +49,33 @@ class ProjectValuationObject extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Penilai lapangan yang turun ke objek ini (2026-09-25, feedback user).
+     * Kosong = seluruh penilai proyek ikut — lihat surveyors().
+     */
+    public function appraisers()
+    {
+        return $this->belongsToMany(User::class, 'project_object_appraisers', 'object_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Penilai efektif objek ini: pilihan khusus bila ada, kalau tidak jatuh ke
+     * seluruh penilai proyek. Dipakai SPJ Surveyor & cetak Surat Tugas.
+     */
+    public function surveyors()
+    {
+        $dipilih = $this->relationLoaded('appraisers') ? $this->appraisers : $this->appraisers()->get();
+
+        if ($dipilih->isNotEmpty()) {
+            return $dipilih;
+        }
+
+        $proyek = $this->relationLoaded('project') ? $this->project : $this->project()->first();
+
+        return $proyek?->appraisers ?? collect();
     }
 
     /**

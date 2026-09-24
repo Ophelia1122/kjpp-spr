@@ -790,6 +790,11 @@ class ProposalController extends Controller
                 'Real Properti - Tanah',
                 'Real Properti - Tanah dan Bangunan',
                 'Real Properti - Tanah, Bangunan dan Sarana Pelengkap',
+                // Tambahan 2026-09-25 (feedback user), tetap dalam kelompok
+                // Real Properti supaya urutannya tidak melompat.
+                'Real Properti - Ruko',
+                'Real Properti - Office Space',
+                'Real Properti - Unit Apartemen',
                 'Personal Properti - Mesin dan Peralatan',
                 'Personal Properti - Kendaraan',
                 'Personal Properti - Alat Berat',

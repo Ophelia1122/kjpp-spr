@@ -85,7 +85,7 @@
                                 </td>
                                 <td class="px-4 py-2 font-semibold text-gray-900 dark:text-gray-100">{{ $p->effective_client_name ?: '-' }}</td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-500">
-                                    @forelse ($p->valuationObjects as $obj)
+                                    @forelse ($row['objectsPer'][$p->id] ?? collect() as $obj)
                                         <div class="{{ $loop->first ? '' : 'mt-1' }}">
                                             <span class="font-medium text-gray-700 dark:text-gray-300">{{ $loop->iteration }}. {{ $obj->short_label }}</span>
                                             <span class="text-gray-500 dark:text-gray-500">&mdash; {{ $obj->location ?: '(lokasi belum diisi)' }}</span>
@@ -116,10 +116,10 @@
                         </div>
 
                         <p class="mt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                            Objek disurvei ({{ $p->valuationObjects->count() }})
+                            Objek disurvei ({{ ($row['objectsPer'][$p->id] ?? collect())->count() }})
                         </p>
                         <div class="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-500">
-                            @forelse ($p->valuationObjects as $obj)
+                            @forelse ($row['objectsPer'][$p->id] ?? collect() as $obj)
                                 <div class="rounded-md bg-gray-50 px-2 py-1.5 dark:bg-gray-900">
                                     <span class="font-medium text-gray-700 dark:text-gray-300">{{ $loop->iteration }}. {{ $obj->short_label }}</span>
                                     <span class="block text-gray-500 dark:text-gray-500">{{ $obj->location ?: '(lokasi belum diisi)' }}</span>
