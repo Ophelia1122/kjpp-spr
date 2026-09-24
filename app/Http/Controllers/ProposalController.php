@@ -432,6 +432,49 @@ class ProposalController extends Controller
      * kembali" ke tahap yang tepat. Edit proposal otomatis terkunci
      * (edit() sudah membatasi ke status Draft).
      */
+    /**
+     * Batalkan beberapa proyek sekaligus dari List Project (2026-09-24,
+     * feedback user). Aturannya sama persis dengan cancel() satuan: status
+     * lama disimpan supaya bisa diaktifkan lagi, dan tiap proyek dicatat
+     * sendiri di Audit Log. Proyek yang sudah Batal dilewati.
+     */
+    public function cancelMany(Request $request)
+    {
+        $data = $request->validate([
+            'ids'   => 'required|array|max:100',
+            'ids.*' => 'integer',
+        ], ['ids.required' => 'Pilih dulu proyek yang mau dibatalkan.']);
+
+        $proyek = Project::whereIn('id', $data['ids'])
+            ->where('status', '!=', Project::STATUS_BATAL)
+            ->get();
+
+        foreach ($proyek as $satu) {
+            $sebelum = $satu->status;
+
+            $satu->update([
+                'status_before_cancel' => $sebelum,
+                'cancelled_at'         => now(),
+                'status'               => Project::STATUS_BATAL,
+            ]);
+
+            \App\Helpers\AuditLogger::record(
+                'proposal.cancelled',
+                "Membatalkan proyek {$satu->proposal_number} (status sebelumnya: {$sebelum}). Dibatalkan massal dari List Project.",
+                $satu
+            );
+        }
+
+        $dilewati = count($data['ids']) - $proyek->count();
+
+        return back()->with(
+            $proyek->isEmpty() ? 'info' : 'success',
+            $proyek->count() . ' proyek ditandai Batal'
+                . ($dilewati > 0 ? ", {$dilewati} dilewati karena sudah Batal" : '')
+                . '. Data tetap tersimpan dan bisa diaktifkan kembali.'
+        );
+    }
+
     public function cancel(Project $project)
     {
         if ($project->status === Project::STATUS_BATAL) {

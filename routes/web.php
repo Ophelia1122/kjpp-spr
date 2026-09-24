@@ -113,6 +113,8 @@ Route::middleware('auth')->group(function () {
         // --- Proposal: Batal / Aktifkan kembali (Batch 7) ---
         // Non-destruktif: data proyek tetap utuh, hanya status yang berubah.
         Route::post('/proposals/{project}/cancel', [ProposalController::class, 'cancel'])->name('proposals.cancel');
+        // Batalkan beberapa proyek sekaligus dari List Project (2026-09-24).
+        Route::post('/proposals/cancel-many', [ProposalController::class, 'cancelMany'])->name('proposals.cancelMany');
         Route::post('/proposals/{project}/reactivate', [ProposalController::class, 'reactivate'])->name('proposals.reactivate');
 
         // --- Skema "Bayar Nanti": mulai kerja lapangan tanpa DP (2026-09-14) ---

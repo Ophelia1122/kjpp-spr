@@ -309,7 +309,19 @@
             </svg>
             Export Excel
         </button>
-        <button type="button" id="bulkClear" class="text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">Batal</button>
+        @can('proposals.manage')
+            <form id="bulkCancelForm" action="{{ route('proposals.cancelMany') }}" method="POST">
+                @csrf
+                <button type="submit" id="bulkCancel"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-900/30">
+                    <svg aria-hidden="true" class="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                    Batalkan
+                </button>
+            </form>
+        @endcan
+        <button type="button" id="bulkClear" class="text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">Bersihkan</button>
     </div>
 </div>
 
@@ -363,6 +375,27 @@
         baris().forEach(c => { c.checked = false; });
         perbaruiJumlah();
     });
+
+    const formBatal = document.getElementById('bulkCancelForm');
+    if (formBatal) {
+        formBatal.addEventListener('submit', function (e) {
+            const ids = terpilih();
+            if (! ids.length) { e.preventDefault(); return; }
+            if (! confirm('Batalkan ' + ids.length + ' proyek terpilih? Status lamanya disimpan, jadi bisa diaktifkan kembali lewat menu Sampah.')) {
+                e.preventDefault();
+                return;
+            }
+            // Kirim id terpilih sebagai input tersembunyi.
+            formBatal.querySelectorAll('input[name="ids[]"]').forEach(el => el.remove());
+            ids.forEach(function (id) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ids[]';
+                input.value = id;
+                formBatal.appendChild(input);
+            });
+        });
+    }
 
     document.getElementById('bulkExport').addEventListener('click', function () {
         const ids = terpilih();
