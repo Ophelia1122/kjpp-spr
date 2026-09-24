@@ -259,8 +259,12 @@ class InvoiceController extends Controller
         $invoice->delete();
 
         $project->load('invoices');
+        // Invoice terakhir dibatalkan: proyek kembali ke "Menunggu Persetujuan
+        // Klien", bukan Draft (2026-09-25, feedback user) — invoice baru
+        // diterbitkan setelah proposal dikirim ke klien, jadi mengembalikannya
+        // ke Draft memaksa staf menekan "Kirim ke Klien" untuk kedua kalinya.
         if ($project->invoices->isEmpty() && $project->status === Project::STATUS_DP_INVOICING) {
-            $project->update(['status' => Project::STATUS_DRAFT]);
+            $project->update(['status' => Project::STATUS_WAITING_APPROVAL]);
         }
 
         return back()->with('success', "Invoice {$invoiceNumber} berhasil dibatalkan/dihapus.");
