@@ -33,14 +33,15 @@
         .logo { width: 370px; margin: 2px 0 12px 2px; }
 
         .meta td { padding: 1px 0; }
-        .meta .label { width: 150px; }
+        .meta .label { width: 132px; }
+        .meta .colon { width: 10px; }
 
         .docs { margin-top: 8px; }
         .docs th { background: #001F60; color: #fff; font-weight: bold; padding: 4px 8px; text-align: left; }
         .docs th.c, .docs td.c { text-align: center; }
         .docs td { padding: 3px 8px; }
 
-        .note-box { border: 1px solid #9aa4b8; padding: 6px 9px; color: #5b6478; font-style: italic; font-size: 11px; }
+        .note-box { display: inline-block; border: 1px solid #9aa4b8; padding: 6px 9px; color: #5b6478; font-style: italic; font-size: 11px; white-space: nowrap; }
         .slip { margin-top: 16px; border: 1px solid #001F60; }
         .slip .pad { padding: 5px 10px; }
         .slip .foot { background: #001F60; height: 20px; }
@@ -57,11 +58,11 @@
         <tr>
             <td style="width: 50%;">
                 <table class="meta">
-                    <tr><td class="label bold">Nomor Pengiriman</td><td>{{ $receipt->number }}</td></tr>
-                    <tr><td class="label bold">Tanggal Pengiriman</td><td>{{ $receipt->delivery_date->translatedFormat('d F Y') }}</td></tr>
-                    <tr><td colspan="2" style="height: 12px;"></td></tr>
-                    <tr><td colspan="2" class="bold">Pengirim:</td></tr>
-                    <tr><td colspan="2">KJPP Sugianto Prasodjo dan Rekan</td></tr>
+                    <tr><td class="label bold">Nomor Pengiriman</td><td class="colon bold">:</td><td>{{ $receipt->number }}</td></tr>
+                    <tr><td class="label bold">Tanggal Pengiriman</td><td class="colon bold">:</td><td>{{ $receipt->delivery_date->translatedFormat('d F Y') }}</td></tr>
+                    <tr><td colspan="3" style="height: 12px;"></td></tr>
+                    <tr><td colspan="3" class="bold">Pengirim:</td></tr>
+                    <tr><td colspan="3">KJPP Sugianto Prasodjo dan Rekan</td></tr>
                 </table>
             </td>
             <td>
@@ -71,7 +72,7 @@
                     <p style="margin: 0;">{{ $line }}</p>
                 @endforeach
                 <table class="meta" style="margin-top: 2px;">
-                    <tr><td style="width: 34px;" class="bold">Up:</td><td>{{ $up }}</td></tr>
+                    <tr><td style="width: 20px;" class="bold">Up</td><td class="colon bold">:</td><td>{{ $up }}</td></tr>
                 </table>
             </td>
         </tr>
@@ -113,7 +114,7 @@
 
     <table style="margin-top: 16px;">
         <tr>
-            <td style="width: 55%;">
+            <td style="width: 42%;">
                 <p class="bold" style="margin: 0 0 82px 26px;">Diterima Oleh,</p>
                 <p style="margin: 0 0 0 8px;">( ________________ )</p>
             </td>
@@ -131,22 +132,21 @@
 {{-- Potongan "Kepada Yth." untuk ditempel di amplop. --}}
 <div class="slip">
     <div class="pad bold" style="border-bottom: 1px solid #001F60;">Kepada Yth.</div>
-    <div class="navy-bar center" style="font-size: 16px;">{{ mb_strtoupper($name) }}</div>
+    <div class="navy-bar" style="font-size: 16px;">{{ mb_strtoupper($name) }}</div>
     <div class="pad">
         @foreach ($addressLines as $line)
             <p style="margin: 0;">{{ $line }}</p>
         @endforeach
         <table class="meta" style="margin-top: 2px;">
-            <tr><td style="width: 34px;" class="bold">Up:</td><td>{{ $up }}</td></tr>
-        </table>
-        @if ($note)
-            <table style="margin-top: 2px;">
+            <tr><td style="width: 84px;" class="bold">Up</td><td class="colon bold">:</td><td>{{ $up }}</td></tr>
+            @if ($note)
                 <tr>
-                    <td style="width: 74px;" class="bold">Keterangan:</td>
+                    <td class="bold">Keterangan</td>
+                    <td class="colon bold">:</td>
                     <td class="justify">{{ $note }}</td>
                 </tr>
-            </table>
-        @endif
+            @endif
+        </table>
     </div>
     <div class="foot"></div>
 </div>

@@ -8,6 +8,7 @@ use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\Shared\Converter;
 use PhpOffice\PhpWord\SimpleType\Jc;
+use PhpOffice\PhpWord\Style\Table;
 
 /**
  * Tanda Terima Pengiriman Buku versi .docx — tata letak, warna, dan tulisan
@@ -86,7 +87,7 @@ class TandaTerimaDocxBuilder
         foreach ($lines as $line) {
             $right->addText($line, $this->f, $this->p0);
         }
-        $this->labelValue($right, 'Up:', $up, 1.2);
+        $this->labelValue($right, 'Up', $up, 0.8);
 
         $cell->addTextBreak(1, $this->f);
         $cell->addText('Telah diterima beberapa dokumen Penilaian Aset dengan rincian sebagai berikut:', $this->fB, $this->p0);
@@ -125,18 +126,18 @@ class TandaTerimaDocxBuilder
         // Tanda tangan + kotak "Perhatian".
         $sign = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
         $sign->addRow();
-        $sc = $sign->addCell(Converter::cmToTwip(8.5));
+        $sc = $sign->addCell(Converter::cmToTwip(6.4));
         $sc->addText('Diterima Oleh,', $this->fB, ['indentation' => ['left' => Converter::cmToTwip(0.6)]] + $this->p0);
         $sc->addTextBreak(3, $this->f);
         $sc->addText('( ________________ )', $this->f, $this->p0);
 
-        $nc = $sign->addCell(Converter::cmToTwip(7.5));
+        $nc = $sign->addCell(Converter::cmToTwip(9.6));
         $warn = $nc->addTable([
             'borderSize' => 6, 'borderColor' => '9AA4B8',
             'width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 80,
         ]);
         $warn->addRow();
-        $wc = $warn->addCell(Converter::cmToTwip(7.5));
+        $wc = $warn->addCell(Converter::cmToTwip(9.6));
         $small = ['name' => self::FONT, 'size' => 9.5, 'italic' => true, 'color' => '5B6478'];
         foreach (['Perhatian.', 'Mohon sertakan nama jelas penerima dan tanggal penerimaan berkas.', 'Terima kasih.'] as $t) {
             $wc->addText($t, $small, $this->p0);
@@ -154,19 +155,23 @@ class TandaTerimaDocxBuilder
 
         $slip->addRow();
         $slip->addCell($w, ['bgColor' => self::NAVY])
-            ->addText(mb_strtoupper($name), $this->fWhite + ['size' => 14], ['alignment' => Jc::CENTER] + $this->p0);
+            ->addText(mb_strtoupper($name), $this->fWhite + ['size' => 14], $this->p0);
 
         $slip->addRow();
         $body = $slip->addCell($w);
         foreach ($lines as $line) {
             $body->addText($line, $this->f, $this->p0);
         }
-        $this->labelValue($body, 'Up:', $up, 1.2);
+        $this->labelValue($body, 'Up', $up, 2.2, 12.7);
         if ($r->note) {
-            $noteTbl = $body->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+            $noteTbl = $body->addTable([
+                'layout' => Table::LAYOUT_FIXED, 'unit' => 'dxa',
+                'width'  => Converter::cmToTwip(15.2), 'cellMargin' => 0,
+            ]);
             $noteTbl->addRow();
-            $noteTbl->addCell(Converter::cmToTwip(2.2))->addText('Keterangan:', $this->fB, $this->p0);
-            $noteTbl->addCell(Converter::cmToTwip(13))->addText($r->note, $this->f, ['alignment' => Jc::BOTH] + $this->p0);
+            $noteTbl->addCell(Converter::cmToTwip(2.2))->addText('Keterangan', $this->fB, $this->p0);
+            $noteTbl->addCell(Converter::cmToTwip(0.3))->addText(':', $this->fB, $this->p0);
+            $noteTbl->addCell(Converter::cmToTwip(12.7))->addText($r->note, $this->f, ['alignment' => Jc::BOTH] + $this->p0);
         }
 
         $slip->addRow(Converter::cmToTwip(0.4));
@@ -179,12 +184,23 @@ class TandaTerimaDocxBuilder
         return $path;
     }
 
-    /** Baris "Label   Nilai" dengan lebar label tetap. */
-    private function labelValue($container, string $label, string $value, float $labelCm = 3.4): void
+    /**
+     * Baris "Label : Nilai" dengan lebar label tetap. Titik dua berada di
+     * kolomnya sendiri supaya sejajar antar-baris (2026-09-24, feedback user).
+     */
+    private function labelValue($container, string $label, string $value, float $labelCm = 3.4, float $valueCm = 4.2): void
     {
-        $t = $container->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        // Lebar kolom dipatok (LAYOUT_FIXED); kalau dibiarkan persen, Word
+        // membagi ulang kolomnya dan titik duanya jadi tidak sejajar.
+        $t = $container->addTable([
+            'layout'     => Table::LAYOUT_FIXED,
+            'unit'       => 'dxa',
+            'width'      => Converter::cmToTwip($labelCm + 0.3 + $valueCm),
+            'cellMargin' => 0,
+        ]);
         $t->addRow();
         $t->addCell(Converter::cmToTwip($labelCm))->addText($label, $this->fB, $this->p0);
-        $t->addCell(Converter::cmToTwip(4.5))->addText($value, $this->f, $this->p0);
+        $t->addCell(Converter::cmToTwip(0.3))->addText(':', $this->fB, $this->p0);
+        $t->addCell(Converter::cmToTwip($valueCm))->addText($value, $this->f, $this->p0);
     }
 }

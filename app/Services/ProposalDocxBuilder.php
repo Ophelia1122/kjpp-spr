@@ -923,7 +923,7 @@ class ProposalDocxBuilder
 
     private function tkiBaku(): void
     {
-        $this->para($this->cl['tki_intro']);
+        $this->para($this->cl['tki_intro'], null, ['keepNext' => true]);
 
         $alasan = $this->tkiAlasanLimited();
         foreach ($this->cl['tki_items'] as $it) {
@@ -969,7 +969,7 @@ class ProposalDocxBuilder
 
     private function asumsiBaku(): void
     {
-        $this->para($this->cl['asumsi_intro']);
+        $this->para($this->cl['asumsi_intro'], null, ['keepNext' => true]);
         foreach ($this->cl['asumsi_items'] as $it) {
             $this->listBullet($it);
         }
@@ -1103,7 +1103,7 @@ class ProposalDocxBuilder
 
     private function lampiranBaku(): void
     {
-        $this->para($this->cl['data_diperlukan_intro']);
+        $this->para($this->cl['data_diperlukan_intro'], null, ['keepNext' => true]);
         foreach ($this->lampiranItems() as $it) {
             $this->listBullet($it);
         }
@@ -1123,7 +1123,7 @@ class ProposalDocxBuilder
     {
         $this->sectionTitle('Prosedur Pelaksanaan Penugasan');
         $this->bodyOr('prosedur', function () {
-            $this->para($this->cl['prosedur_intro']);
+            $this->para($this->cl['prosedur_intro'], null, ['keepNext' => true]);
             foreach ($this->cl['prosedur_items'] as $it) {
                 $this->listNum($it);
             }
@@ -1186,7 +1186,11 @@ class ProposalDocxBuilder
 
         // Termin pembayaran rata kiri.
         $this->closeList();
-        $this->s->addText($this->cl['termin_label'], $this->fBold, ['alignment' => Jc::START, 'spaceAfter' => 20] + $ind);
+        // keepNext: label "Termin pembayaran" tidak boleh ditinggal sendirian
+        // di dasar halaman, dan seluruh item terminnya ikut pindah bersama
+        // (2026-09-24, feedback user). Bloknya pendek (2-4 baris), jadi ruang
+        // kosong yang mungkin tersisa paling banyak beberapa baris.
+        $this->s->addText($this->cl['termin_label'], $this->fBold, ['alignment' => Jc::START, 'spaceAfter' => 20, 'keepNext' => true] + $ind);
         $this->listJustClosed = false;
         // Termin mengikuti persentase proposal (2026-09-19, feedback user):
         // DP di Awal default 50/50, Bayar Nanti default 100%, dan staf boleh
@@ -1194,25 +1198,33 @@ class ProposalDocxBuilder
         // seluruh termin persis sama dengan total biaya.
         $percents = $p->paymentTermPercents();
         $last     = count($percents) - 1;
-        $sisa     = $total;
 
-        foreach ($percents as $i => $pctTerm) {
-            $nominal = $i === $last ? $sisa : round($total * $pctTerm / 100);
-            $sisa   -= $nominal;
+        $this->keepRows(function () use ($percents, $last, $total, $rp) {
+            $sisa = $total;
 
-            $key = $last === 0 ? 'termin_item_last' : ($i === 0 ? 'termin_item_first' : ($i === $last ? 'termin_item_last' : 'termin_item_mid'));
-            $this->listNum(strtr($this->cl[$key], [
-                ':pct'        => rtrim(rtrim(number_format($pctTerm, 2, ',', '.'), '0'), ','),
-                ':pct_words'  => Terbilang::words((int) round($pctTerm)),
-                ':rp'         => $rp($nominal),
-                ':terbilang'  => Terbilang::make($nominal),
-            ]), Jc::START);
-        }
+            foreach ($percents as $i => $pctTerm) {
+                $nominal = $i === $last ? $sisa : round($total * $pctTerm / 100);
+                $sisa   -= $nominal;
+
+                // Item terakhir dilepas ikatannya supaya blok termin tidak ikut
+                // menyeret blok Rekening Bank sesudahnya.
+                $this->listKeepNext = $i !== $last;
+
+                $key = $last === 0 ? 'termin_item_last' : ($i === 0 ? 'termin_item_first' : ($i === $last ? 'termin_item_last' : 'termin_item_mid'));
+                $this->listNum(strtr($this->cl[$key], [
+                    ':pct'        => rtrim(rtrim(number_format($pctTerm, 2, ',', '.'), '0'), ','),
+                    ':pct_words'  => Terbilang::words((int) round($pctTerm)),
+                    ':rp'         => $rp($nominal),
+                    ':terbilang'  => Terbilang::make($nominal),
+                ]), Jc::START);
+            }
+        });
 
         // Rekening Bank & NPWP dalam 2 kolom: kiri = rekening (bisa 1–2),
         // kanan = NPWP (baku, dari config). Titik-dua dirapikan via kvTable.
         $this->closeList();
-        $this->s->addText($this->cl['rekening_label'], $this->fBold, ['spaceAfter' => 40] + $ind);
+        // keepNext: label menempel pada tabel rekeningnya (2026-09-24).
+        $this->s->addText($this->cl['rekening_label'], $this->fBold, ['spaceAfter' => 40, 'keepNext' => true] + $ind);
         $this->listJustClosed = false;
 
         $colW = $this->indentedColWidths([9.5, 6.4]);
@@ -1931,6 +1943,9 @@ class ProposalDocxBuilder
     /** true tepat setelah closeList() sampai ada paragraf/tabel lain. */
     private bool $listJustClosed = false;
 
+    /** true selama emit blok daftar yang harus utuh satu halaman. */
+    private bool $listKeepNext = false;
+
     /** Tutup tabel daftar yang sedang aktif (dipanggil sebelum emit non-daftar). */
     private function closeList(): void
     {
@@ -1971,7 +1986,28 @@ class ProposalDocxBuilder
 
     private function listCellPara(): array
     {
-        return ['spaceAfter' => 0, 'spaceBefore' => 0];
+        // keepNext aktif = baris daftar ini diikat ke baris berikutnya, jadi
+        // satu blok daftar pendek tidak terbelah dua halaman (2026-09-24,
+        // feedback user). Hanya dipakai untuk blok pendek — lihat keepRows().
+        return ['spaceAfter' => 0, 'spaceBefore' => 0]
+            + ($this->listKeepNext ? ['keepNext' => true] : []);
+    }
+
+    /**
+     * Jalankan $emit dengan seluruh baris daftar terikat jadi satu blok.
+     * Baris TERAKHIR sengaja dilepas ikatannya supaya blok ini tidak ikut
+     * menyeret paragraf sesudahnya. Pakai hanya untuk blok pendek (kira-kira
+     * maksimal sepertiga halaman); blok panjang justru menyisakan halaman
+     * kosong kalau diikat.
+     */
+    private function keepRows(callable $emit): void
+    {
+        $this->listKeepNext = true;
+        try {
+            $emit();
+        } finally {
+            $this->listKeepNext = false;
+        }
     }
 
     /** Tulis run bergaya (markup + istilah) ke sebuah kontainer. */
