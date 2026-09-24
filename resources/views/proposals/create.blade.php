@@ -1053,12 +1053,21 @@
         recalcFeeTotal();
     }
 
+    /**
+     * Baca nilai rupiah dari input tersembunyi. Bagian desimal dibuang lebih
+     * dulu supaya '5550000.00' tidak terbaca 555000000 (2026-09-24).
+     */
+    function rawRupiah(id) {
+        const v = String(document.getElementById(id).value || '').trim();
+        return parseInt(digits(v.split(/[.,]\d{1,2}$/)[0]) || '0', 10);
+    }
+
     function recalcFeeTotal() {
         // PPN atas Fee + Transport & Akomodasi yang ditagih — rumus sama dengan
         // accessor total_fee di model Project. TA reimburse tidak dihitung.
         const PPN_PCT = +(PPN_RATE * 100).toFixed(2);
-        const base = parseInt(digits(document.getElementById('service_fee_raw').value) || '0', 10);  // Fee
-        const transportRaw = parseInt(digits(document.getElementById('transport_cost_raw').value) || '0', 10);
+        const base = rawRupiah('service_fee_raw');                 // Fee
+        const transportRaw = rawRupiah('transport_cost_raw');
         const ppnIncluded = document.getElementById('fee_ppn_included').value === '1';
         const isBreakdown = document.getElementById('fee_breakdown').value === '1';
         const reimbursed = document.getElementById('transport_reimbursed').value === '1';
