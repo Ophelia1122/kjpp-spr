@@ -462,14 +462,16 @@
                                  kosong = tanggal survei terakhir. --}}
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Tanggal Penilaian
-                                @include('partials.icon-info', ['tip' => 'Kosongkan untuk memakai tanggal survei paling akhir. Isi manual bila tanggal penilaian berbeda.'])
                             </label>
                             <input type="date" name="valuation_date" lang="id" @disabled($hasSurvey)
                                    data-survey-field
                                    @if ($hasSurvey) title="Terkunci — klik ikon Edit untuk mengubah." @endif
                                    value="{{ old('valuation_date', $project->valuation_date_manual?->toDateString()) }}"
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
+                            {{-- Keterangan dulu tersembunyi di balik ikon hover; dipindah
+                                 jadi tulisan tetap di bawah kolom (2026-09-24, feedback user). --}}
                             <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                                Kosongkan untuk memakai tanggal survei paling akhir. Isi manual bila tanggal penilaian berbeda.
                                 Tanggal survei terakhir: {{ $project->survey_date?->translatedFormat('d F Y') ?: '—' }}
                             </p>
                         </div>

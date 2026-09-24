@@ -48,15 +48,7 @@
         <div class="flex flex-wrap items-center justify-end gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
             {{-- Jumlah hasil tampil di caption header; nilai ini dipakai live search. --}}
             <span id="resultsCount" hidden>{{ $projects->total() }}</span>
-            <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
-                <span>Tampilkan</span>
-                @foreach ([15, 25] as $size)
-                    <a href="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => null]) }}"
-                       class="rounded-md px-2 py-0.5 font-medium {{ $projects->perPage() === $size ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700' }}">
-                        {{ $size }}
-                    </a>
-                @endforeach
-            </div>
+            @include('partials.per-page', ['paginator' => $projects])
         </div>
     {{-- Isi tabel 13px (2026-09-20, hasil audit UI) — 12px terasa kecil di laptop. --}}
     <table class="min-w-[1040px] w-full text-[13px]">
@@ -201,13 +193,7 @@
      kartu daripada digeser ke samping terus (2026-09-14, feedback user). --}}
 <div class="lg:hidden space-y-3">
     <div class="flex items-center justify-end gap-2 px-1 text-xs text-gray-500 dark:text-gray-500">
-        <span class="flex items-center gap-1.5">
-            Tampilkan
-            @foreach ([15, 25] as $size)
-                <a href="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => null]) }}"
-                   class="rounded-md px-2 py-0.5 font-medium {{ $projects->perPage() === $size ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700' }}">{{ $size }}</a>
-            @endforeach
-        </span>
+        @include('partials.per-page', ['paginator' => $projects])
     </div>
     @forelse ($projects as $project)
         @php

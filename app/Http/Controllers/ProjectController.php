@@ -167,19 +167,25 @@ class ProjectController extends Controller
         }
 
         $now = now();
-        $uid = auth()->id();
 
+        // Kolom pelaku yang tidak pernah dibaca layar mana pun tidak lagi
+        // diisi — pelakunya sudah tercatat di Audit Log, yang justru dipakai
+        // panel Riwayat proyek (2026-09-24). Kecualinya
+        // review_approved_by_user_id, masih dipakai kartu Beranda Reviewer.
+        // Data lama dibiarkan apa adanya.
         // Catatan pengembalian terakhir tampil sebagai peringatan sampai ada langkah maju.
         $changes = ['review_status' => $def['to']] + match (true) {
             $stays    => [],
-            $isReturn => ['review_rejected_at' => $now, 'review_rejected_by_user_id' => $uid, 'review_rejection_note' => $note],
-            default   => ['review_rejected_at' => null, 'review_rejected_by_user_id' => null, 'review_rejection_note' => null],
+            $isReturn => ['review_rejected_at' => $now, 'review_rejection_note' => $note],
+            default   => ['review_rejected_at' => null, 'review_rejection_note' => null],
         };
 
         $changes += match ($step) {
-            'submit_value'   => ['review_submitted_at' => $now, 'review_submitted_by_user_id' => $uid],
-            'release_resume' => ['reviewed_at' => $now, 'reviewed_by_user_id' => $uid],
-            'approve_value'  => ['review_approved_at' => $now, 'review_approved_by_user_id' => $uid,
+            'submit_value'   => ['review_submitted_at' => $now],
+            'release_resume' => ['reviewed_at' => $now],
+            // review_approved_by_user_id TETAP disimpan: kartu "Review selesai
+            // bulan ini" milik Reviewer di Beranda menghitung dari kolom ini.
+            'approve_value'  => ['review_approved_at' => $now, 'review_approved_by_user_id' => auth()->id(),
                                  'status' => Project::STATUS_FINALISASI],
             'submit_draft'  => ['draft_submitted_at' => $now],
             'confirm_draft' => ['draft_confirmed_at' => $now],

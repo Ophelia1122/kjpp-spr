@@ -214,6 +214,19 @@ class DashboardController extends Controller
      * di akhir pekan, Carbon menggeser ke Senin berikutnya lalu menghitung
      * sisanya — jadi ditangani sebagai cabang terpisah.
      */
+    /**
+     * Tenggat SLA Draft versi SQL. HARUS sama dengan accessor
+     * Project::getEstimatedCompletionDateAttribute(), yang sejak 2026-09-23
+     * mulai menghitung dari hari kerja BERIKUTNYA setelah survei terakhir
+     * (H+1). Tanpa "1 +" di sini, Dashboard menandai proyek terlambat satu
+     * hari kerja lebih cepat daripada tenggat yang tertulis di halaman
+     * proyeknya sendiri (2026-09-24).
+     */
+    private function slaDraftDeadlineSql(string $daysExpr = 'sla_draft_days'): string
+    {
+        return $this->addBusinessDaysSql('survey_date', "(1 + $daysExpr)");
+    }
+
     private function addBusinessDaysSql(string $dateExpr, string $daysExpr): string
     {
         // Cabang akhir pekan: geser ke Senin, lalu sisa (N-1) hari kerja.
@@ -335,7 +348,7 @@ class DashboardController extends Controller
             $query->active()
                 ->whereNotNull('survey_date')
                 ->where('sla_draft_days', '>', 0)
-                ->whereRaw($this->addBusinessDaysSql('survey_date', 'sla_draft_days') . ' < CURDATE()');
+                ->whereRaw($this->slaDraftDeadlineSql() . ' < CURDATE()');
         } elseif ($focus === 'survey_week') {
             $query->where('status', '!=', Project::STATUS_BATAL)
                 ->whereBetween('survey_date', [
@@ -424,7 +437,7 @@ class DashboardController extends Controller
             // tenggat Draft bikin isi kolom terlihat tidak urut.
             $deadlineExpr = 'CASE WHEN review_approved_at IS NOT NULL AND sla_final_days IS NOT NULL'
                 . ' THEN ' . $this->addBusinessDaysSql('review_approved_at', 'sla_final_days')
-                . ' ELSE ' . $this->addBusinessDaysSql('survey_date', 'COALESCE(sla_draft_days, 0)') . ' END';
+                . ' ELSE ' . $this->slaDraftDeadlineSql('COALESCE(sla_draft_days, 0)') . ' END';
 
             // Proyek yang kolom SLA-nya kosong (belum ada penilai/tanggal survei,
             // atau sudah Selesai/Batal) selalu ditaruh paling bawah — bukan

@@ -40,3 +40,6 @@ Thumbs.db
 /wa-db-data/
 /wa-instances/
 /tailscale-state/
+
+# Panduan peran hasil cetak — sumbernya resources/views/pdf/panduan-peran.blade.php
+/Panduan Peran - Aplikasi KJPP SPR.pdf
