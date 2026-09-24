@@ -507,19 +507,6 @@
                                    class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-500 shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-400">
                         @endif
                     </div>
-                    {{-- Persentase termin (2026-09-19, feedback user): terisi otomatis
-                         sesuai skema, tetap bisa diubah. Kalimat sesudah persentase
-                         di proposal tidak berubah. --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Termin Pembayaran (%)
-                            @include('partials.icon-info', ['tip' => 'Pisahkan dengan koma, jumlahnya harus 100. Contoh: 50,50 atau 30,70. Kosongkan untuk memakai bawaan skema: DP di Awal 50,50 dan Bayar Nanti 100.'])
-                        </label>
-                        <input type="text" name="payment_terms" id="paymentTerms" value="{{ old('payment_terms', implode(',', array_map(fn ($n) => rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.'), $project->paymentTermPercents()))) }}"
-                               placeholder="50,50"
-                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-                        @error('payment_terms') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Rekening Bank Pembayaran
@@ -537,6 +524,16 @@
                             @endforeach
                         </select>
                     </div>
+
+                    @include('partials.payment-terms', [
+                        'termPercents' => old('payment_terms')
+                            ? array_map('floatval', explode(',', old('payment_terms')))
+                            : $project->paymentTermPercents(),
+                        {{-- Termin dikunci lebih lambat daripada Skema Pembayaran: baru
+                             terkunci saat proyek masuk tahap pencetakan buku
+                             (2026-09-24, feedback user). --}}
+                        'locked'       => ! $project->canEditPaymentTerms(auth()->user()),
+                    ])
                 </div>
             </div>
         </div>
@@ -1085,6 +1082,9 @@
             ppn = (base + transport) * PPN_RATE;
             total = base + transport + ppn;
         }
+
+        // Nominal per termin ikut berubah begitu biaya jasa diubah.
+        if (window.ptSetTotal) window.ptSetTotal(total);
 
         document.getElementById('service_fee_hint').textContent = (ppnIncluded
             ? 'Fee & transport sudah termasuk PPN — di rincian tampil net (dikurangi PPN).'

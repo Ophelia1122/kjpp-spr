@@ -588,7 +588,10 @@ return [
     // :pct = angka persen, :pct_words = persen dalam huruf, :rp & :terbilang = nominal.
     'termin_item_first' => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum dilakukan inspeksi lapangan.',
     'termin_item_last'  => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
-    'termin_item_mid'   => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
+    // Termin tengah dipakai kalau pembayaran dibagi 3 tahap atau lebih
+    // (2026-09-24, feedback user): dibayar setelah draft laporan diserahkan,
+    // sebelum termin terakhir yang jatuh di penyerahan laporan final.
+    'termin_item_mid'   => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan setelah draft laporan diserahkan.',
     'termin_1' => '50% (lima puluh persen) sebesar **:rp (:terbilang),** dibayarkan sebelum dilakukan inspeksi lapangan.',
     'termin_2' => '50% (lima puluh persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
     'rekening_label' => 'Rekening Bank :',

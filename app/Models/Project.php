@@ -419,6 +419,37 @@ class Project extends Model
     }
 
     /**
+     * Termin pembayaran masih boleh diubah selama proyek belum masuk tahap
+     * pencetakan buku (2026-09-24, feedback user). Sebelum itu nominal
+     * tagihan masih bisa menyesuaikan kesepakatan dengan klien; setelah buku
+     * dicetak, angkanya sudah dipakai di dokumen dan tidak boleh bergeser.
+     * Administrator tetap bisa mengubah, sesuai aturan kunci lainnya.
+     */
+    public function canEditPaymentTerms(?User $user = null): bool
+    {
+        if ($user?->isAdministrator() && ! $this->isCancelled()) {
+            return true;
+        }
+
+        $printingStages = [
+            self::STAGE_DRAFT_REVIEWED,
+            self::STAGE_PRINTED,
+            self::STAGE_SIGNED,
+            self::STAGE_DELIVERED,
+        ];
+
+        $printingStatuses = [
+            self::STATUS_TANDA_TANGAN,
+            self::STATUS_PENGIRIMAN,
+            self::STATUS_SELESAI_BELUM_LUNAS,
+            self::STATUS_SELESAI,
+        ];
+
+        return ! in_array($this->review_status, $printingStages, true)
+            && ! in_array($this->status, $printingStatuses, true);
+    }
+
+    /**
      * Status akhir setelah buku dikirim: "Selesai" bila sudah lunas, selain
      * itu "Selesai - Belum Lunas" (dipanggil saat Tanda Terima dibuat dan
      * saat invoice ditandai lunas).

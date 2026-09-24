@@ -197,7 +197,10 @@ class ProposalController extends Controller
         if (in_array($project->status, [Project::STATUS_DRAFT, Project::STATUS_WAITING_APPROVAL], true)) {
             $updateData['payment_scheme'] = $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP;
         }
-        if (array_key_exists('payment_terms', $validated)) {
+        // Termin boleh berubah lebih lama daripada skema — sampai proyek masuk
+        // tahap pencetakan buku (2026-09-24, feedback user). Sesudah itu
+        // angkanya sudah dipakai di dokumen, jadi request diabaikan.
+        if (array_key_exists('payment_terms', $validated) && $project->canEditPaymentTerms($request->user())) {
             $updateData['payment_terms'] = $this->parsePaymentTerms($validated['payment_terms']);
         }
 

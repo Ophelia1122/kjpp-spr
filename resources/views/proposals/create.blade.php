@@ -447,19 +447,6 @@
                             <option value="Bayar Nanti" @selected(old('payment_scheme') === 'Bayar Nanti')>Bayar Nanti (tanpa DP di awal)</option>
                         </select>
                     </div>
-                    {{-- Persentase termin (2026-09-19, feedback user): terisi otomatis
-                         sesuai skema, tetap bisa diubah. Kalimat sesudah persentase
-                         di proposal tidak berubah. --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Termin Pembayaran (%)
-                            @include('partials.icon-info', ['tip' => 'Pisahkan dengan koma, jumlahnya harus 100. Contoh: 50,50 atau 30,70. Kosongkan untuk memakai bawaan skema: DP di Awal 50,50 dan Bayar Nanti 100.'])
-                        </label>
-                        <input type="text" name="payment_terms" id="paymentTerms" value="{{ old('payment_terms', '50,50') }}"
-                               placeholder="50,50"
-                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-                        @error('payment_terms') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Rekening Bank Pembayaran
@@ -476,6 +463,11 @@
                             @endforeach
                         </select>
                     </div>
+
+                    @include('partials.payment-terms', [
+                        'termPercents' => array_map('floatval', explode(',', old('payment_terms', '50,50'))),
+                        'locked'       => false,
+                    ])
                 </div>
             </div>
         </div>
@@ -1084,6 +1076,9 @@
             ppn = (base + transport) * PPN_RATE;
             total = base + transport + ppn;
         }
+
+        // Nominal per termin ikut berubah begitu biaya jasa diubah.
+        if (window.ptSetTotal) window.ptSetTotal(total);
 
         document.getElementById('service_fee_hint').textContent = (ppnIncluded
             ? 'Fee & transport sudah termasuk PPN — di rincian tampil net (dikurangi PPN).'
