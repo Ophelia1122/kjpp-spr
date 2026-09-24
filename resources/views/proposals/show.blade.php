@@ -185,6 +185,20 @@
                         </a>
                     @endif
                 @endcan
+                {{-- Duplikat: menyalin isian proposal untuk klien langganan
+                     (2026-09-24, feedback user). --}}
+                @can('proposals.manage')
+                    <form action="{{ route('proposals.duplicate', $project) }}" method="POST"
+                          data-confirm="Duplikat proposal {{ $project->proposal_number }}? Salinan dibuat sebagai Draft dengan nomor sementara yang harus Anda ganti.">
+                        @csrf
+                        <button type="submit" title="Duplikat proposal" aria-label="Duplikat proposal"
+                                class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"/>
+                            </svg>
+                        </button>
+                    </form>
+                @endcan
                 <a href="{{ route('proposals.lengkap', $project) }}" title="Lihat seluruh data proyek" aria-label="Lihat seluruh data proyek"
                    class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                     <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
@@ -1360,6 +1374,35 @@
                 Sisa Tagihan (belum di-invoice): <span class="font-semibold text-amber-600 dark:text-amber-400">Rp {{ number_format($project->uninvoiced_balance, 0, ',', '.') }}</span>
                 dari total kontrak Rp {{ number_format((float) $project->total_fee, 0, ',', '.') }}.
             </p>
+            {{-- Pilihan cepat dari termin proposal (2026-09-24, feedback user):
+                 staf tidak perlu menghitung ulang persen & nominalnya. --}}
+            @php
+                $terminPersen = $project->paymentTermPercents();
+                $terminTotal  = (float) $project->total_fee;
+                $sisaBagi     = $terminTotal;
+                $terminChips  = [];
+                foreach ($terminPersen as $i => $pct) {
+                    $nominal = $i === count($terminPersen) - 1 ? $sisaBagi : round($terminTotal * $pct / 100);
+                    $sisaBagi -= $nominal;
+                    $terminChips[] = ['no' => $i + 1, 'pct' => $pct, 'nominal' => $nominal];
+                }
+                $terminTerpakai = $project->invoices->count();
+            @endphp
+            @if (count($terminChips) > 1)
+                <div>
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Isi cepat dari termin proposal</p>
+                    <div class="mt-1.5 flex flex-wrap gap-2">
+                        @foreach ($terminChips as $i => $chip)
+                            <button type="button" onclick="isiDariTermin({{ $chip['nominal'] }})"
+                                    class="rounded-md border px-2.5 py-1 text-xs font-medium {{ $i === $terminTerpakai ? 'border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60' }}">
+                                Termin {{ $chip['no'] }} &middot; {{ rtrim(rtrim(number_format($chip['pct'], 2, ',', '.'), '0'), ',') }}%
+                                &middot; Rp {{ number_format($chip['nominal'], 0, ',', '.') }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Persentase (%)</label>
                 <input type="number" id="inv_percentage" name="percentage" min="0.01" max="100" step="0.01" required
@@ -1500,6 +1543,14 @@
 <script>
     const INVOICE_MODAL_TOTAL_FEE = {{ (float) $project->total_fee }};
     const INVOICE_MODAL_REMAINING = {{ (float) $project->uninvoiced_balance }};
+
+    /** Isi nominal & persentase dari satu termin proposal (2026-09-24). */
+    function isiDariTermin(nominal) {
+        const amountInput = document.getElementById('inv_amount');
+        amountInput.value = Math.round(nominal);
+        amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+        amountInput.focus();
+    }
 
     function openInvoiceModal() {
         // Semua nilai kontrak sudah di-invoice: tampilkan peringatan, modal tidak dibuka.

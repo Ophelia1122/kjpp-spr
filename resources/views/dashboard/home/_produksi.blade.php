@@ -37,7 +37,8 @@
                         <th class="px-5 py-2.5">Proyek</th>
                         <th class="px-4 py-2.5">Tindakan</th>
                         <th class="px-4 py-2.5">Menunggu Sejak</th>
-                        <th class="px-5 py-2.5 w-[32%]">Catatan Terakhir</th>
+                        <th class="px-5 py-2.5 w-[26%]">Catatan Terakhir</th>
+                        <th class="px-4 py-2.5">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -59,6 +60,7 @@
                                 <p class="{{ ($wait ?? 0) >= 3 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400 dark:text-gray-500' }}">{{ $waitText($wait) }}</p>
                             </td>
                             <td class="px-5 py-3">@include('dashboard.home._note', ['project' => $p])</td>
+                            <td class="px-4 py-3">@include('dashboard.home._row_actions', ['project' => $p])</td>
                         </tr>
                     @endforeach
                 </tbody>

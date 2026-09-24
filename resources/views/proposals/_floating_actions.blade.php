@@ -43,21 +43,27 @@
     // Tersedia di SEMUA status, termasuk Selesai & Batal (2026-09-14,
     // feedback user) — proposal tetap perlu dicetak ulang untuk arsip.
     if (auth()->user()->can('proposals.view')) {
-        $fabActions[] = [
-            'type' => 'link', 'icon' => 'printer', 'tone' => 'neutral',
-            'label' => 'Cetak PDF', 'tip' => 'Cetak proposal sebagai PDF',
-            'url' => route('proposals.exportPdf', $project),
+        // Satu tombol "Unduh" berisi seluruh dokumen, menggantikan tiga tombol
+        // terpisah (2026-09-24, feedback user) — pola yang sama dengan menu
+        // unduh invoice di partials/invoice-download-menu.blade.php.
+        $unduhItems = [
+            ['group' => 'Proposal'],
+            ['label' => 'Proposal', 'format' => 'PDF',  'url' => route('proposals.exportPdf', $project)],
+            ['label' => 'Proposal', 'format' => 'Word', 'url' => route('proposals.exportWord', $project)],
+            ['group' => 'Dokumen Pendukung'],
+            ['label' => 'Surat Representasi', 'format' => 'Word', 'url' => route('proposals.exportRepresentatif', $project)],
         ];
+
+        // Surat Tugas hanya muncul setelah nomornya diisi.
+        if ($project->assignment_letter_number && auth()->user()->can('survey.view')) {
+            $unduhItems[] = ['label' => 'Surat Tugas', 'format' => 'PDF',  'url' => route('projects.exportSuratTugas', $project)];
+            $unduhItems[] = ['label' => 'Surat Tugas', 'format' => 'Word', 'url' => route('projects.exportSuratTugasWord', $project)];
+        }
+
         $fabActions[] = [
-            'type' => 'link', 'icon' => 'download', 'tone' => 'blue',
-            'label' => 'Unduh Word', 'tip' => 'Unduh proposal sebagai dokumen Word',
-            'url' => route('proposals.exportWord', $project),
-        ];
-        // Surat Representasi untuk klien (2026-09-21, feedback user).
-        $fabActions[] = [
-            'type' => 'link', 'icon' => 'doc-check', 'tone' => 'emerald',
-            'label' => 'Representatif', 'tip' => 'Unduh Surat Representasi (Word) untuk klien',
-            'url' => route('proposals.exportRepresentatif', $project),
+            'type' => 'menu', 'icon' => 'download', 'tone' => 'blue',
+            'label' => 'Unduh', 'tip' => 'Unduh proposal & dokumen pendukung',
+            'items' => $unduhItems,
         ];
     }
 
@@ -144,7 +150,33 @@
                         {{ $action['tip'] }}
                     </span>
 
-                    @if ($action['type'] === 'link')
+                    @if ($action['type'] === 'menu')
+                        {{-- Tombol bermenu: ikon + panah kecil, isinya daftar dokumen. --}}
+                        <div data-dropdown class="h-full">
+                            <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false"
+                                    class="{{ $btnClass }}">
+                                <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $fabIcons[$action['icon']] }}"/>
+                                </svg>
+                                <span class="lg:hidden">{{ $action['label'] }}</span>
+                            </button>
+
+                            <div data-dropdown-menu role="menu" style="display: none;"
+                                 class="z-50 w-60 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                @foreach ($action['items'] as $item)
+                                    @if (isset($item['group']))
+                                        <p class="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ $item['group'] }}</p>
+                                    @else
+                                        <a href="{{ $item['url'] }}" role="menuitem"
+                                           class="flex items-center justify-between gap-4 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/60">
+                                            <span>{{ $item['label'] }}</span>
+                                            <span class="rounded border px-1.5 text-[10px] font-semibold leading-4 {{ $item['format'] === 'PDF' ? 'border-rose-200 text-rose-600 dark:border-rose-800 dark:text-rose-400' : 'border-blue-200 text-blue-600 dark:border-blue-800 dark:text-blue-400' }}">{{ $item['format'] }}</span>
+                                        </a>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    @elseif ($action['type'] === 'link')
                         <a href="{{ $action['url'] }}" class="{{ $btnClass }}">
                             <svg aria-hidden="true" class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $fabIcons[$action['icon']] }}"/>

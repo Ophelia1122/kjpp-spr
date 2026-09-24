@@ -139,14 +139,39 @@
                         <td class="px-6 py-3 text-right tabular-nums whitespace-nowrap font-semibold text-gray-900 dark:text-gray-100">{{ $rp($p->remaining_balance) }}</td>
                         <td class="px-4 py-3 text-center whitespace-nowrap" data-row-actions>
                             @can('invoices.manage')
-                                @if ($notBilled > 0)
-                                    <a href="{{ route('proposals.show', $p) }}#section-tagihan"
-                                       class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
-                                        + Buat Invoice
-                                    </a>
-                                @else
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">Menunggu bayar</span>
-                                @endif
+                                {{-- Menandai lunas dulu harus lewat halaman proyek; sekarang bisa
+                                     langsung dari sini selama tagihannya tinggal satu
+                                     (2026-09-24, feedback user). --}}
+                                @php $belumLunas = $p->invoices->where('status', \App\Models\Invoice::STATUS_UNPAID)->values(); @endphp
+                                <div class="flex items-center justify-center gap-1.5">
+                                    @if ($belumLunas->count() === 1)
+                                        <form action="{{ route('invoices.markAsPaid', $belumLunas[0]) }}" method="POST"
+                                              data-confirm="Tandai invoice {{ $belumLunas[0]->invoice_number }} sebesar {{ $rp($belumLunas[0]->amount) }} sudah LUNAS hari ini?">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1 rounded-md border border-emerald-300 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-900/30">
+                                                <svg aria-hidden="true" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                                                </svg>
+                                                Tandai Lunas
+                                            </button>
+                                        </form>
+                                    @elseif ($belumLunas->count() > 1)
+                                        <a href="{{ route('proposals.show', $p) }}#section-tagihan"
+                                           class="inline-flex items-center rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
+                                            {{ $belumLunas->count() }} tagihan
+                                        </a>
+                                    @endif
+
+                                    @if ($notBilled > 0)
+                                        <a href="{{ route('proposals.show', $p) }}#section-tagihan"
+                                           class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                                            + Buat Invoice
+                                        </a>
+                                    @elseif ($belumLunas->isEmpty())
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">Menunggu bayar</span>
+                                    @endif
+                                </div>
                             @endcan
                         </td>
                     </tr>

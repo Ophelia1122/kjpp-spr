@@ -612,6 +612,54 @@
             });
         }
 
+        // ---------- Pintasan papan tik (2026-09-24, feedback user) ----------
+        // "/" ke kolom cari, "n" proposal baru, "?" daftar pintasan.
+        // Diabaikan saat sedang mengetik atau saat modal terbuka.
+        (function () {
+            const bisaBuatProposal = @json(auth()->check() && auth()->user()->can('proposals.manage'));
+            const urlProposalBaru  = @json(auth()->check() && auth()->user()->can('proposals.manage') ? route('proposals.create') : null);
+
+            function sedangMengetik(el) {
+                return el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+            }
+
+            function tampilkanBantuan() {
+                let box = document.getElementById('shortcutHelp');
+                if (box) { box.remove(); return; }
+
+                box = document.createElement('div');
+                box.id = 'shortcutHelp';
+                box.className = 'fixed bottom-4 left-1/2 z-[80] -translate-x-1/2 rounded-lg bg-gray-900 px-4 py-3 text-xs text-white shadow-xl';
+                box.innerHTML = '<b class="mb-1 block text-[11px] uppercase tracking-wide text-gray-400">Pintasan</b>'
+                    + '<div><kbd class="rounded bg-gray-700 px-1.5">/</kbd> cari'
+                    + (bisaBuatProposal ? ' &middot; <kbd class="rounded bg-gray-700 px-1.5">n</kbd> proposal baru' : '')
+                    + ' &middot; <kbd class="rounded bg-gray-700 px-1.5">?</kbd> tutup bantuan ini</div>';
+                document.body.appendChild(box);
+                setTimeout(() => box.remove(), 6000);
+            }
+
+            document.addEventListener('keydown', function (e) {
+                if (e.ctrlKey || e.metaKey || e.altKey || sedangMengetik(document.activeElement)) return;
+                // Modal terbuka: jangan ganggu.
+                if (document.querySelector('.fixed.inset-0.flex:not(.hidden)')) return;
+
+                if (e.key === '/') {
+                    const cari = document.querySelector('input[name="q"], input[type="search"]');
+                    if (cari) { e.preventDefault(); cari.focus(); cari.select(); }
+                    return;
+                }
+                if (e.key === 'n' && urlProposalBaru) {
+                    e.preventDefault();
+                    window.location.href = urlProposalBaru;
+                    return;
+                }
+                if (e.key === '?') {
+                    e.preventDefault();
+                    tampilkanBantuan();
+                }
+            });
+        })();
+
         // ---------- Menu tarik-turun [data-dropdown] (2026-09-14) ----------
         // Saat dibuka, menu DIPINDAH ke <body> dan diposisikan `fixed` terhadap
         // layar, lalu dikembalikan ke tempatnya saat ditutup. Alasannya:

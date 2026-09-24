@@ -33,7 +33,8 @@
                         <th class="px-4 py-2.5">Jenis Review</th>
                         <th class="px-4 py-2.5">Diajukan</th>
                         <th class="px-4 py-2.5">Menunggu</th>
-                        <th class="px-5 py-2.5 w-[30%]">Catatan Terakhir</th>
+                        <th class="px-5 py-2.5 w-[24%]">Catatan Terakhir</th>
+                        <th class="px-4 py-2.5">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -50,6 +51,7 @@
                                 {{ $wait === null ? '—' : ($wait === 0 ? 'hari ini' : $wait . ' hari') }}
                             </td>
                             <td class="px-5 py-3">@include('dashboard.home._note', ['project' => $p])</td>
+                            <td class="px-4 py-3">@include('dashboard.home._row_actions', ['project' => $p])</td>
                         </tr>
                     @endforeach
                 </tbody>

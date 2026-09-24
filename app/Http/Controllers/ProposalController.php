@@ -57,6 +57,70 @@ class ProposalController extends Controller
         return (float) ($validated['transport_cost'] ?? 0);
     }
 
+    /**
+     * Duplikat proposal (2026-09-24, feedback user): klien langganan sering
+     * memakai isian yang hampir sama, jadi staf tidak perlu mengetik ulang
+     * 20-an kolom. Yang TIDAK ikut disalin: nomor & tanggal proposal, seluruh
+     * penomoran dokumen, tanda tangan/stempel, dan semua jejak pelaksanaan —
+     * salinan selalu lahir sebagai Draft Proposal yang bersih.
+     */
+    public function duplicate(Project $project)
+    {
+        $project->load('valuationObjects', 'intendedUsers');
+
+        $salinan = $project->replicate([
+            // Penomoran & tanggal: wajib diisi ulang.
+            'proposal_number', 'proposal_date',
+            'assignment_letter_number', 'assignment_letter_date', 'assignment_letter_barcode',
+            'assignment_letter_request_basis', 'assignment_letter_on_behalf_client_id',
+            'assignment_letter_recipient_client_id',
+            'tax_invoice_number', 'tax_invoice_date',
+            'final_report_number', 'final_report_date', 'final_report_notes',
+            // Tanda tangan & stempel: berkasnya milik proposal asal.
+            'use_signature_barcode', 'signature_barcode', 'use_stamp',
+            // Jejak pelaksanaan.
+            'status', 'review_status', 'assigned_appraiser', 'assigned_appraiser_id',
+            'survey_date', 'valuation_date_manual',
+            'review_submitted_at', 'review_approved_at', 'review_approved_by_user_id',
+            'reviewed_at', 'reviewed_by_user_id', 'review_submitted_by_user_id',
+            'review_rejected_at', 'review_rejected_by_user_id', 'review_rejection_note',
+            'draft_submitted_at', 'draft_confirmed_at', 'draft_reviewed_at',
+            'printed_at', 'signed_at', 'delivered_at',
+            'status_before_cancel', 'cancelled_at',
+        ]);
+
+        $salinan->proposal_number = $this->nomorSalinan($project->proposal_number);
+        $salinan->proposal_date   = now()->toDateString();
+        $salinan->status          = Project::STATUS_DRAFT;
+        $salinan->save();
+
+        $salinan->intendedUsers()->sync($project->intendedUsers->pluck('id')->all());
+
+        foreach ($project->valuationObjects as $objek) {
+            $baru = $objek->replicate(['survey_start_date', 'survey_end_date']);
+            $baru->project_id = $salinan->id;
+            $baru->save();
+        }
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.duplicated',
+            "Menduplikat proposal {$project->proposal_number} menjadi {$salinan->proposal_number}",
+            $salinan
+        );
+
+        return redirect()
+            ->route('proposals.edit', $salinan)
+            ->with('success', 'Proposal disalin. Ganti Nomor Proposal dan periksa isinya sebelum disimpan.');
+    }
+
+    /** Nomor sementara untuk salinan; wajib diganti staf sebelum dipakai. */
+    private function nomorSalinan(string $asal): string
+    {
+        $calon = 'SALINAN-' . now()->format('His') . '/' . $asal;
+
+        return mb_substr($calon, 0, 191);
+    }
+
     public function store(Request $request)
     {
         if ($request->has('psak_classification') && is_array($request->psak_classification)) {
