@@ -730,9 +730,10 @@
                                 Dasar Permintaan Penilaian
                                 @include('partials.icon-info', ['tip' => 'Selalu sama dengan Dasar Permintaan di Identitas Proposal. Ubah di Edit Proposal bila perlu.'])
                             </p>
-                            <p class="mt-1 whitespace-pre-line rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
-                                {{ $project->request_basis ?: 'Belum diisi di proposal.' }}
-                            </p>
+                            {{-- Teks ditempel rapat ke tag: whitespace-pre-line ikut
+                                 mempertahankan baris baru & spasi indentasi Blade,
+                                 sehingga muncul baris kosong di atas (2026-09-25). --}}
+                            <p class="mt-1 whitespace-pre-line rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">{{ trim($project->request_basis) ?: 'Belum diisi di proposal.' }}</p>
                         </div>
                     </div>
                 </form>

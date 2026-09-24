@@ -68,6 +68,19 @@
         ];
     }
 
+    // Tahap Pengiriman Buku tidak punya tombol alur: proyek ditutup dengan
+    // membuat Tanda Terima. Tanpa penunjuk, bilah terlihat kosong dan staf
+    // bingung harus ke mana (2026-09-25, feedback user).
+    if ($project->status === \App\Models\Project::STATUS_PENGIRIMAN
+        && \App\Models\Project::userCanActAs(auth()->user(), 'admin_or_keuangan')) {
+        $fabActions[] = [
+            'type' => 'link', 'icon' => 'doc-check', 'tone' => 'emerald',
+            'label' => 'Tanda Terima', 'tip' => 'Buat Tanda Terima Pengiriman Buku untuk menutup proyek',
+            'url' => route('proposals.show', $project) . '#section-tanda-terima',
+            'primary' => true,
+        ];
+    }
+
     if ($isActiveProject) {
         // ---------- DRAFT / MENUNGGU PERSETUJUAN ----------
         // Draft -> Menunggu Persetujuan Klien (2026-09-15, feedback user).
@@ -79,7 +92,14 @@
                 'confirm' => 'Tandai proposal ' . $project->proposal_number . ' sudah dikirim ke klien?',
             ];
         }
-        if (in_array($project->status, [\App\Models\Project::STATUS_DRAFT, \App\Models\Project::STATUS_WAITING_APPROVAL])) {
+        // Termasuk DP Invoicing (2026-09-25, feedback user): proyek Bayar Nanti
+        // yang invoice-nya sudah terbit tetapi belum dibayar dulu tidak punya
+        // tombol apa pun, sehingga survei tidak bisa dimulai sama sekali.
+        if (in_array($project->status, [
+            \App\Models\Project::STATUS_DRAFT,
+            \App\Models\Project::STATUS_WAITING_APPROVAL,
+            \App\Models\Project::STATUS_DP_INVOICING,
+        ])) {
             if (auth()->user()->can('proposals.manage') && $project->isPaymentDeferred()) {
                 $fabActions[] = [
                     'type' => 'form', 'icon' => 'rocket', 'tone' => 'indigo',
@@ -145,8 +165,11 @@
     $fabLainnya   = [];
 
     foreach ($fabActions as $action) {
-        $isLangkahMaju = ($action['type'] ?? '') === 'modal'
-            && ! in_array($action['tone'], ['rose', 'orange'], true);
+        // Langkah maju = tombol alur (modal) maupun aksi status (form) seperti
+        // "Kirim ke Klien" dan "Mulai Tanpa DP" — bukan pengembalian/banding.
+        $isLangkahMaju = ! empty($action['primary'])
+            || (in_array($action['type'] ?? '', ['modal', 'form'], true)
+                && ! in_array($action['tone'], ['rose', 'orange'], true));
 
         if ($fabUtama === null && $isLangkahMaju) {
             $fabUtama = $action;

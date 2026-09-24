@@ -127,9 +127,13 @@ class ProjectController extends Controller
     public function startWorkWithoutDp(Project $project)
     {
         abort_unless(
-            in_array($project->status, [Project::STATUS_DRAFT, Project::STATUS_WAITING_APPROVAL], true),
+            in_array($project->status, [
+                Project::STATUS_DRAFT,
+                Project::STATUS_WAITING_APPROVAL,
+                Project::STATUS_DP_INVOICING,
+            ], true),
             403,
-            'Mulai Pekerjaan Tanpa DP hanya bisa dilakukan selama proyek berstatus Draft/Menunggu Persetujuan.'
+            'Mulai Pekerjaan Tanpa DP hanya bisa dilakukan sebelum pekerjaan lapangan berjalan.'
         );
         abort_unless($project->isPaymentDeferred(), 403, 'Proyek ini menggunakan skema DP di Awal, bukan Bayar Nanti.');
 
