@@ -136,9 +136,12 @@
                          kedua yang lebih redup dan dipotong satu baris. --}}
                     <td class="px-3 py-3 text-gray-500 dark:text-gray-500" title="{{ $obj['full'] }}&#10;{{ $locations->implode(' | ') ?: $firstAddr }}">
                         <span class="block max-w-[280px] truncate font-medium text-gray-700 dark:text-gray-300">{{ $obj['short'] }}</span>
-                        <span class="block max-w-[280px] truncate text-[11px] text-gray-400 dark:text-gray-500">
-                            {{ $firstAddr ?: '—' }}@if ($locations->count() > 1) <span class="text-blue-600 dark:text-blue-400">+{{ $locations->count() - 1 }} objek lain</span>@endif
-                        </span>
+                        <span class="block max-w-[280px] truncate text-[11px] text-gray-400 dark:text-gray-500">{{ $firstAddr ?: '—' }}</span>
+                        @if ($locations->count() > 1)
+                            {{-- Baris sendiri supaya tidak ikut terpotong bersama alamat
+                                 (2026-09-25, feedback user). --}}
+                            <span class="block text-[11px] text-blue-600 dark:text-blue-400">+{{ $locations->count() - 1 }} lokasi lain</span>
+                        @endif
                     </td>
                     <td class="px-3 py-3 text-center">
                         <span class="inline-block px-2.5 py-1 rounded-full font-semibold whitespace-nowrap {{ $project->status_badge_classes }}"

@@ -61,7 +61,8 @@
             </table>
         </div>
 
-        <div class="mt-4">
+        {{-- Tombol simpan rata kanan, seragam dengan form lain (2026-09-25). --}}
+        <div class="mt-4 flex justify-end">
             <button type="submit" class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-4 text-sm font-medium text-white transition hover:border-blue-700 hover:bg-blue-700">
                 Simpan Perubahan Hak Akses
             </button>

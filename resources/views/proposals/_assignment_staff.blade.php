@@ -99,7 +99,13 @@
 @endcan
 
 @can('assignment_letter.manage')
-    @php $availableStaffUsers = $activeUsers->whereNotIn('id', $project->assignmentStaff->pluck('user_id')); @endphp
+    {{-- Petugas Surat Tugas berisi penilai/pelaksana/reviewer; jabatan Admin
+         tidak ditawarkan (2026-09-25, feedback user). --}}
+    @php
+        $availableStaffUsers = $activeUsers
+            ->whereNotIn('id', $project->assignmentStaff->pluck('user_id'))
+            ->reject(fn ($u) => $u->jabatan === \App\Models\User::JABATAN_ADMIN);
+    @endphp
     @if ($availableStaffUsers->isEmpty())
         {{-- Semua pengguna aktif sudah masuk daftar: kolom pilih disembunyikan
              supaya tidak ada kotak kosong menggantung (2026-09-24, feedback user). --}}

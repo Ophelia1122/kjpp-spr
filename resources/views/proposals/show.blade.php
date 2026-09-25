@@ -424,8 +424,12 @@
                      Label pakai jabatan (biodata), bukan role, supaya lebih relevan
                      (Penilai/Pelaksana Inspeksi) daripada nama role sistem. --}}
                 @php
+                    // Jabatan Admin tidak muncul di pilihan penilai lapangan
+                    // (2026-09-25, feedback user): kolom ini khusus orang yang
+                    // benar-benar turun survei.
                     $fieldAppraiserOptions = $activeUsers->filter(
                         fn ($u) => in_array($u->role?->slug, [\App\Models\Role::ADMINISTRATOR, \App\Models\Role::SURVEYOR], true)
+                            && $u->jabatan !== \App\Models\User::JABATAN_ADMIN
                     );
                 @endphp
                 <form action="{{ route('projects.inputSurveyData', $project) }}" method="POST" id="surveyForm">

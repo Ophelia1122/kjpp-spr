@@ -129,12 +129,14 @@
             @if (empty($topBanks['slices']))
                 <p class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">Belum ada proyek dari klien bank.</p>
             @else
-                {{-- Tinggi pie 160px, setara kartu Proyek per Status; legenda di samping
-                     (turun ke bawah di HP). --}}
-                <div class="flex flex-wrap items-center gap-6 sm:flex-nowrap">
-                    <div class="shrink-0">@include('dashboard._pie3d', ['slices' => $topBanks['slices']])</div>
-                    <div class="min-w-0 flex-1">
-                        <ul class="space-y-2 text-sm">
+                {{-- Pie di atas, legenda DI BAWAH (2026-09-25, feedback user):
+                     kartu Proyek per Status di kiri memanjang sejak status
+                     bertambah, jadi grafiknya dibesarkan dan legenda turun
+                     supaya tinggi kedua kartu seimbang. --}}
+                <div class="flex flex-col gap-5">
+                    <div class="flex justify-center">@include('dashboard._pie3d', ['slices' => $topBanks['slices']])</div>
+                    <div>
+                        <ul class="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                             @foreach ($topBanks['slices'] as $s)
                                 <li class="flex items-start gap-2">
                                     <span class="mt-1 h-3 w-3 shrink-0 rounded-sm" style="background: {{ $s['color'] }}"></span>

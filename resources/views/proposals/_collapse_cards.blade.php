@@ -36,30 +36,42 @@
 
         const kepala = anak[0];
         const isi    = anak.slice(1);
-        isi.forEach(el => { el.hidden = true; });
+        const judul  = kepala.querySelector('h2, h3') || kepala;
+        let terbuka  = false;
 
-        kepala.classList.add('cursor-pointer');
-        kepala.setAttribute('role', 'button');
-        kepala.setAttribute('tabindex', '0');
-        kepala.title = 'Klik untuk membuka kartu ini';
+        // Tanda panah ditaruh DI DEPAN nama kartu, bukan di kanan: tombol
+        // Edit/Simpan di kanan tidak boleh tergeser (2026-09-25, feedback user).
+        const panah = document.createElement('button');
+        panah.type = 'button';
+        panah.setAttribute('aria-expanded', 'false');
+        panah.className = 'mr-1.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300';
+        panah.innerHTML = '<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.4" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>';
+        panah.title = 'Buka kartu ini';
+        judul.prepend(panah);
 
-        const tanda = document.createElement('span');
-        tanda.className = 'ml-auto shrink-0 text-[11px] font-medium text-gray-400 dark:text-gray-500';
-        tanda.textContent = 'Buka';
-        kepala.classList.add('flex', 'items-center', 'gap-2');
-        kepala.appendChild(tanda);
-
-        function buka() {
-            isi.forEach(el => { el.hidden = false; });
-            tanda.remove();
-            kepala.classList.remove('cursor-pointer');
-            kepala.removeAttribute('role');
-            kepala.removeAttribute('tabindex');
-            kepala.removeAttribute('title');
+        function setel(buka) {
+            terbuka = buka;
+            isi.forEach(el => { el.hidden = ! buka; });
+            panah.style.transform = buka ? 'rotate(90deg)' : '';
+            panah.setAttribute('aria-expanded', buka ? 'true' : 'false');
+            panah.title = buka ? 'Tutup kartu ini' : 'Buka kartu ini';
         }
 
-        kepala.addEventListener('click', buka);
-        kepala.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); buka(); } });
+        setel(false);
+
+        function toggle(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            setel(! terbuka);
+        }
+
+        panah.addEventListener('click', toggle);
+        judul.addEventListener('click', function (e) {
+            // Klik nama kartu ikut membuka, tetapi klik tombol di dalamnya tidak.
+            if (e.target.closest('a, button') && e.target.closest('button') !== panah) return;
+            toggle(e);
+        });
+        judul.classList.add('cursor-pointer');
     }
 
     SEMUA.filter(id => ! RELEVAN.includes(id)).forEach(function (id) {

@@ -24,7 +24,7 @@
     $single = count($parts) === 1;
 @endphp
 
-<svg viewBox="0 {{ $cy - $ry - 6 }} 400 {{ 2 * $ry + $depth + 12 }}" class="h-40 w-auto max-w-full" role="img"
+<svg viewBox="0 {{ $cy - $ry - 6 }} 400 {{ 2 * $ry + $depth + 12 }}" class="h-56 w-auto max-w-full" role="img"
      aria-label="{{ collect($parts)->map(fn ($p) => $p['label'] . ': ' . $p['value'])->implode(', ') }}">
     <g stroke="#ffffff" stroke-width="1" stroke-linejoin="round">
         {{-- Dinding samping (bagian depan saja). --}}
