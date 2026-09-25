@@ -332,12 +332,11 @@
 <div id="bulkBar" class="fixed inset-x-0 bottom-4 z-40 hidden justify-center px-4">
     <div class="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-2 shadow-xl dark:border-gray-700 dark:bg-gray-800">
         <span id="bulkCount" class="text-sm font-medium text-gray-700 dark:text-gray-200">0 dipilih</span>
-        <button type="button" id="bulkExport"
-                class="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
-            <svg aria-hidden="true" class="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+        <button type="button" id="bulkExport" title="Export baris terpilih ke Excel" aria-label="Export baris terpilih ke Excel"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+            <svg aria-hidden="true" class="h-[16px] w-[16px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
             </svg>
-            Export Excel
         </button>
         @can('proposals.manage')
             <form id="bulkCancelForm" action="{{ route('proposals.cancelMany') }}" method="POST">

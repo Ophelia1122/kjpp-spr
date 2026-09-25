@@ -9,11 +9,11 @@
          Mengosongkan log hanya untuk Administrator dan meminta kata sandi. --}}
     <x-page-header title="Log Aktivitas" subtitle="{{ $logs->total() }} aktivitas tercatat">
         <a href="{{ route('audit.export', request()->query()) }}"
-           class="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
-            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+           title="Unduh Excel sesuai filter" aria-label="Unduh Excel sesuai filter"
+           class="inline-flex h-[38px] w-[38px] items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">
+            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
             </svg>
-            Export Excel
         </a>
         @if (auth()->user()->isAdministrator())
             <button type="button" onclick="openClearLogModal()"
