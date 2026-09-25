@@ -570,6 +570,8 @@
     // salinannya, bukan sekadar kembali (2026-09-24, feedback user).
     $salinanBaru = request()->boolean('baru') && $project->status === \App\Models\Project::STATUS_DRAFT;
 @endphp
+@include('proposals._form_errors')
+
 @include('proposals._form_actions', [
     'cancelUrl'     => route('proposals.show', $project),
     'cancelForm'    => $salinanBaru ? route('proposals.discardDuplicate', $project) : null,

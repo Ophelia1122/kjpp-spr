@@ -73,10 +73,9 @@
                 @php
                     $cols = [
                         ['key' => 'proposal_number', 'label' => 'No. Proposal',  'class' => 'px-3 py-3'],
-                        ['key' => null,              'label' => 'Nama Klien',    'class' => 'px-3 py-3 min-w-[190px]'],
+                        ['key' => null,              'label' => 'Nama Klien',    'class' => 'px-3 py-3 w-full min-w-[240px]'],
                         ['key' => 'purpose',         'label' => 'Jenis',         'class' => 'px-3 py-3 w-[112px]'],
-                        ['key' => null,              'label' => 'Objek',         'class' => 'px-3 py-3 min-w-[140px]'],
-                        ['key' => null,              'label' => 'Alamat',        'class' => 'px-3 py-3 min-w-[220px]'],
+                        ['key' => null,              'label' => 'Objek & Alamat', 'class' => 'px-3 py-3 w-[300px]'],
                         ['key' => 'status',          'label' => 'Status',        'class' => 'px-3 py-3 w-[126px]'],
                         ['key' => 'deadline',        'label' => 'SLA',           'class' => 'px-3 py-3 w-[104px]', 'tip' => 'Urutkan berdasarkan tenggat SLA — yang paling mepet di atas'],
                         ['key' => null,              'label' => 'Aksi',          'class' => 'px-3 py-3 w-[100px]'],
@@ -132,13 +131,14 @@
                     {{-- Nama Klien, bukan Pemberi Tugas (2026-09-14, feedback user). --}}
                     <td class="px-3 py-3 font-semibold text-gray-900 dark:text-gray-100">{{ $project->effective_client_name ?: '-' }}</td>
                     <td class="px-3 py-3 text-gray-500 dark:text-gray-500">{{ $project->proposal_purpose }}</td>
-                    {{-- Objek diringkas "kategori pertama +N" (2026-09-13); daftar lengkap di tooltip. --}}
-                    <td class="px-3 py-3 text-gray-500 dark:text-gray-500" title="{{ $obj['full'] }}">{{ $obj['short'] }}</td>
-                    <td class="px-3 py-3 text-gray-500 dark:text-gray-500" title="{{ $locations->implode(' | ') ?: $firstAddr }}">
-                        <span class="line-clamp-2">{{ $firstAddr ?: '—' }}</span>
-                        @if ($locations->count() > 1)
-                            <span class="text-[11px] text-blue-600 dark:text-blue-400">+{{ $locations->count() - 1 }} objek lain</span>
-                        @endif
+                    {{-- Objek & alamat jadi satu kolom dua baris (2026-09-25, feedback
+                         user): jenis objek tetap terbaca penuh, alamat jadi baris
+                         kedua yang lebih redup dan dipotong satu baris. --}}
+                    <td class="px-3 py-3 text-gray-500 dark:text-gray-500" title="{{ $obj['full'] }}&#10;{{ $locations->implode(' | ') ?: $firstAddr }}">
+                        <span class="block max-w-[280px] truncate font-medium text-gray-700 dark:text-gray-300">{{ $obj['short'] }}</span>
+                        <span class="block max-w-[280px] truncate text-[11px] text-gray-400 dark:text-gray-500">
+                            {{ $firstAddr ?: '—' }}@if ($locations->count() > 1) <span class="text-blue-600 dark:text-blue-400">+{{ $locations->count() - 1 }} objek lain</span>@endif
+                        </span>
                     </td>
                     <td class="px-3 py-3 text-center">
                         <span class="inline-block px-2.5 py-1 rounded-full font-semibold whitespace-nowrap {{ $project->status_badge_classes }}"

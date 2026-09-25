@@ -43,14 +43,14 @@ class AuditLog extends Model
         'project.assignment_letter_barcode_deleted'   => ['Barcode Surat Tugas dihapus', 'gray'],
         'project.assignment_staff_added'              => ['Petugas ditambahkan', 'gray'],
         'project.assignment_staff_removed'            => ['Petugas dihapus', 'gray'],
-        'review.submitted'                            => ['Surveyor submit review nilai', 'indigo'],
+        'review.submitted'                            => ['Surveyor submit review nilai', 'blue'],
         'project.book_signed'                         => ['Buku ditandatangani', 'emerald'],
         'project.receipt_created'                     => ['Tanda Terima pengiriman dibuat', 'emerald'],
         'project.receipt_deleted'                     => ['Tanda Terima pengiriman dihapus', 'rose'],
-        'review.resume_released'                      => ['Draft Resume dirilis', 'indigo'],
+        'review.resume_released'                      => ['Draft Resume dirilis', 'blue'],
         'review.value_approved'                       => ['Draft Resume disetujui — SLA Laporan Final berjalan', 'emerald'],
         'review.resume_appealed'                      => ['Draft Resume banding', 'amber'],
-        'draft.submitted'                             => ['Surveyor: draft laporan sudah dibuat', 'indigo'],
+        'draft.submitted'                             => ['Surveyor: draft laporan sudah dibuat', 'blue'],
         'draft.confirmed'                             => ['Admin Produksi mengonfirmasi draft laporan', 'blue'],
         'draft.returned_by_admin'                     => ['Draft laporan dikembalikan ke Surveyor', 'rose'],
         'draft.reviewed'                              => ['Draft laporan telah direview', 'emerald'],
@@ -64,13 +64,28 @@ class AuditLog extends Model
         'project.final_report_number_set'             => ['Nomor Laporan Final diisi', 'emerald'],
     ];
 
+    /**
+     * Warna titik riwayat memakai bahasa warna yang sama dengan badge status
+     * (2026-09-25, feedback user): abu-abu = catatan administratif, biru =
+     * diteruskan ke pihak lain, kuning = perlu tindakan/banding, merah =
+     * dikembalikan/dihapus, hijau = disetujui/selesai. Legendanya tampil di
+     * atas daftar riwayat.
+     */
     public const TIMELINE_DOTS = [
-        'blue'    => 'bg-blue-500',
         'gray'    => 'bg-gray-400 dark:bg-gray-500',
-        'rose'    => 'bg-rose-500',
+        'blue'    => 'bg-blue-500',
         'amber'   => 'bg-amber-500',
         'emerald' => 'bg-emerald-500',
-        'indigo'  => 'bg-indigo-500',
+        'rose'    => 'bg-rose-500',
+    ];
+
+    /** Keterangan warna untuk legenda di bawah judul Riwayat Proyek. */
+    public const TIMELINE_LEGEND = [
+        'gray'    => 'Catatan',
+        'blue'    => 'Diteruskan',
+        'amber'   => 'Perlu tindakan',
+        'emerald' => 'Selesai/disetujui',
+        'rose'    => 'Dikembalikan',
     ];
 
     public function user()

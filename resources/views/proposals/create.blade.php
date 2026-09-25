@@ -495,6 +495,8 @@
     </form>
 </div>
 
+@include('proposals._form_errors')
+
 @include('proposals._form_actions', [
     'cancelUrl'     => route('dashboard'),
     'cancelForm'    => null,

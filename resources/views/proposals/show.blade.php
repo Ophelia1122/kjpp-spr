@@ -92,6 +92,8 @@
         </div>
     </x-page-header>
 
+    @include('proposals._stage_bar')
+
     {{-- ===================== NAVIGASI CEPAT (QUICK NAV) =====================
          Pill tab bar sticky (2026-09-14, feedback user — Opsi A dari 2
          alternatif yang diajukan). JS di bawah otomatis membuang pill yang
@@ -1306,7 +1308,18 @@
         {{-- ---------- RIWAYAT PROYEK (2026-09-14, feedback user) ----------
              Semua langkah alur proyek beserta tanggal, jam, pelaku, dan catatan. --}}
         <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Riwayat Proyek</h3>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Riwayat Proyek</h3>
+                {{-- Legenda warna (2026-09-25, feedback user): tanpa ini titik
+                     berwarna di kiri tidak bisa dibaca artinya. --}}
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    @foreach (\App\Models\AuditLog::TIMELINE_LEGEND as $nada => $arti)
+                        <span class="inline-flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
+                            <span class="h-2 w-2 rounded-full {{ \App\Models\AuditLog::TIMELINE_DOTS[$nada] }}"></span>{{ $arti }}
+                        </span>
+                    @endforeach
+                </div>
+            </div>
             @forelse ($activityLogs as $log)
                 <div class="flex gap-3">
                     <div class="flex flex-col items-center">
@@ -1670,4 +1683,6 @@
         document.getElementById('reviewRejectModal').classList.remove('flex');
     }
 </script>
+
+@include('proposals._collapse_cards')
 @endsection

@@ -1172,22 +1172,42 @@ class Project extends Model
      * supaya konsisten dipakai di halaman manapun (show, index, dsb),
      * tidak ditulis ulang di setiap Blade.
      */
-    public function getStatusBadgeClassesAttribute(): string
+    /**
+     * Satu bahasa warna untuk seluruh aplikasi (2026-09-25, feedback user):
+     *   abu-abu = netral/belum jalan · biru = sedang berjalan
+     *   kuning  = menunggu tindakan  · hijau = selesai · merah = batal/mundur
+     * Sebelumnya tiap status punya warnanya sendiri (indigo, sky, violet,
+     * teal), sehingga warna tidak lagi membawa arti.
+     */
+    public const BADGE_TONES = [
+        'gray'    => 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
+        'blue'    => 'bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+        'amber'   => 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
+        'emerald' => 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
+        'rose'    => 'bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800',
+    ];
+
+    /** Nada warna tiap status — dipakai badge, garis tahap, dan kartu Beranda. */
+    public function getStatusToneAttribute(): string
     {
         return match ($this->status) {
-            self::STATUS_DRAFT            => 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
-            self::STATUS_WAITING_APPROVAL => 'bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-            self::STATUS_DP_INVOICING     => 'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
-            // Indigo, selaras dengan badge tahapan di Beranda (2026-09-19, feedback user).
-            self::STATUS_IN_PROGRESS      => 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800',
-            self::STATUS_FINALISASI       => 'bg-sky-100 text-sky-700 border border-sky-300 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800',
-            self::STATUS_TANDA_TANGAN     => 'bg-violet-100 text-violet-700 border border-violet-300 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800',
-            self::STATUS_PENGIRIMAN       => 'bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800',
-            self::STATUS_SELESAI_BELUM_LUNAS => 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
-            self::STATUS_SELESAI          => 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
-            self::STATUS_BATAL           => 'bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800',
-            default                       => 'bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
+            self::STATUS_DRAFT               => 'gray',
+            self::STATUS_WAITING_APPROVAL    => 'amber',
+            self::STATUS_DP_INVOICING        => 'amber',
+            self::STATUS_IN_PROGRESS,
+            self::STATUS_FINALISASI,
+            self::STATUS_TANDA_TANGAN,
+            self::STATUS_PENGIRIMAN          => 'blue',
+            self::STATUS_SELESAI_BELUM_LUNAS => 'amber',
+            self::STATUS_SELESAI             => 'emerald',
+            self::STATUS_BATAL               => 'rose',
+            default                          => 'gray',
         };
+    }
+
+    public function getStatusBadgeClassesAttribute(): string
+    {
+        return self::BADGE_TONES[$this->status_tone];
     }
 
     /**
