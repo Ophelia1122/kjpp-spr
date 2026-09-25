@@ -231,7 +231,15 @@ class ProjectController extends Controller
         $actor = auth()->user();
         dispatch(fn () => \App\Services\WhatsAppNotifier::workflowStep($project->fresh(), $step, $actor, $note))->afterResponse();
 
-        return back()->with($isReturn ? 'warning' : ($stays ? 'info' : 'success'), $def['flash']);
+        $redirect = back()->with($isReturn ? 'warning' : ($stays ? 'info' : 'success'), $def['flash']);
+
+        // Proyek ditutup = satu-satunya momen konfeti (2026-09-25, permintaan
+        // user). Dipasang sebagai flash supaya hanya muncul sekali.
+        if ($step === 'mark_delivered') {
+            $redirect->with('konfetti', true);
+        }
+
+        return $redirect;
     }
 
     /** Halaman baca-saja seluruh data proyek (2026-09-23, feedback user). */

@@ -14,9 +14,9 @@
 <div class="{{ $tileClass }}">
 @endif
     <div class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">{{ $label }}</div>
-    <div class="mt-1 text-3xl font-bold tabular-nums {{ $valueTone }}">{{ $value }}</div>
+    <div class="mt-1 text-3xl font-bold tabular-nums {{ $valueTone }}" data-angka>{{ $value }}</div>
     @if (! empty($sub))
-        <div class="text-sm font-semibold text-gray-700 tabular-nums dark:text-gray-300">{{ $sub }}</div>
+        <div class="text-sm font-semibold text-gray-700 tabular-nums dark:text-gray-300" data-angka>{{ $sub }}</div>
     @endif
     <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ $hint }}</p>
 @if (! empty($href))

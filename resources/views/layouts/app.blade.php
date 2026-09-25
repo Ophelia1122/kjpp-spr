@@ -374,7 +374,7 @@
 
             <main class="flex-1 px-4 lg:px-8 py-6">
                 @if (session('success'))
-                    <div class="mb-4 rounded-md bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
+                    <div class="mb-4 rounded-md bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 text-sm px-4 py-3 flex items-start justify-between gap-3" data-toast="{{ session('undo') ? 12000 : 6000 }}">
                         <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>{{ session('success') }}</span>
                         <span class="flex shrink-0 items-center gap-3">
                             {{-- Aksi yang bisa dibatalkan memasang tombol "Urungkan"
@@ -395,21 +395,21 @@
                 @endif
 
                 @if (session('error'))
-                    <div class="mb-4 rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
+                    <div class="mb-4 rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 text-sm px-4 py-3 flex items-start justify-between gap-3" data-toast="10000">
                         <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>{{ session('error') }}</span>
                         <button type="button" onclick="this.closest('div').remove()" class="text-red-500 hover:text-red-700 dark:hover:text-red-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if (session('warning'))
-                    <div class="mb-4 rounded-md bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
+                    <div class="mb-4 rounded-md bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 text-sm px-4 py-3 flex items-start justify-between gap-3" data-toast="10000">
                         <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>{{ session('warning') }}</span>
                         <button type="button" onclick="this.closest('div').remove()" class="text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-300 leading-none">&times;</button>
                     </div>
                 @endif
 
                 @if (session('info'))
-                    <div class="mb-4 rounded-md bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
+                    <div class="mb-4 rounded-md bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-sm px-4 py-3 flex items-start justify-between gap-3" data-toast="7000">
                         <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>{{ session('info') }}</span>
                         <button type="button" onclick="this.closest('div').remove()" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 leading-none">&times;</button>
                     </div>
@@ -780,5 +780,7 @@
         @include('partials.quick-palette')
     @endauth
     @stack('scripts')
+
+    @include('partials.ui-motion')
 </body>
 </html>

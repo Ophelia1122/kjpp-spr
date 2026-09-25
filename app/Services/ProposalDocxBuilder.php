@@ -1144,7 +1144,12 @@ class ProposalDocxBuilder
 
     private function sectionBiaya(): void
     {
-        $this->sectionTitle('Biaya Jasa Penilaian');
+        // Bab 24 (Biaya Jasa Penilaian) SELALU mulai di halaman baru
+        // (2026-09-25, permintaan user): bab 24, bab 25 dan blok tanda tangan
+        // harus berada pada satu halaman yang sama dan tidak boleh terpisah.
+        // Dengan memulai halaman baru, ketiganya mendapat satu halaman penuh;
+        // bab 25 dan blok tanda tangan sendiri sudah diikat dengan keepNext.
+        $this->sectionTitle('Biaya Jasa Penilaian', ['pageBreakBefore' => true]);
         $p      = $this->project;
         $total  = round($p->total_fee);          // angka final (gross), rupiah bulat
         $pct    = $this->ppnPct();
@@ -1172,7 +1177,13 @@ class ProposalDocxBuilder
         // Rincian Biaya (opsional) — Fee / Transport / PPN / Total.
         // Satu baris tabel (cantSplit) berisi 3 cell agar tak terbelah halaman.
         if ($p->fee_breakdown) {
-            $this->s->addText($this->cl['biaya_rincian_label'], $this->fBold, ['spaceBefore' => 80, 'spaceAfter' => 40, 'keepNext' => true] + $ind);
+            // Tabel Rincian Biaya memakai font lebih kecil (2026-09-25,
+            // permintaan user) supaya bab 24 + bab 25 + blok tanda tangan
+            // muat pada satu halaman tanpa mengecilkan barcode/stempel.
+            $fRinci     = ['name' => $this->fName, 'size' => $this->fSize - self::RINCIAN_FONT_DELTA];
+            $fRinciBold = $fRinci + ['bold' => true];
+
+            $this->s->addText($this->cl['biaya_rincian_label'], $fRinciBold, ['spaceBefore' => 80, 'spaceAfter' => 40, 'keepNext' => true] + $ind);
             $rows = [['Fee', $rp($p->fee_professional), false]];
             // Baris Transport hanya kalau TA ikut ditagih — bila ditanggung
             // klien (reimburse) nilainya memang tidak masuk total.
@@ -1188,12 +1199,11 @@ class ProposalDocxBuilder
             $cC = $rin->addCell($colW[1]);
             $cV = $rin->addCell($colW[2]);
             foreach ($rows as [$k, $v, $bold]) {
-                $f = $bold ? $this->fBold : $this->fBody;
+                $f = $bold ? $fRinciBold : $fRinci;
                 $cK->addText($k, $f, ['spaceAfter' => 0]);
-                $cC->addText(':', $this->fBody, ['spaceAfter' => 0]);
+                $cC->addText(':', $fRinci, ['spaceAfter' => 0]);
                 $cV->addText($v, $f, ['spaceAfter' => 0]);
             }
-            $this->s->addTextBreak(1);
         }
 
         // Termin pembayaran rata kiri.
@@ -1202,7 +1212,10 @@ class ProposalDocxBuilder
         // di dasar halaman, dan seluruh item terminnya ikut pindah bersama
         // (2026-09-24, feedback user). Bloknya pendek (2-4 baris), jadi ruang
         // kosong yang mungkin tersisa paling banyak beberapa baris.
-        $this->s->addText($this->cl['termin_label'], $this->fBold, ['alignment' => Jc::START, 'spaceAfter' => 20, 'keepNext' => true] + $ind);
+        // spaceBefore menggantikan paragraf kosong di atasnya (2026-09-25,
+        // permintaan user): jaraknya tetap terlihat, tapi tidak memakan
+        // tinggi satu baris penuh.
+        $this->s->addText($this->cl['termin_label'], $this->fBold, ['alignment' => Jc::START, 'spaceBefore' => 120, 'spaceAfter' => 20, 'keepNext' => true] + $ind);
         $this->listJustClosed = false;
         // Termin mengikuti persentase proposal (2026-09-19, feedback user):
         // DP di Awal default 50/50, Bayar Nanti default 100%, dan staf boleh
@@ -1260,9 +1273,9 @@ class ProposalDocxBuilder
         $rc = $rt->addCell($colW[1]);
         $this->kvTable($rc, [['NPWP No.', $this->cfg['npwp']]], 2.2, 3.6, true);
 
-        $this->s->addTextBreak(1);
         // Kalimat pembatalan tebal + miring (contoh proposal resmi 02309).
-        $this->para($this->cl['biaya_pembatalan'], ['bold' => true, 'italic' => true] + $this->fBody);
+        // Jaraknya lewat spaceBefore, bukan paragraf kosong (2026-09-25).
+        $this->para($this->cl['biaya_pembatalan'], ['bold' => true, 'italic' => true] + $this->fBody, ['spaceBefore' => 120]);
     }
 
     /** Persentase PPN diformat "11" / "11,5" (tanpa nol berlebih). */
@@ -1279,7 +1292,10 @@ class ProposalDocxBuilder
         // minimal bab 25 ikut di halaman yang sama (bab 24 ikut kalau muat).
         $this->bodyOr('pernyataan_pemberi_tugas', function () {
             $this->para($this->cl['pernyataan_pemberi_tugas'], null, ['keepNext' => true]);
-            $this->para($this->cl['penutup_spk'], null, ['keepNext' => true]);
+            // Paragraf penutup dilebarkan: tanpa indent isi bab, jadi mulai
+            // sejajar nomor bab dan lebih lebar dari paragraf di atasnya
+            // (2026-09-25, permintaan user).
+            $this->para($this->cl['penutup_spk'], null, ['keepNext' => true, 'indentation' => ['left' => 0]]);
         }, null, ['keepNext' => true]);
     }
 
@@ -1287,6 +1303,9 @@ class ProposalDocxBuilder
     private array $tempFiles = [];
 
     // Sisi barcode di dokumen (cm), sama dengan Surat Tugas.
+    /** Selisih ukuran font tabel Rincian Biaya terhadap font isi (pt). */
+    private const RINCIAN_FONT_DELTA = 3;
+
     private const BARCODE_CM = 2.65;
 
     /**
@@ -1395,8 +1414,11 @@ class ProposalDocxBuilder
     private function sectionTandaTangan(): void
     {
         // Paragraf jeda ber-keepNext = jembatan supaya blok tanda tangan
-        // (tabel di bawah) menempel dengan Bab 25.
-        $this->s->addText('', $this->fBody, ['spaceBefore' => 480, 'spaceAfter' => 0, 'keepNext' => true]);
+        // (tabel di bawah) menempel dengan Bab 25. Jaraknya dipersempit dari
+        // 480 ke 200 twip (2026-09-25, permintaan user): bab 24, bab 25 dan
+        // blok tanda tangan harus muat pada SATU halaman, termasuk proposal
+        // dengan rincian biaya + 3 termin + 2 rekening bank.
+        $this->s->addText('', $this->fBody, ['spaceBefore' => 200, 'spaceAfter' => 0, 'keepNext' => true]);
 
         $sig      = $this->signatory();
         $approver = $this->project->effective_approver_name;
@@ -1419,7 +1441,11 @@ class ProposalDocxBuilder
         // tanda tangan basah seperti semula (feedback user 2026-09-21).
         $img = $this->signatureImage();
         if (! $img) {
-            $l->addTextBreak(7);
+            // Ruang tanda tangan basah disamakan tingginya dengan barcode/
+            // stempel (2026-09-25, permintaan user): 6 baris kosong ~ 78pt,
+            // sepadan dengan gambar 2,65 cm ~ 75pt. Sebelumnya 7 baris, yang
+            // membuat proposal tanpa barcode 16pt lebih tinggi.
+            $l->addTextBreak(6);
         } else {
             [$file, $wCm, $hCm] = $img;
             $l->addImage($file, [
@@ -1858,13 +1884,13 @@ class ProposalDocxBuilder
     // ---------- helpers ----------
 
     /** Emit heading bernomor (font lebih besar dari isi), kembalikan null. */
-    private function sectionTitle(string $title): ?array
+    private function sectionTitle(string $title, array $pExtra = []): ?array
     {
         $this->closeList();
         $this->listJustClosed = false;
         $this->secNo++;
         $hFont = ['bold' => true, 'size' => self::HEADING_SIZE, 'name' => $this->fName];
-        $hPara = ['spaceBefore' => 220, 'spaceAfter' => 70, 'keepNext' => true, 'keepLines' => true];
+        $hPara = $pExtra + ['spaceBefore' => 220, 'spaceAfter' => 70, 'keepNext' => true, 'keepLines' => true];
 
         // Istilah Inggris pada judul (mis. "(Exposure Time)") tetap dimiringkan.
         // Judul huruf besar + garis bawah (2026-09-22, feedback user); nomor

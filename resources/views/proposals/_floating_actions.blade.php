@@ -68,16 +68,24 @@
         ];
     }
 
-    // Tahap Pengiriman Buku tidak punya tombol alur: proyek ditutup dengan
-    // membuat Tanda Terima. Tanpa penunjuk, bilah terlihat kosong dan staf
-    // bingung harus ke mana (2026-09-25, feedback user).
+    // Tahap Pengiriman Buku: proyek ditutup dengan tombol "Laporan Siap
+    // Dikirim", dan tombol itu baru boleh dipakai setelah Tanda Terima dibuat.
+    // Pintasan ini hanya jadi tombol UTAMA selama Tanda Terima BELUM ada
+    // (2026-09-25, feedback user) — begitu Tanda Terima dibuat, slot utama
+    // diserahkan ke "Laporan Siap Dikirim" supaya tidak tertimbun di menu
+    // "Aksi lain".
+    $tandaTerimaAda = $project->deliveryReceipts->isNotEmpty();
+
     if ($project->status === \App\Models\Project::STATUS_PENGIRIMAN
         && \App\Models\Project::userCanActAs(auth()->user(), 'admin_or_keuangan')) {
         $fabActions[] = [
             'type' => 'link', 'icon' => 'doc-check', 'tone' => 'emerald',
-            'label' => 'Tanda Terima', 'tip' => 'Buat Tanda Terima Pengiriman Buku untuk menutup proyek',
+            'label' => 'Tanda Terima',
+            'tip' => $tandaTerimaAda
+                ? 'Lihat atau tambah Tanda Terima Pengiriman Buku'
+                : 'Buat Tanda Terima Pengiriman Buku untuk menutup proyek',
             'url' => route('proposals.show', $project) . '#section-tanda-terima',
-            'primary' => true,
+            'primary' => ! $tandaTerimaAda,
         ];
     }
 
@@ -137,6 +145,9 @@
             $hint = $step['hint'] ?? null;
             if ($stepKey === 'mark_printed' && ! $project->final_report_number) {
                 $hint = 'Nomor Laporan Final belum diisi — isi dulu di kartu "Nomor Laporan Final".';
+            }
+            if ($stepKey === 'mark_delivered' && ! $tandaTerimaAda) {
+                $hint = 'Tanda Terima Pengiriman Buku belum dibuat — buat dulu di kartu "Tanda Terima Pengiriman Buku".';
             }
 
             $fabActions[] = [
