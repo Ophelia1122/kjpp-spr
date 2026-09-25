@@ -490,6 +490,42 @@
 
                 <p class="text-sm text-gray-600 dark:text-gray-400" id="fee_total_preview"></p>
 
+                {{-- Alasan perubahan biaya (2026-09-25, feedback user): klien
+                     sering menawar setelah proposal dikirim, dan hasil negonya
+                     harus ikut tercatat di Riwayat Proyek. Kotak ini hanya
+                     muncul saat angkanya benar-benar berubah. --}}
+                <div id="feeReasonWrap" class="@if (! $errors->has('fee_change_reason')) hidden @endif rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+                    <label for="fee_change_reason" class="block text-sm font-medium text-amber-800 dark:text-amber-300">
+                        Alasan perubahan biaya <span class="font-normal">(wajib)</span>
+                    </label>
+                    <input type="text" name="fee_change_reason" id="fee_change_reason"
+                           value="{{ old('fee_change_reason') }}" maxlength="500"
+                           placeholder="Contoh: hasil nego dengan klien via telepon 25 Sep 2026"
+                           class="mt-1 w-full rounded-md border-amber-300 text-sm shadow-sm dark:border-amber-800 dark:bg-gray-900">
+                    <p class="mt-1 text-xs text-amber-700 dark:text-amber-400">Tercatat di Riwayat Proyek beserta nilai lama dan barunya.</p>
+                    @error('fee_change_reason') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+
+                <script>
+                (function () {
+                    const kotak = document.getElementById('feeReasonWrap');
+                    const fee   = document.getElementById('service_fee_raw');
+                    const trans = document.getElementById('transport_cost_raw');
+                    const awalFee   = fee ? fee.value : '';
+                    const awalTrans = trans ? trans.value : '';
+
+                    function periksa() {
+                        const berubah = (fee && fee.value !== awalFee) || (trans && trans.value !== awalTrans);
+                        kotak.classList.toggle('hidden', ! berubah);
+                    }
+
+                    ['input', 'change'].forEach(function (ev) {
+                        document.getElementById('service_fee_display')?.addEventListener(ev, () => setTimeout(periksa, 0));
+                        document.getElementById('transport_cost_display')?.addEventListener(ev, () => setTimeout(periksa, 0));
+                    });
+                })();
+                </script>
+
                 {{-- Skema pembayaran hanya bisa diubah selagi Draft/Menunggu
                      Persetujuan — begitu proyek mulai diproses, dikunci supaya
                      tidak ada perubahan diam-diam yang bikin data tidak

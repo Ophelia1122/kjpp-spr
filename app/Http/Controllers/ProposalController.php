@@ -141,6 +141,37 @@ class ProposalController extends Controller
         return redirect()->route('dashboard')->with('info', 'Salinan proposal dibatalkan dan dihapus.');
     }
 
+    /**
+     * Catat perubahan biaya jasa / transport sebagai satu baris Riwayat
+     * Proyek beserta alasannya (2026-09-25, feedback user). Dipanggil setelah
+     * proyek tersimpan; $lama berisi nilai sebelum disimpan.
+     */
+    private function catatNegoBiaya(Request $request, Project $project, array $lama): void
+    {
+        $project->refresh();
+
+        $rp = fn ($n) => 'Rp ' . number_format((float) $n, 0, ',', '.');
+
+        $ubah = [];
+        if (round($lama['fee'], 2) !== round((float) $project->service_fee, 2)) {
+            $ubah[] = 'Biaya jasa ' . $rp($lama['fee']) . ' menjadi ' . $rp($project->service_fee);
+        }
+        if (round($lama['transport'], 2) !== round((float) $project->transport_cost, 2)) {
+            $ubah[] = 'Transport ' . $rp($lama['transport']) . ' menjadi ' . $rp($project->transport_cost);
+        }
+
+        if (! $ubah) {
+            return;
+        }
+
+        \App\Helpers\AuditLogger::record(
+            'proposal.fee_changed',
+            implode('. ', $ubah) . ' pada proposal ' . $project->proposal_number,
+            $project,
+            trim((string) $request->input('fee_change_reason'))
+        );
+    }
+
     /** Nomor sementara untuk salinan; wajib diganti staf sebelum dipakai. */
     private function nomorSalinan(string $asal): string
     {
@@ -173,6 +204,10 @@ class ProposalController extends Controller
             'asset_type'               => $this->summarizeAssetTypes($validated['objects']),
             'asset_address'            => $this->summarizeAssetAddress($validated['objects']),
             'service_fee'              => $validated['service_fee'],
+            // Nilai penawaran AWAL disimpan sekali saat proposal dibuat, lalu
+            // tidak pernah ikut berubah walau dinego (2026-09-25).
+            'initial_service_fee'      => $validated['service_fee'],
+            'initial_transport_cost'   => $this->billableTransportInput($request, $validated),
             'fee_ppn_included'         => $request->boolean('fee_ppn_included'),
             'fee_breakdown'            => $request->boolean('fee_breakdown'),
             'transport_reimbursed'     => $request->boolean('transport_reimbursed'),
@@ -282,6 +317,27 @@ class ProposalController extends Controller
             'is_public_company'        => $request->boolean('is_public_company'),
         ];
 
+        $biayaLama = [
+            'fee'       => (float) $project->service_fee,
+            'transport' => (float) $project->transport_cost,
+        ];
+
+        // Alasan WAJIB bila biaya jasa atau transport berubah (2026-09-25,
+        // feedback user) — supaya hasil nego dengan klien selalu ada
+        // keterangannya di Riwayat Proyek.
+        $biayaBerubah = round($biayaLama['fee'], 2) !== round((float) ($validated['service_fee'] ?? 0), 2)
+            || round($biayaLama['transport'], 2) !== round((float) ($this->billableTransportInput($request, $validated) ?? 0), 2);
+
+        if ($biayaBerubah) {
+            $request->validate(
+                ['fee_change_reason' => 'required|string|min:5|max:500'],
+                [
+                    'fee_change_reason.required' => 'Biaya berubah — tulis alasannya (mis. hasil nego dengan klien).',
+                    'fee_change_reason.min'      => 'Alasan terlalu pendek, tulis minimal 5 karakter.',
+                ]
+            );
+        }
+
         // Skema pembayaran hanya boleh diubah selagi Draft/Menunggu
         // Persetujuan (field-nya juga cuma dirender editable di blade
         // pada status itu) — di luar itu nilai lama dipertahankan supaya
@@ -299,6 +355,11 @@ class ProposalController extends Controller
         $project->update($updateData + $this->signatureData($request, $project));
 
         $project->intendedUsers()->sync($validated['intended_user_ids']);
+
+        // Nego biaya (2026-09-25, feedback user): kalau biaya jasa atau
+        // transport berubah, alasannya wajib diisi dan dicatat di Riwayat
+        // Proyek. Nilai penawaran awal tidak pernah ikut berubah.
+        $this->catatNegoBiaya($request, $project, $biayaLama);
 
         // Cara paling aman untuk sinkronisasi objek saat edit: hapus semua
         // baris lama, buat ulang dari input form. Karena ini masih status

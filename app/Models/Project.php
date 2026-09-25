@@ -303,9 +303,11 @@ class Project extends Model
         'asset_type',
         'asset_address',
         'service_fee',
+        'initial_service_fee',
         'fee_ppn_included',
         'fee_breakdown',
         'transport_cost',
+        'initial_transport_cost',
         'transport_reimbursed',
         'client_name',
         'client_id',
@@ -412,6 +414,23 @@ class Project extends Model
             ->filter();
 
         return $dates->isEmpty() ? null : $dates->max();
+    }
+
+    /**
+     * Biaya jasa pernah dinego? Dibandingkan dengan nilai penawaran awal
+     * (2026-09-25, feedback user). Proyek lama punya nilai awal = nilai
+     * sekarang, jadi otomatis false.
+     */
+    public function feeDinego(): bool
+    {
+        return $this->initial_service_fee !== null
+            && round((float) $this->initial_service_fee, 2) !== round((float) $this->service_fee, 2);
+    }
+
+    /** Selisih penawaran awal dikurangi kesepakatan; positif = turun harga. */
+    public function getFeeNegoSelisihAttribute(): float
+    {
+        return round((float) $this->initial_service_fee - (float) $this->service_fee, 2);
     }
 
     /** Pekerjaan sedang berjalan (In-Progress s/d Pengiriman Buku). */

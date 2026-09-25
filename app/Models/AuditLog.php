@@ -28,6 +28,9 @@ class AuditLog extends Model
         'proposal.created'                            => ['Proposal dibuat', 'blue'],
         'proposal.sent_to_client'                     => ['Proposal dikirim ke klien', 'blue'],
         'proposal.updated'                            => ['Proposal diubah', 'gray'],
+        // Nego biaya (2026-09-25, feedback user): selalu tampil di Riwayat
+        // Proyek beserta alasannya.
+        'proposal.fee_changed'                        => ['Biaya jasa dinegosiasi', 'amber'],
         'proposal.cancelled'                          => ['Proyek dibatalkan', 'rose'],
         'proposal.reactivated'                        => ['Proyek diaktifkan kembali', 'blue'],
         'proposal.tax_invoice_set'                    => ['Faktur pajak diisi', 'gray'],

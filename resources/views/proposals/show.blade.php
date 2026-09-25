@@ -320,6 +320,18 @@
             <div>
                 <dt class="text-gray-500 dark:text-gray-400">Biaya Jasa</dt>
                 <dd class="font-medium text-gray-900 dark:text-gray-100">Rp {{ number_format($project->total_fee, 0, ',', '.') }}</dd>
+                @if ($project->feeDinego())
+                    {{-- Jejak nego (2026-09-25, feedback user): selisih terhadap
+                         penawaran awal terlihat tanpa membuka Riwayat. --}}
+                    <dd class="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+                        Penawaran awal Rp {{ number_format($project->initial_service_fee, 0, ',', '.') }}
+                        &middot; {{ $project->fee_nego_selisih > 0 ? 'turun' : 'naik' }}
+                        Rp {{ number_format(abs($project->fee_nego_selisih), 0, ',', '.') }}
+                        @if ((float) $project->initial_service_fee > 0)
+                            ({{ number_format(abs($project->fee_nego_selisih) / (float) $project->initial_service_fee * 100, 1, ',', '.') }}%)
+                        @endif
+                    </dd>
+                @endif
                 <dd class="text-gray-500 text-xs mt-0.5 dark:text-gray-400">
                     Fee Rp {{ number_format($project->fee_professional, 0, ',', '.') }}
                     + PPN Rp {{ number_format($project->fee_ppn_amount, 0, ',', '.') }}
