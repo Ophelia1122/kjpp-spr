@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Helpers\Terbilang;
 use App\Models\Project;
+use App\Models\ProposalSectionDefault;
 use PhpOffice\PhpWord\ComplexType\TblWidth as TblWidthComplexType;
 use PhpOffice\PhpWord\Element\Footer;
 use PhpOffice\PhpWord\Element\Header;
@@ -47,6 +48,16 @@ class ProposalDocxBuilder
 
     /** [section_key => body] override manual teks bab (proposal_section_texts). */
     private array $overrides = [];
+
+    /**
+     * [section_key => body] teks baku per TUJUAN PENILAIAN
+     * (proposal_section_defaults, diatur di Pengaturan Sistem > Teks Baku
+     * Proposal). Dipakai kalau proyek ini tidak punya override sendiri.
+     */
+    private array $defaults = [];
+
+    /** true = builder dipakai untuk pratinjau teks config, abaikan $defaults. */
+    private bool $abaikanDefault = false;
 
     // true tepat setelah sebuah heading di-emit: paragraf isi PERTAMA
     // sesudahnya dibuat "keepLines" supaya heading tidak menggantung
@@ -235,6 +246,7 @@ class ProposalDocxBuilder
         $this->cl  = config('proposal_clauses');
         $this->cfg = config('kjpp');
         $this->overrides = $this->project->sectionTexts->pluck('body', 'section_key')->all();
+        $this->defaults  = ProposalSectionDefault::untukTujuan($this->project->proposal_purpose);
 
         // Delimiter '/' ikut di-escape (istilah bisa memuat "/", mis. "ketentuan/biaya").
         $it = array_map(fn ($x) => preg_quote($x, '/'), $this->cl['text_style']['italic'] ?? []);
@@ -1439,7 +1451,51 @@ class ProposalDocxBuilder
 
     private function hasOverride(string $key): bool
     {
-        return isset($this->overrides[$key]) && trim($this->overrides[$key]) !== '';
+        return $this->teksManual($key) !== null;
+    }
+
+    /**
+     * Teks manual sebuah bab, atau null kalau tidak ada. Urutannya:
+     * override milik proyek ini > teks baku per tujuan penilaian.
+     * Placeholder (:klien, :nomor_proposal, ...) diganti nilai proyek supaya
+     * teks baku yang ditulis Administrator tetap menyebut klien yang benar.
+     */
+    private function teksManual(string $key): ?string
+    {
+        $teks = $this->overrides[$key] ?? ($this->abaikanDefault ? null : ($this->defaults[$key] ?? null));
+
+        if ($teks === null || trim($teks) === '') {
+            return null;
+        }
+
+        return strtr($teks, $this->placeholderProyek());
+    }
+
+    /**
+     * Placeholder yang boleh dipakai di dalam teks baku/override. Sengaja
+     * sedikit dan memakai data yang selalu ada di proposal.
+     */
+    public const PLACEHOLDER = [
+        ':klien'            => 'Nama Pemberi Tugas',
+        ':pengguna_laporan' => 'Nama seluruh Pengguna Laporan',
+        ':nomor_proposal'   => 'Nomor proposal',
+        ':tanggal_proposal' => 'Tanggal proposal',
+        ':tujuan'           => 'Tujuan penilaian',
+        ':dasar_nilai'      => 'Dasar nilai (Nilai Pasar/Nilai Wajar/...)',
+    ];
+
+    private function placeholderProyek(): array
+    {
+        return [
+            ':klien'            => (string) optional($this->project->instructingClient)->client_name,
+            ':pengguna_laporan' => $this->joinParties(
+                $this->project->intendedUsers->map(fn ($u) => (string) $u->client_name)->all()
+            ),
+            ':nomor_proposal'   => (string) $this->project->proposal_number,
+            ':tanggal_proposal' => $this->project->effective_proposal_date?->translatedFormat('d F Y') ?? '',
+            ':tujuan'           => (string) $this->project->proposal_purpose,
+            ':dasar_nilai'      => (string) $this->project->value_basis_label,
+        ];
     }
 
     /**
@@ -1472,7 +1528,7 @@ class ProposalDocxBuilder
         $this->closeList();
         $this->listJustClosed = false;
 
-        $text   = str_replace(["\r\n", "\r"], "\n", trim($this->overrides[$key]));
+        $text   = str_replace(["\r\n", "\r"], "\n", trim((string) $this->teksManual($key)));
         $blocks = preg_split('/\n{2,}/', $text) ?: [$text];
 
         $first    = true;
@@ -1533,21 +1589,117 @@ class ProposalDocxBuilder
                 continue;
             }
 
-            $baku = $meta['editable'] ? $this->bakuText($key) : '';
-            $ov   = $this->hasOverride($key) ? $this->overrides[$key] : null;
+            // "Baku" bagi sebuah proyek = teks baku per tujuan penilaian
+            // (Pengaturan Sistem) kalau ada, kalau tidak baru teks config.
+            $default = trim((string) ($this->defaults[$key] ?? '')) !== ''
+                ? strtr($this->defaults[$key], $this->placeholderProyek())
+                : null;
+
+            $baku = $meta['editable'] ? ($default ?? $this->bakuText($key)) : '';
+            $ov   = trim((string) ($this->overrides[$key] ?? '')) !== '' ? $this->overrides[$key] : null;
 
             $out[] = [
-                'key'        => $key,
-                'title'      => $meta['title'],
-                'editable'   => $meta['editable'],
-                'note'       => $meta['note'],
-                'overridden' => $ov !== null,
-                'baku'       => $baku,
-                'text'       => $ov ?? $baku,
+                'key'          => $key,
+                'title'        => $meta['title'],
+                'editable'     => $meta['editable'],
+                'note'         => $meta['note'],
+                'overridden'   => $ov !== null,
+                'dari_default' => $default !== null,
+                'baku'         => $baku,
+                'text'         => $ov ?? $baku,
             ];
         }
 
         return $out;
+    }
+
+    /**
+     * Daftar bab untuk editor TEKS BAKU PER TUJUAN (Pengaturan Sistem).
+     * Memakai proyek contoh di memori, jadi tidak menyentuh data asli dan
+     * teks "baku" yang ditampilkan murni dari config/proposal_clauses.php.
+     *
+     * @param  string  $purpose  Tujuan penilaian, '' = berlaku semua tujuan.
+     * @param  array   $tersimpan  [section_key => body] yang sudah disimpan.
+     */
+    public static function sectionsForDefaultEditor(string $purpose, array $tersimpan = []): array
+    {
+        $builder = new self(self::proyekContoh($purpose));
+        $builder->abaikanDefault = true;
+
+        $out = [];
+
+        foreach ($builder->sectionsForEditor() as $bab) {
+            $simpan = trim((string) ($tersimpan[$bab['key']] ?? '')) !== '' ? $tersimpan[$bab['key']] : null;
+
+            $out[] = array_merge($bab, [
+                'overridden'   => $simpan !== null,
+                'dari_default' => false,
+                'text'         => $simpan ?? $bab['baku'],
+            ]);
+        }
+
+        return $out;
+    }
+
+    /**
+     * Proyek contoh (tidak disimpan ke database) untuk merender teks baku
+     * sebuah tujuan penilaian. Semua relasi di-set manual supaya builder
+     * tidak melakukan query apa pun untuk proyek yang belum ada.
+     */
+    private static function proyekContoh(string $purpose): Project
+    {
+        $klien = new \App\Models\Client([
+            'client_name' => 'PT Contoh Pemberi Tugas',
+            'client_type' => 'Korporat',
+            'address'     => 'Jl. Contoh No. 1, Bandung',
+        ]);
+
+        $proyek = new Project([
+            'proposal_number'  => '000/SPR-PROP/X/2026',
+            'proposal_date'    => now()->toDateString(),
+            'proposal_purpose' => $purpose !== '' ? $purpose : Project::PURPOSE_JUAL_BELI,
+            'report_style'     => Project::REPORT_LONG,
+            'sla_draft_days'   => 5,
+            'sla_final_days'   => 7,
+            'service_fee'      => 10_000_000,
+            'fee_ppn_included' => true,
+            'payment_scheme'   => Project::PAYMENT_SCHEME_DP,
+            'payment_terms'    => '50,50',
+            'asset_type'       => 'Tanah',
+            'asset_address'    => 'Jl. Objek Contoh No. 1',
+            'valuation_date'   => now()->toDateString(),
+        ]);
+
+        $objek = new \App\Models\ProjectValuationObject([
+            'asset_category' => 'Real Properti - Tanah dan Bangunan',
+            'location'       => 'Jl. Objek Contoh No. 1, Bandung',
+            'ownership_form' => 'SHM',
+            'owner_name'     => 'PT Contoh Pemberi Tugas',
+        ]);
+
+        $proyek->setRelation('instructingClient', $klien);
+        $proyek->setRelation('namedClient', null);
+        $proyek->setRelation('approverClient', null);
+        $proyek->setRelation('intendedUsers', collect([$klien]));
+        $proyek->setRelation('valuationObjects', collect([$objek]));
+        $proyek->setRelation('signedBy', null);
+        $proyek->setRelation('sectionTexts', collect());
+        $proyek->setRelation('bank', null);
+
+        return $proyek;
+    }
+
+    /**
+     * Key bab yang boleh diisi teks baku untuk sebuah tujuan penilaian.
+     * Bab bertanda 'only' hanya valid untuk tujuan itu; untuk pilihan
+     * "semua tujuan" ('') bab bertanda 'only' tidak ikut.
+     */
+    public static function defaultSectionKeys(string $purpose): array
+    {
+        return array_keys(array_filter(
+            self::SECTION_META,
+            fn ($m) => $m['editable'] && (! isset($m['only']) || $m['only'] === $purpose)
+        ));
     }
 
     /** Key bab yang boleh menerima override (untuk validasi controller). */

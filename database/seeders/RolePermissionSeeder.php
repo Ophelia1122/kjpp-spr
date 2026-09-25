@@ -42,6 +42,7 @@ class RolePermissionSeeder extends Seeder
         ['key' => 'users.manage',     'label' => 'Kelola Pengguna',                                    'group' => 'Pengaturan Sistem'],
         ['key' => 'banks.manage',     'label' => 'Kelola Master Rekening Bank',                         'group' => 'Pengaturan Sistem'],
         ['key' => 'audit.view',       'label' => 'Lihat Log Aktivitas (Audit Log)',                    'group' => 'Pengaturan Sistem'],
+        ['key' => 'proposal_defaults.manage', 'label' => 'Kelola Teks Baku Proposal per Tujuan Penilaian', 'group' => 'Pengaturan Sistem'],
     ];
 
     /**
@@ -66,6 +67,9 @@ class RolePermissionSeeder extends Seeder
             'invoices.view', 'invoices.manage', 'tax_invoice.manage', 'final_report.manage',
             'survey.view', 'assignment_letter.manage', 'clients.view',
             'reports.view', 'reports.export',
+            // Klausul proposal berubah sewaktu-waktu; General Admin boleh
+            // memperbaruinya sendiri (2026-09-25, permintaan user).
+            'proposal_defaults.manage',
         ],
         // Surveyor SENGAJA tanpa dashboard.overview — tidak melihat angka
         // nilai kontrak / pipeline keuangan. Beranda & Timeline tetap bisa.

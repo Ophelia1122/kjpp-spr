@@ -217,6 +217,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/audit-log/clear', [\App\Http\Controllers\AuditLogController::class, 'clear'])->name('audit.clear');
     });
 
+    // --- Pengaturan Sistem: Teks Baku Proposal per Tujuan Penilaian (2026-09-25) ---
+    // Administrator & General Admin: mengubah klausul proposal tanpa menyentuh kode.
+    Route::middleware('permission:proposal_defaults.manage')->group(function () {
+        Route::get('/settings/teks-proposal', [\App\Http\Controllers\ProposalDefaultsController::class, 'index'])->name('settings.proposalDefaults.index');
+        Route::put('/settings/teks-proposal/{key}', [\App\Http\Controllers\ProposalDefaultsController::class, 'update'])->name('settings.proposalDefaults.update');
+        Route::delete('/settings/teks-proposal/{key}', [\App\Http\Controllers\ProposalDefaultsController::class, 'reset'])->name('settings.proposalDefaults.reset');
+        Route::delete('/settings/teks-proposal', [\App\Http\Controllers\ProposalDefaultsController::class, 'resetAll'])->name('settings.proposalDefaults.resetAll');
+    });
+
     // --- Pengaturan Sistem: Master Rekening Bank (izin 'banks.manage', default hanya Administrator) ---
     Route::middleware('permission:banks.manage')->group(function () {
         Route::get('/banks', [\App\Http\Controllers\BankController::class, 'index'])->name('banks.index');

@@ -73,6 +73,12 @@
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $section['note'] }}</p>
                 @endif
 
+                @if ($section['dari_default'])
+                    <p class="mt-1 text-xs text-blue-700 dark:text-blue-400">
+                        Teks bakunya diambil dari Pengaturan Sistem &rsaquo; Teks Baku Proposal untuk tujuan "{{ $project->proposal_purpose }}".
+                    </p>
+                @endif
+
                 @if (! $section['editable'])
                     <p class="mt-3 text-sm text-gray-400 italic dark:text-gray-500">Bab ini dibuat otomatis dari data proyek — tidak ada teks untuk diedit.</p>
                 @else
