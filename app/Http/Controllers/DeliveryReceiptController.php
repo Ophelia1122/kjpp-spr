@@ -70,15 +70,9 @@ class DeliveryReceiptController extends Controller
                     'created_by_user_id'  => auth()->id(),
                 ]);
 
-                // Tanda terima pertama = buku sudah dikirim.
-                if ($project->status === Project::STATUS_PENGIRIMAN) {
-                    $project->update([
-                        'review_status' => Project::STAGE_DELIVERED,
-                        'delivered_at'  => now(),
-                        'status'        => $project->finalStatusAfterDelivery(),
-                    ]);
-                }
-
+                // Proyek TIDAK ditutup di sini (2026-09-25, feedback user):
+                // Tanda Terima cuma dokumennya. Penutupan lewat tombol
+                // "Laporan Siap Dikirim" di bilah aksi.
                 return $receipt;
             });
         });
@@ -89,7 +83,8 @@ class DeliveryReceiptController extends Controller
             $project
         );
 
-        return back()->with('success', "Tanda Terima {$receipt->number} dibuat. Status proyek: {$project->fresh()->status}.");
+        return back()->withFragment('section-tanda-terima')
+            ->with('success', "Tanda Terima {$receipt->number} dibuat. Tekan \"Laporan Siap Dikirim\" bila dokumen sudah siap diantar.");
     }
 
     public function destroy(Project $project, DeliveryReceipt $receipt)

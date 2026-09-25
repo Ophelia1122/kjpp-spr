@@ -54,7 +54,7 @@
     (function () {
         const daftar = document.getElementById('staffList');
         if (! daftar || daftar.dataset.siap) return;
-        daftar.dataset.siap = '1';
+        daftar.dataset.siap = '1';   // elemen baru sesudah render ulang AJAX belum bertanda
 
         let diseret = null;
 
@@ -63,6 +63,13 @@
             if (! diseret) return;
             diseret.style.opacity = '0.4';
             e.dataTransfer.effectAllowed = 'move';
+            // Tanpa setData, sebagian browser menolak drop dan kursornya jadi
+            // tanda silang (2026-09-25, laporan user).
+            try { e.dataTransfer.setData('text/plain', diseret.dataset.id || ''); } catch (err) {}
+        });
+
+        daftar.addEventListener('drop', function (e) {
+            if (diseret) e.preventDefault();
         });
 
         daftar.addEventListener('dragend', function () {
@@ -73,9 +80,11 @@
         });
 
         daftar.addEventListener('dragover', function (e) {
+            if (! diseret) return;
             e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';         // kursor "boleh drop"
             const target = e.target.closest('.staff-row');
-            if (! target || ! diseret || target === diseret) return;
+            if (! target || target === diseret) return;
 
             const kotak = target.getBoundingClientRect();
             const setelah = (e.clientY - kotak.top) > kotak.height / 2;

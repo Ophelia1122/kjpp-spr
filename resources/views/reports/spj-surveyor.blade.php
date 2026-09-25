@@ -45,6 +45,15 @@
              sebelum dipakai di seluruh aplikasi. --}}
         <x-btn>Tampilkan</x-btn>
         <x-btn variant="outline" :href="route('spj.index')">Bulan ini</x-btn>
+        {{-- Unduh mengikuti filter yang sedang aktif (2026-09-25, permintaan user). --}}
+        <a href="{{ route('spj.export', request()->only(['from', 'to', 'appraiser'])) }}"
+           title="Unduh Excel sesuai filter" aria-label="Unduh Excel sesuai filter"
+           class="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
+            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+            </svg>
+            Export Excel
+        </a>
     </form>
 
     @forelse ($rows as $row)

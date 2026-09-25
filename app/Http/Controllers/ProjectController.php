@@ -183,6 +183,12 @@ class ProjectController extends Controller
             ['note.required' => $stays ? 'Catatan banding wajib diisi.' : 'Alasan pengembalian wajib diisi.']
         )['note'] ?? null;
 
+        // Laporan siap dikirim hanya masuk akal bila Tanda Terimanya sudah ada.
+        if ($step === 'mark_delivered' && $project->deliveryReceipts()->count() === 0) {
+            return back()->withFragment('section-tanda-terima')
+                ->with('error', 'Buat Tanda Terima Pengiriman Buku terlebih dahulu sebelum menandai laporan siap dikirim.');
+        }
+
         if ($step === 'mark_printed' && ! $project->final_report_number) {
             return back()->with('error', 'Isi Nomor Laporan Final terlebih dahulu sebelum mengonfirmasi buku selesai dicetak.');
         }
@@ -213,6 +219,7 @@ class ProjectController extends Controller
             'review_draft'  => ['draft_reviewed_at' => $now],
             'mark_printed'  => ['printed_at' => $now, 'status' => Project::STATUS_TANDA_TANGAN],
             'mark_signed'   => ['signed_at' => $now, 'status' => Project::STATUS_PENGIRIMAN],
+            'mark_delivered' => ['delivered_at' => $now, 'status' => $project->finalStatusAfterDelivery()],
             default         => [],
         };
 

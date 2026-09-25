@@ -86,6 +86,8 @@ Route::middleware('auth')->group(function () {
 
     // SPJ Surveyor — rekap survei per penilai (2026-09-19, feedback user).
     Route::middleware('permission:survey.view')->get('/spj-surveyor', [SurveyReportController::class, 'index'])->name('spj.index');
+    // Unduh SPJ sesuai filter aktif (2026-09-25).
+    Route::middleware('permission:survey.view')->get('/spj-surveyor/export', [SurveyReportController::class, 'export'])->name('spj.export');
 
     Route::middleware('permission:clients.view')->get('/clients', [ClientController::class, 'index'])->name('clients.index');
     // Detail klien + proyek yang melibatkannya (2026-09-15).

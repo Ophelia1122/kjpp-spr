@@ -38,6 +38,10 @@ class TandaTerimaTest extends TestCase
             'payment_scheme' => Project::PAYMENT_SCHEME_DP, 'status' => Project::STATUS_PENGIRIMAN,
             'review_status' => Project::STAGE_SIGNED, 'asset_type' => 'Tanah', 'asset_address' => 'Jl. Objek',
             'final_report_number' => '00045/LAP/KJPPSPR/IX/2026',
+            // Tombol alur butuh penilai & tanggal survei terisi.
+            'assigned_appraiser_id' => $this->admin->id,
+            'assigned_appraiser'    => $this->admin->name,
+            'survey_date'           => now()->subDays(10)->toDateString(),
         ]);
     }
 
@@ -51,7 +55,7 @@ class TandaTerimaTest extends TestCase
         ], $timpa);
     }
 
-    public function test_tanda_terima_menyelesaikan_proyek_dan_nomor_urut_berjalan(): void
+    public function test_tanda_terima_tidak_langsung_menutup_proyek_dan_nomor_urut_berjalan(): void
     {
         $this->actingAs($this->admin)
             ->post(route('receipts.store', $this->proyek), $this->data())
@@ -63,7 +67,19 @@ class TandaTerimaTest extends TestCase
         $this->assertSame(['laporan', 'invoice', 'kwitansi'], array_column($receipt->documents, 'key'));
         $this->assertCount(3, $receipt->documentRows());
 
-        // Belum lunas -> "Selesai - Belum Lunas".
+        // Tanda Terima TIDAK menutup proyek (2026-09-25, feedback user):
+        // proyek tetap di tahap pengiriman sampai tombol "Laporan Siap
+        // Dikirim" ditekan.
+        $this->proyek->refresh();
+        $this->assertSame(Project::STATUS_PENGIRIMAN, $this->proyek->status);
+        $this->assertSame(Project::STAGE_SIGNED, $this->proyek->review_status);
+        $this->assertNull($this->proyek->delivered_at);
+
+        // Tombol itu baru menutup proyek; belum lunas -> "Selesai - Belum Lunas".
+        $this->actingAs($this->admin)
+            ->post(route('projects.workflow', [$this->proyek, 'mark_delivered']))
+            ->assertRedirect();
+
         $this->proyek->refresh();
         $this->assertSame(Project::STATUS_SELESAI_BELUM_LUNAS, $this->proyek->status);
         $this->assertSame(Project::STAGE_DELIVERED, $this->proyek->review_status);

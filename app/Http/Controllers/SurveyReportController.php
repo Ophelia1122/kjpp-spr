@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\SpjSurveyorExport;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * SPJ Surveyor (2026-09-19, feedback user) — rekap proyek yang tanggal
@@ -20,7 +22,26 @@ use Illuminate\Http\Request;
  */
 class SurveyReportController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Unduh SPJ sesuai filter yang sedang aktif (2026-09-25, permintaan user).
+     * Memakai data yang sama dengan halamannya, tanpa paginasi.
+     */
+    public function export(Request $request)
+    {
+        [$rows, $from, $to] = $this->kumpulkan($request, true);
+
+        $nama = 'SPJ Surveyor ' . $from->format('Y-m-d') . ' sd ' . $to->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(new SpjSurveyorExport($rows, $from, $to), $nama);
+    }
+
+    /**
+     * Susun data SPJ dari filter yang aktif. Dipakai halaman (dengan paginasi)
+     * dan export Excel (tanpa paginasi) supaya isinya dijamin sama.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Carbon\Carbon, 2: \Carbon\Carbon, 3: mixed}
+     */
+    private function kumpulkan(Request $request, bool $untukExport = false): array
     {
         $request->validate([
             'from'      => 'nullable|date',
@@ -34,16 +55,22 @@ class SurveyReportController extends Controller
         // Rentang bawaan = bulan berjalan, jadi biasanya pendek. Paginasi
         // dipasang sebagai jaga-jaga bila staf memilih rentang panjang
         // (2026-09-20, feedback user).
-        $paginator = Project::query()
+        $query = Project::query()
             ->with(['appraisers', 'assignedAppraiser', 'valuationObjects.appraisers', 'instructingClient', 'namedClient'])
             ->where('status', '!=', Project::STATUS_BATAL)
             ->whereNotNull('survey_date')
             ->whereBetween('survey_date', [$from->toDateString(), $to->toDateString()])
-            ->orderBy('survey_date')
-            ->paginate(50)
-            ->withQueryString();
+            ->orderBy('survey_date');
 
-        $projects = $paginator->getCollection();
+        // Export mengambil seluruh baris dalam rentang, dibatasi 2000 sebagai
+        // pengaman bila rentangnya kelewat panjang.
+        if ($untukExport) {
+            $paginator = null;
+            $projects  = $query->limit(2000)->get();
+        } else {
+            $paginator = $query->paginate(50)->withQueryString();
+            $projects  = $paginator->getCollection();
+        }
 
         // Kelompokkan per penilai. Proyek tanpa relasi appraisers (data lama)
         // memakai kolom ringkasan assigned_appraiser_id.
@@ -81,6 +108,13 @@ class SurveyReportController extends Controller
             ])
             ->sortByDesc(fn ($g) => $g['projects']->count())
             ->values();
+
+        return [$rows, $from, $to, $paginator, $projects];
+    }
+
+    public function index(Request $request)
+    {
+        [$rows, $from, $to, $paginator, $projects] = $this->kumpulkan($request);
 
         return view('reports.spj-surveyor', [
             'paginator'        => $paginator,

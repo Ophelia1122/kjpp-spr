@@ -84,6 +84,9 @@ class WhatsAppNotification extends Model
             'return_draft_reviewer' => ['enabled' => true, 'recipients' => ['submitter', 'appraisers'], 'template' => self::T_RETURN],
             'mark_printed'          => $info(['appraisers']),
             'mark_signed'           => $info(['jabatan:' . User::JABATAN_ADMIN]),
+            // Buku dikirim ke klien (2026-09-25, feedback user) — aktif sejak
+            // awal karena ini penanda proyek ditutup.
+            'mark_delivered'        => ['enabled' => true, 'recipients' => ['jabatan:' . User::JABATAN_ADMIN, 'appraisers'], 'template' => self::T_INFO],
         ];
     }
 

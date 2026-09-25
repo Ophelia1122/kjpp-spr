@@ -267,6 +267,15 @@ class Project extends Model
             'action' => 'project.book_signed', 'desc' => 'Menandai buku laporan selesai ditandatangani, lanjut proses pengiriman',
             'flash' => 'Buku ditandatangani. Lanjut proses pengiriman buku.',
         ],
+        // Proyek TIDAK lagi otomatis selesai begitu Tanda Terima dibuat
+        // (2026-09-25, feedback user): Tanda Terima hanya menyiapkan dokumen,
+        // penutupan proyek ditekan manual lewat tombol ini.
+        'mark_delivered' => [
+            'from' => self::STAGE_SIGNED, 'to' => self::STAGE_DELIVERED, 'actor' => 'admin_or_keuangan', 'note' => 'optional',
+            'title' => 'Laporan Siap Dikirim', 'button' => 'Laporan Siap Dikirim', 'tip' => 'Tandai buku & dokumen siap dikirim ke klien — proyek ditutup',
+            'action' => 'project.book_delivered', 'desc' => 'Menandai laporan siap dikirim ke klien',
+            'flash' => 'Laporan ditandai siap dikirim.',
+        ],
     ];
 
     /**
