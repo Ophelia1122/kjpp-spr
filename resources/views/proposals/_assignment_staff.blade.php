@@ -31,9 +31,9 @@
             </div>
         </div>
         @can('assignment_letter.manage')
+            {{-- Tanpa konfirmasi: notifikasinya membawa "Urungkan" (2026-09-25). --}}
             <form action="{{ route('projects.assignmentStaff.destroy', [$project, $staff]) }}" method="POST"
-                  class="assignment-staff-remove-form"
-                  data-confirm="Hapus {{ $staff->user->name ?? 'petugas ini' }} dari daftar petugas?">
+                  class="assignment-staff-remove-form">
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="text-xs text-red-500 hover:text-red-700">Hapus</button>

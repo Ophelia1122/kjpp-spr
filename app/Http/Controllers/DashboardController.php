@@ -518,9 +518,17 @@ class DashboardController extends Controller
             // Proyek yang kolom SLA-nya kosong (belum ada penilai/tanggal survei,
             // atau sudah Selesai/Batal) selalu ditaruh paling bawah — bukan
             // nyelip di tengah hanya karena tanggal surveinya kebetulan cocok.
+            // Jumlah tanda tanya HARUS mengikuti jumlah status, bukan ditulis
+            // tetap: sejak "Selesai - Belum Lunas" ditambahkan, statusnya jadi
+            // tiga sementara tanda tanyanya dua, sehingga MySQL menolak query
+            // dengan "Invalid parameter number" dan tab Proyek Saya gagal
+            // dibuka (2026-09-25, laporan user).
+            $statusAkhir = array_merge(Project::DONE_STATUSES, [Project::STATUS_BATAL]);
+            $tandaTanya  = implode(', ', array_fill(0, count($statusAkhir), '?'));
+
             $query->orderByRaw(
-                '(survey_date IS NULL OR assigned_appraiser IS NULL OR status IN (?, ?)) asc',
-                array_merge(Project::DONE_STATUSES, [Project::STATUS_BATAL])
+                "(survey_date IS NULL OR assigned_appraiser IS NULL OR status IN ($tandaTanya)) asc",
+                $statusAkhir
             )->orderByRaw($deadlineExpr . ' ' . $dir);
         } else {
             $column = match ($sort) {
@@ -782,6 +790,38 @@ class DashboardController extends Controller
      * Membutuhkan package: composer require maatwebsite/excel
      */
     /** Export Excel dengan rentang waktu & filter dari modal (2026-09-14, feedback user). */
+    /**
+     * Pencarian cepat untuk palet Ctrl+K (2026-09-25, feedback user): proyek
+     * dicari dari nomor proposal & nama klien, dibatasi 8 baris supaya
+     * jawabannya ringan. Menu sistem ditangani di sisi halaman.
+     */
+    public function quickSearch(Request $request)
+    {
+        $kata = trim((string) $request->query('q'));
+
+        if (mb_strlen($kata) < 2) {
+            return response()->json([]);
+        }
+
+        $proyek = Project::with('instructingClient', 'namedClient')
+            ->where(function ($q) use ($kata) {
+                $q->where('proposal_number', 'like', "%{$kata}%")
+                  ->orWhere('client_name', 'like', "%{$kata}%")
+                  ->orWhereHas('instructingClient', fn ($s) => $s->where('client_name', 'like', "%{$kata}%"))
+                  ->orWhereHas('namedClient', fn ($s) => $s->where('client_name', 'like', "%{$kata}%"));
+            })
+            ->orderByDesc('id')
+            ->limit(8)
+            ->get(['id', 'proposal_number', 'status', 'client_id', 'client_name', 'instructing_client_id']);
+
+        return response()->json($proyek->map(fn ($p) => [
+            'judul'    => $p->proposal_number,
+            'sub'      => $p->effective_client_name ?: '-',
+            'status'   => $p->status_short,
+            'url'      => route('proposals.show', $p),
+        ])->all());
+    }
+
     public function exportExcel(Request $request)
     {
         $filters = $request->validate([

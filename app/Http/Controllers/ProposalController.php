@@ -495,7 +495,9 @@ class ProposalController extends Controller
             $project
         );
 
-        return back()->with('success', "Proyek {$project->proposal_number} ditandai Batal. Data tetap tersimpan dan bisa diaktifkan kembali kapan saja.");
+        return back()
+            ->with('success', "Proyek {$project->proposal_number} ditandai Batal.")
+            ->with('undo', ['url' => route('proposals.reactivate', $project), 'label' => 'Urungkan']);
     }
 
     /**

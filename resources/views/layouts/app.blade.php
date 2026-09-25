@@ -367,7 +367,21 @@
                 @if (session('success'))
                     <div class="mb-4 rounded-md bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 text-sm px-4 py-3 flex items-start justify-between gap-3">
                         <span class="flex items-start gap-2"><svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>{{ session('success') }}</span>
-                        <button type="button" onclick="this.closest('div').remove()" class="text-green-500 hover:text-green-700 dark:hover:text-green-300 leading-none">&times;</button>
+                        <span class="flex shrink-0 items-center gap-3">
+                            {{-- Aksi yang bisa dibatalkan memasang tombol "Urungkan"
+                                 di sini (2026-09-25, feedback user), menggantikan
+                                 modal konfirmasi sebelum aksi dijalankan. --}}
+                            @if (session('undo'))
+                                <form action="{{ session('undo')['url'] }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="inline-flex items-center gap-1 rounded-md border border-green-300 px-2.5 py-1 text-xs font-medium text-green-700 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/40">
+                                        <svg aria-hidden="true" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/></svg>
+                                        {{ session('undo')['label'] ?? 'Urungkan' }}
+                                    </button>
+                                </form>
+                            @endif
+                            <button type="button" onclick="this.closest('div').remove()" class="text-green-500 hover:text-green-700 dark:hover:text-green-300 leading-none">&times;</button>
+                        </span>
                     </div>
                 @endif
 
@@ -753,6 +767,9 @@
             window.addEventListener('resize', function () { closeAll(); });
         })();
     </script>
+    @auth
+        @include('partials.quick-palette')
+    @endauth
     @stack('scripts')
 </body>
 </html>

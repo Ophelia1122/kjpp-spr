@@ -116,7 +116,7 @@
                      user) — sebelumnya harus tepat mengenai ikon mata yang kecil.
                      Ikon aksi di kolom terakhir menghentikan propagasi klik. --}}
                 <tr data-href="{{ route('proposals.show', $project) }}"
-                    class="project-row cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-900/20 {{ $project->status === \App\Models\Project::STATUS_BATAL ? 'opacity-60' : '' }}">
+                    class="project-row group cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-900/20 {{ $project->status === \App\Models\Project::STATUS_BATAL ? 'opacity-60' : '' }}">
                     <td class="bulk-col hidden px-3 py-3" onclick="event.stopPropagation()">
                         <input type="checkbox" class="bulk-row rounded border-gray-300 dark:border-gray-600"
                                value="{{ $project->id }}" aria-label="Pilih {{ $project->proposal_number }}">
@@ -162,6 +162,33 @@
                     </td>
                     <td class="px-3 py-3">
                         <div class="flex justify-center items-center gap-1.5" data-row-actions>
+                            {{-- Aksi cepat (2026-09-25, feedback user): muncul saat kursor
+                                 di atas baris supaya pekerjaan harian tidak perlu membuka
+                                 proyek dulu. Di layar sentuh selalu terlihat. --}}
+                            @php
+                                $tagihanBelumLunas = $project->invoices->where('status', \App\Models\Invoice::STATUS_UNPAID)->values();
+                            @endphp
+                            @can('invoices.manage')
+                                @if ($tagihanBelumLunas->count() === 1)
+                                    <form action="{{ route('invoices.markAsPaid', $tagihanBelumLunas[0]) }}" method="POST"
+                                          class="opacity-0 transition group-hover:opacity-100 focus-within:opacity-100"
+                                          data-confirm="Tandai invoice {{ $tagihanBelumLunas[0]->invoice_number }} sebesar Rp {{ number_format($tagihanBelumLunas[0]->amount, 0, ',', '.') }} sudah LUNAS hari ini?">
+                                        @csrf
+                                        <button type="submit" title="Tandai lunas" aria-label="Tandai lunas"
+                                                class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 dark:text-gray-500 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-300">
+                                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                @endif
+                            @endcan
+                            <a href="{{ route('proposals.exportPdf', $project) }}" title="Unduh proposal PDF" aria-label="Unduh proposal PDF"
+                               class="grid h-8 w-8 place-items-center rounded-md text-gray-500 opacity-0 transition hover:bg-gray-100 hover:text-gray-900 group-hover:opacity-100 focus:opacity-100 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-100">
+                                <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                </svg>
+                            </a>
                             <a href="{{ route('proposals.show', $project) }}" title="Lihat / kelola" aria-label="Lihat / kelola"
                                class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-blue-100 hover:text-blue-700 dark:text-gray-500 dark:hover:bg-blue-900/40 dark:hover:text-blue-300">
                                 <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">

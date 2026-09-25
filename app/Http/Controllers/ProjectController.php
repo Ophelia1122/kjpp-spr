@@ -436,7 +436,9 @@ class ProjectController extends Controller
 
         abort_unless($staff->project_id === $project->id, 404);
 
-        $name = $staff->user->name ?? '(user terhapus)';
+        $name          = $staff->user->name ?? '(user terhapus)';
+        $namaPetugas   = $name;
+        $userPetugas   = $staff->user_id;
         $staff->delete();
 
         \App\Helpers\AuditLogger::record(
@@ -449,8 +451,40 @@ class ProjectController extends Controller
             return $this->assignmentStaffPartial($project);
         }
 
-        return back()->withFragment('section-surat-tugas')->with('success', 'Petugas dihapus.');
+        return back()->withFragment('section-surat-tugas')
+            ->with('success', ($namaPetugas ?: 'Petugas') . ' dihapus dari Surat Tugas.')
+            ->with('undo', [
+                'url'   => route('projects.assignmentStaff.undo', [$project, $userPetugas]),
+                'label' => 'Urungkan',
+            ]);
 
+    }
+
+    /**
+     * Kembalikan petugas yang baru saja dihapus (tombol "Urungkan" pada
+     * notifikasi, 2026-09-25 feedback user).
+     */
+    public function undoRemoveAssignmentStaff(Project $project, User $user)
+    {
+        $this->ensureFieldworkOpen($project);
+
+        $sudahAda = $project->assignmentStaff()->where('user_id', $user->id)->exists();
+
+        if (! $sudahAda) {
+            ProjectAssignmentStaff::create([
+                'project_id' => $project->id,
+                'user_id'    => $user->id,
+                'sort_order' => (int) $project->assignmentStaff()->max('sort_order') + 1,
+            ]);
+
+            \App\Helpers\AuditLogger::record(
+                'project.assignment_staff_added',
+                "Mengembalikan {$user->name} ke daftar petugas Surat Tugas proyek {$project->proposal_number}",
+                $project
+            );
+        }
+
+        return back()->withFragment('section-surat-tugas')->with('success', "{$user->name} dikembalikan ke daftar petugas.");
     }
 
     /**

@@ -76,8 +76,9 @@
                         </button>
                     </form>
                 @else
-                    <form action="{{ route('proposals.cancel', $project) }}" method="POST"
-                          data-confirm="Batalkan proyek {{ $project->proposal_number }}? Data TIDAK dihapus — status menjadi Batal dan bisa diaktifkan kembali kapan saja.">
+                    {{-- Tanpa modal konfirmasi: aksinya reversibel dan notifikasinya
+                         membawa tombol "Urungkan" (2026-09-25, feedback user). --}}
+                    <form action="{{ route('proposals.cancel', $project) }}" method="POST">
                         @csrf
                         <button type="submit" aria-label="Batalkan Project"
                                 class="group relative grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-900/30 dark:hover:text-rose-300">
@@ -1688,5 +1689,6 @@
     }
 </script>
 
+@include('proposals._inline_edit')
 @include('proposals._collapse_cards')
 @endsection

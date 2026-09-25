@@ -63,6 +63,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:reports.export')
         ->get('/dashboard/export-excel', [DashboardController::class, 'exportExcel'])->name('dashboard.exportExcel');
 
+    // Palet pencarian cepat Ctrl+K (2026-09-25).
+    Route::middleware('permission:proposals.view')
+        ->get('/quick-search', [DashboardController::class, 'quickSearch'])->name('quickSearch');
+
     // --- Klien: pencarian AJAX (dipakai di dalam form proposal, hanya butuh 'view') ---
     Route::middleware('permission:clients.view')->get('/clients/search', [ClientController::class, 'search'])->name('clients.search');
     // Peringatan klien kembar di modal Tambah Klien Baru (2026-09-15).
@@ -117,6 +121,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/proposals/cancel-many', [ProposalController::class, 'cancelMany'])->name('proposals.cancelMany');
         // Urutan petugas Surat Tugas diubah dengan digeser (2026-09-24).
         Route::post('/projects/{project}/assignment-staff/reorder', [ProjectController::class, 'reorderAssignmentStaff'])->name('projects.assignmentStaff.reorder');
+        // Urungkan penghapusan petugas (2026-09-25).
+        Route::post('/projects/{project}/assignment-staff/{user}/undo', [ProjectController::class, 'undoRemoveAssignmentStaff'])->name('projects.assignmentStaff.undo');
         Route::post('/proposals/{project}/reactivate', [ProposalController::class, 'reactivate'])->name('proposals.reactivate');
 
         // --- Skema "Bayar Nanti": mulai kerja lapangan tanpa DP (2026-09-14) ---
