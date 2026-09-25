@@ -49,9 +49,24 @@
         panah.title = 'Buka kartu ini';
         judul.prepend(panah);
 
-        function setel(buka) {
+        function setel(buka, animasi) {
             terbuka = buka;
             isi.forEach(el => { el.hidden = ! buka; });
+
+            // Transisi singkat saat dibuka (2026-09-25, feedback user):
+            // sebelumnya isi kartu muncul mendadak.
+            if (buka && animasi) {
+                isi.forEach(el => {
+                    el.style.transition = 'opacity .15s ease, transform .15s ease';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(-4px)';
+                    requestAnimationFrame(() => {
+                        el.style.opacity = '';
+                        el.style.transform = '';
+                    });
+                });
+            }
+            panah.style.transition = 'transform .15s ease';
             panah.style.transform = buka ? 'rotate(90deg)' : '';
             panah.setAttribute('aria-expanded', buka ? 'true' : 'false');
             panah.title = buka ? 'Tutup kartu ini' : 'Buka kartu ini';
@@ -62,7 +77,7 @@
         function toggle(e) {
             e.preventDefault();
             e.stopPropagation();
-            setel(! terbuka);
+            setel(! terbuka, true);
         }
 
         panah.addEventListener('click', toggle);

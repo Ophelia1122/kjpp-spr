@@ -499,14 +499,37 @@
                 const buttons = [...form.querySelectorAll('button[type="submit"], button:not([type]), input[type="submit"]')];
                 if (form.id) buttons.push(...document.querySelectorAll(`button[form="${form.id}"]`));
                 // Ditunda supaya nilai tombol (name/value) tetap ikut terkirim.
-                setTimeout(() => buttons.forEach((b) => { b.disabled = true; b.classList.add('opacity-60', 'cursor-wait'); }), 0);
+                setTimeout(() => buttons.forEach((b) => {
+                    b.disabled = true;
+                    b.classList.add('opacity-60', 'cursor-wait');
+
+                    // Tombol berlabel teks diganti "Menyimpan…" + lingkaran
+                    // berputar (2026-09-25, feedback user) supaya jelas
+                    // permintaannya sedang berjalan. Tombol ikon dibiarkan.
+                    const label = (b.textContent || '').trim();
+                    if (! label || b.dataset.busyDone) return;
+                    b.dataset.busyDone = '1';
+                    b.dataset.labelAsli = b.innerHTML;
+                    b.innerHTML = '<span class="inline-flex items-center gap-1.5">'
+                        + '<span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-r-transparent"></span>'
+                        + (/hapus|batal|kosongkan/i.test(label) ? 'Memproses…' : 'Menyimpan…')
+                        + '</span>';
+                }), 0);
             });
             // Kembali lewat tombol Back (bfcache) -> form bisa dipakai lagi.
             window.addEventListener('pageshow', (e) => {
                 if (!e.persisted) return;
                 document.querySelectorAll('form[data-submitting]').forEach((f) => {
                     delete f.dataset.submitting;
-                    f.querySelectorAll('button, input[type="submit"]').forEach((b) => { b.disabled = false; b.classList.remove('opacity-60', 'cursor-wait'); });
+                    f.querySelectorAll('button, input[type="submit"]').forEach((b) => {
+                        b.disabled = false;
+                        b.classList.remove('opacity-60', 'cursor-wait');
+                        if (b.dataset.labelAsli) {
+                            b.innerHTML = b.dataset.labelAsli;
+                            delete b.dataset.labelAsli;
+                            delete b.dataset.busyDone;
+                        }
+                    });
                 });
             });
         })();
@@ -582,9 +605,19 @@
             }
 
             form.querySelectorAll('input[type="text"], input[type="search"]').forEach((input) => {
+                // Jeda 1 detik terasa lambat; 300 ms sudah cukup menahan
+                // permintaan beruntun (2026-09-25, feedback user).
                 input.addEventListener('input', () => {
                     clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(() => runSearch(buildUrl()), 1000);
+                    debounceTimer = setTimeout(() => runSearch(buildUrl()), 300);
+                });
+                // Esc mengosongkan pencarian dan langsung memuat ulang daftar.
+                input.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Escape' || ! input.value) return;
+                    e.preventDefault();
+                    input.value = '';
+                    clearTimeout(debounceTimer);
+                    runSearch(buildUrl());
                 });
             });
             // Tanggal ikut memicu pencarian — tombol "Terapkan Filter" sudah
