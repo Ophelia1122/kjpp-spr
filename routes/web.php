@@ -82,6 +82,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/sampah/proyek/{id}', [TrashController::class, 'forceDeleteProject'])->whereNumber('id')->name('trash.projects.forceDelete');
         Route::post('/sampah/klien/{id}/pulihkan', [TrashController::class, 'restoreClient'])->whereNumber('id')->name('trash.clients.restore');
         Route::delete('/sampah/klien/{id}', [TrashController::class, 'forceDeleteClient'])->whereNumber('id')->name('trash.clients.forceDelete');
+        // Kosongkan seluruh Sampah sekaligus (Administrator + konfirmasi sandi).
+        Route::delete('/sampah', [TrashController::class, 'purgeAll'])->name('trash.purgeAll');
     });
 
     // SPJ Surveyor — rekap survei per penilai (2026-09-19, feedback user).

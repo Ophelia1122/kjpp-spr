@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Helpers\AuditLogger;
 use App\Models\Client;
 use App\Models\Project;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Sampah (2026-09-20). Proyek & klien yang dihapus tidak langsung hilang:
@@ -53,6 +55,44 @@ class TrashController extends Controller
         $project->forceDelete();
 
         return back()->with('success', "Proposal {$number} dihapus permanen.");
+    }
+
+    /**
+     * Kosongkan Sampah: seluruh proyek dan klien di dalamnya dihapus permanen
+     * sekaligus (2026-09-25, permintaan user). Hanya Administrator, dan wajib
+     * mengetik ulang kata sandinya — sama seperti Kosongkan Log Aktivitas,
+     * karena tindakan ini tidak bisa dibatalkan.
+     */
+    public function purgeAll(Request $request)
+    {
+        abort_unless($request->user()->isAdministrator(), 403);
+
+        $request->validate(
+            ['password' => 'required|string'],
+            ['password.required' => 'Masukkan kata sandi Anda untuk mengosongkan Sampah.']
+        );
+
+        if (! Hash::check($request->input('password'), $request->user()->password)) {
+            return back()->withErrors(['password' => 'Kata sandi salah. Sampah tidak dikosongkan.']);
+        }
+
+        $proyek = Project::onlyTrashed()->count();
+        $klien  = Client::onlyTrashed()->count();
+
+        if ($proyek === 0 && $klien === 0) {
+            return back()->with('info', 'Sampah sudah kosong.');
+        }
+
+        Project::onlyTrashed()->get()->each->forceDelete();
+        Client::onlyTrashed()->get()->each->forceDelete();
+
+        AuditLogger::record(
+            'trash.purged',
+            "Mengosongkan Sampah: {$proyek} proyek dan {$klien} klien dihapus permanen"
+        );
+
+        return redirect()->route('trash.index')
+            ->with('success', "Sampah dikosongkan — {$proyek} proyek dan {$klien} klien dihapus permanen.");
     }
 
     public function forceDeleteClient(int $id)
