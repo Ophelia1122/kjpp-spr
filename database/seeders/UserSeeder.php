@@ -4,10 +4,13 @@ namespace Database\Seeders;
 
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\Concerns\DataContoh;
 use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
 {
+    use DataContoh;
+
     /**
      * 1 akun testing per role, supaya Anda bisa langsung login-coba
      * bagaimana tampilan & akses berbeda antar role tanpa perlu bikin
@@ -17,6 +20,10 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! $this->bolehIsiDataContoh()) {
+            return;
+        }
+
         $roles = Role::all()->keyBy('slug');
 
         User::updateOrCreate(

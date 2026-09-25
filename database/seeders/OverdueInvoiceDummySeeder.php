@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Invoice;
 use App\Models\Project;
+use Database\Seeders\Concerns\DataContoh;
 use Illuminate\Database\Seeder;
 
 /**
@@ -21,8 +22,14 @@ use Illuminate\Database\Seeder;
  */
 class OverdueInvoiceDummySeeder extends Seeder
 {
+    use DataContoh;
+
     public function run(): void
     {
+        if (! $this->bolehIsiDataContoh()) {
+            return;
+        }
+
         Invoice::where('term_description', 'like', '[DUMMY]%')->delete();
 
         $projects = Project::with('invoices')

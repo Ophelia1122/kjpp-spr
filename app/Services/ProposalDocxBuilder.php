@@ -1728,15 +1728,6 @@ class ProposalDocxBuilder
         ));
     }
 
-    /** Key bab yang boleh menerima override (untuk validasi controller). */
-    public static function editorSectionKeys(): array
-    {
-        return array_keys(array_filter(
-            self::SECTION_META,
-            fn ($m) => $m['editable']
-        ));
-    }
-
     /**
      * Teks BAKU sebuah bab, sudah ter-render (placeholder diganti nilai
      * proyek), dalam bentuk plain — paragraf dipisah baris kosong, item

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Invoice;
 use App\Models\Project;
 use App\Models\ProjectValuationObject;
+use Database\Seeders\Concerns\DataContoh;
 use Illuminate\Database\Seeder;
 
 /**
@@ -21,6 +22,8 @@ use Illuminate\Database\Seeder;
  */
 class ManyLocationInvoiceDummySeeder extends Seeder
 {
+    use DataContoh;
+
     private const NUMBER = 'DUMMY/KJPP/2026/7-LOKASI';
 
     private const LOCATIONS = [
@@ -35,6 +38,10 @@ class ManyLocationInvoiceDummySeeder extends Seeder
 
     public function run(): void
     {
+        if (! $this->bolehIsiDataContoh()) {
+            return;
+        }
+
         $this->purge();
 
         $source = Project::with('valuationObjects')

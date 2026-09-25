@@ -79,37 +79,10 @@ return [
 
     // Versi paragraf lama — tidak dipakai lagi sejak 2026-09-22 (diganti
     // status_penilai_poin), disimpan sebagai arsip teks.
-    'status_penilai' => [
-        'Penilai Publik yang bertanda tangan di dalam Laporan Penilaian ini adalah **:nama** '
-        . 'merupakan Penilai Publik Properti dengan Izin Penilai Publik **No. :izin** berdasarkan Surat '
-        . 'Keputusan Menteri Keuangan Republik Indonesia Nomor **:sk_menkeu**, Penilai Publik juga telah '
-        . 'terdaftar sebagai Profesi Penunjang Penilai Publik pada Sektor Jasa Keuangan sesuai dengan '
-        . 'Keputusan Dewan Komisioner Otoritas Jasa Keuangan Nomor **:ojk_kep**, dengan lingkup pemberian '
-        . 'jasa pada sektor Perbankan; Perasuransian, Penjaminan, dan Dana Pensiun; Lembaga Pembiayaan, '
-        . 'Perusahaan Modal Ventura, Lembaga Keuangan Mikro, dan Lembaga Jasa Keuangan Lainnya; Inovasi '
-        . 'Teknologi Sektor Keuangan serta Aset Keuangan Digital dan Aset Kripto.',
-
-        'Penilai bertindak atas nama **KANTOR JASA PENILAI PUBLIK SUGIANTO PRASODJO DAN REKAN** memiliki '
-        . '**Izin Usaha resmi** dari Kementerian Keuangan Republik Indonesia No. **:izin_usaha** berdasarkan '
-        . '**Kepmenkeu No. :kepmenkeu** dari Menteri Keuangan Republik Indonesia. KJPP Sugianto Prasodjo '
-        . 'dan Rekan adalah perusahaan penilai independen yang terdaftar di Masyarakat Profesi Penilai '
-        . 'Indonesia (MAPPI) dan terdaftar di Otoritas Jasa Keuangan/OJK (d/h Bapepam-LK) berdasarkan '
-        . '**Surat Tanda Terdaftar Profesi Penunjang Pasar Modal No. :sttd_ojk.**',
-
-        'Sebagai Penilai kami dalam posisi untuk memberikan penilaian yang objektif dan tidak memihak. '
-        . 'Kami sebagai penilai menyatakan bahwa status kami adalah sebagai penilai independen. Kami '
-        . 'menyatakan bahwa tidak ada keterlibatan material dan benturan kepentingan baik yang aktual '
-        . 'maupun bersifat potensial terhadap objek penilaian. Sebagai Penilai kami tegaskan kami '
-        . 'memiliki kompetensi dalam melakukan penilaian atas objek penilaian termasuk seluruh Penilai, '
-        . 'tenaga ahli dan staf pelaksana yang terlibat dalam proses penilaian yang dimaksud sehingga '
-        . 'tidak memerlukan bantuan tenaga ahli dari luar.',
-    ],
 
     // ------------------------------------------------------------------
     // 2 & 3. Identifikasi Pemberi Tugas / Pengguna Laporan
     // ------------------------------------------------------------------
-    'pemberi_tugas_intro'   => 'Pemberi Tugas adalah :desc.',
-    'pengguna_laporan_intro' => 'Pengguna Laporan adalah sebagai berikut:',
     'pengguna_laporan_lk_kap' =>
         'Kantor Akuntan Publik (KAP) / Auditor sebagai pihak yang melakukan audit atas laporan '
         . 'keuangan Perusahaan (:klien).',
@@ -592,8 +565,6 @@ return [
     // (2026-09-24, feedback user): dibayar setelah draft laporan diserahkan,
     // sebelum termin terakhir yang jatuh di penyerahan laporan final.
     'termin_item_mid'   => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan setelah draft laporan diserahkan.',
-    'termin_1' => '50% (lima puluh persen) sebesar **:rp (:terbilang),** dibayarkan sebelum dilakukan inspeksi lapangan.',
-    'termin_2' => '50% (lima puluh persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
     'rekening_label' => 'Rekening Bank :',
     'biaya_pembatalan' =>
         'Apabila terjadi pembatalan penugasan, pembayaran yang sudah dibayarkan kepada KJPP/Penilai '

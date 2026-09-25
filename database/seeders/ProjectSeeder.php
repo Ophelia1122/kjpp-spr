@@ -6,10 +6,13 @@ use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Project;
 use App\Models\ProjectValuationObject;
+use Database\Seeders\Concerns\DataContoh;
 use Illuminate\Database\Seeder;
 
 class ProjectSeeder extends Seeder
 {
+    use DataContoh;
+
     /**
      * PENTING: seeder ini menyimpan status, invoice, & objek penilaian
      * secara LANGSUNG (bukan lewat ProposalController@store), khusus untuk
@@ -23,6 +26,10 @@ class ProjectSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! $this->bolehIsiDataContoh()) {
+            return;
+        }
+
         $uob      = Client::where('client_name', 'PT Bank UOB Indonesia')->firstOrFail();
         $mandiri  = Client::where('client_name', 'PT Bank Mandiri (Persero) Tbk')->firstOrFail();
         $petrona  = Client::where('client_name', 'PT Petrona Inti Chemindo')->firstOrFail();

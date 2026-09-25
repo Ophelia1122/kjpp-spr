@@ -3,10 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\Client;
+use Database\Seeders\Concerns\DataContoh;
 use Illuminate\Database\Seeder;
 
 class ClientSeeder extends Seeder
 {
+    use DataContoh;
+
     /**
      * Data klien dibuat generic (tidak ada kolom "role") supaya bisa
      * dipakai fleksibel: kadang sebagai Pemberi Tugas, kadang sebagai
@@ -14,6 +17,10 @@ class ClientSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! $this->bolehIsiDataContoh()) {
+            return;
+        }
+
         Client::updateOrCreate(
             ['client_name' => 'PT Bank UOB Indonesia'],
             [
