@@ -324,11 +324,11 @@
                     {{-- Jejak nego (2026-09-25, feedback user): selisih terhadap
                          penawaran awal terlihat tanpa membuka Riwayat. --}}
                     <dd class="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
-                        Penawaran awal Rp {{ number_format($project->initial_service_fee, 0, ',', '.') }}
+                        Penawaran awal Rp {{ number_format($project->initial_total_fee, 0, ',', '.') }}
                         &middot; {{ $project->fee_nego_selisih > 0 ? 'turun' : 'naik' }}
                         Rp {{ number_format(abs($project->fee_nego_selisih), 0, ',', '.') }}
-                        @if ((float) $project->initial_service_fee > 0)
-                            ({{ number_format(abs($project->fee_nego_selisih) / (float) $project->initial_service_fee * 100, 1, ',', '.') }}%)
+                        @if ($project->initial_total_fee > 0)
+                            ({{ number_format(abs($project->fee_nego_selisih) / $project->initial_total_fee * 100, 1, ',', '.') }}%)
                         @endif
                     </dd>
                 @endif

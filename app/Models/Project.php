@@ -424,13 +424,32 @@ class Project extends Model
     public function feeDinego(): bool
     {
         return $this->initial_service_fee !== null
-            && round((float) $this->initial_service_fee, 2) !== round((float) $this->service_fee, 2);
+            && round($this->initial_total_fee, 2) !== round((float) $this->total_fee, 2);
+    }
+
+    /**
+     * Nilai penawaran awal dalam angka TOTAL — rumusnya sama persis dengan
+     * accessor total_fee, hanya memakai nilai awal (2026-09-25, feedback
+     * user). Tanpa ini, kartu proyek membandingkan total melawan fee saja,
+     * sehingga angkanya terlihat tidak berubah.
+     */
+    public function getInitialTotalFeeAttribute(): float
+    {
+        $transportAwal = $this->transport_reimbursed
+            ? 0.0
+            : round((float) ($this->initial_transport_cost ?? 0), 2);
+
+        $taxable = (float) ($this->initial_service_fee ?? 0) + $transportAwal;
+
+        return $this->fee_ppn_included
+            ? round($taxable, 2)
+            : round($taxable * (1 + $this->fee_ppn_rate), 2);
     }
 
     /** Selisih penawaran awal dikurangi kesepakatan; positif = turun harga. */
     public function getFeeNegoSelisihAttribute(): float
     {
-        return round((float) $this->initial_service_fee - (float) $this->service_fee, 2);
+        return round($this->initial_total_fee - (float) $this->total_fee, 2);
     }
 
     /** Pekerjaan sedang berjalan (In-Progress s/d Pengiriman Buku). */
