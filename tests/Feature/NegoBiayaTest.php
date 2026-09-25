@@ -90,7 +90,13 @@ class NegoBiayaTest extends TestCase
         $this->assertSame(12_500_000.0, (float) $this->proyek->service_fee);
         $this->assertSame(15_000_000.0, (float) $this->proyek->initial_service_fee);
         $this->assertTrue($this->proyek->feeDinego());
-        $this->assertSame(2_500_000.0, $this->proyek->fee_nego_selisih);
+        // Selisih dihitung dalam angka TOTAL (2026-09-25): form uji tidak
+        // mengirim fee_ppn_included, jadi PPN ditambahkan di atas fee.
+        $this->assertSame(
+            round($this->proyek->initial_total_fee - (float) $this->proyek->total_fee, 2),
+            $this->proyek->fee_nego_selisih
+        );
+        $this->assertGreaterThan(2_500_000.0, $this->proyek->fee_nego_selisih);
 
         $log = AuditLog::where('action', 'proposal.fee_changed')->latest('id')->first();
         $this->assertNotNull($log);
