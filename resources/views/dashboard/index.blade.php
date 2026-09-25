@@ -92,11 +92,10 @@
             <div class="ml-auto flex items-center gap-2">
                 @can('reports.export')
                     <button type="button" onclick="openExportModal()" title="Export ke Excel" aria-label="Export ke Excel"
-                       class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-emerald-600 px-3 text-xs font-medium text-emerald-700 hover:bg-emerald-50 sm:w-[38px] sm:px-0 dark:border-emerald-500 dark:text-emerald-300 dark:hover:bg-emerald-900/30">
+                       class="inline-flex h-[38px] w-[38px] items-center justify-center rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
                         <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                         </svg>
-                        <span class="sm:hidden">Excel</span>
                     </button>
                 @endcan
                 @can('proposals.manage')
