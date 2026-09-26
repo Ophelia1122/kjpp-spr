@@ -131,6 +131,60 @@
             </p>
         </div>
 
+        {{-- Kecenderungan antar tahun (2026-09-26, permintaan user): muncul
+             hanya bila datanya memang menyebar di beberapa tahun. --}}
+        @php $tren = $hasil['tren'] ?? null; @endphp
+        @if ($tren)
+            <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Kecenderungan antar tahun</h2>
+                    @if ($tren['status'] !== 'satu_tahun' && $tren['laju'] !== null)
+                        <p class="text-sm">
+                            <span class="text-lg font-bold tabular-nums {{ $tren['laju'] >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                                {{ $tren['laju'] >= 0 ? '+' : '' }}{{ number_format($tren['laju'], 1, ',', '.') }}%
+                            </span>
+                            <span class="text-gray-500 dark:text-gray-400">per tahun &middot; {{ $tren['dari'] }}&ndash;{{ $tren['sampai'] }}</span>
+                        </p>
+                    @endif
+                </div>
+
+                @if ($tren['status'] === 'satu_tahun')
+                    <p class="mt-3 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
+                        {{ $tren['pesan'] }}
+                    </p>
+                @else
+                    @php
+                        $maks = max(array_column($tren['tahun'], 'tengah')) ?: 1;
+                    @endphp
+                    <div class="mt-4 flex items-end gap-3 overflow-x-auto pb-1">
+                        @foreach ($tren['tahun'] as $t)
+                            <div class="flex min-w-[64px] flex-1 flex-col items-center gap-1">
+                                <span class="text-[11px] font-medium tabular-nums text-gray-700 dark:text-gray-300">{{ $rp($t['tengah']) }}</span>
+                                <div class="flex h-24 w-full items-end">
+                                    <div class="w-full rounded-t bg-blue-500/80 dark:bg-blue-500"
+                                         style="height: {{ max(6, (int) round($t['tengah'] / $maks * 96)) }}px"
+                                         title="{{ $t['jumlah'] }} titik"></div>
+                                </div>
+                                <span class="text-xs font-semibold tabular-nums text-gray-600 dark:text-gray-400">{{ $t['tahun'] }}</span>
+                                <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ $t['jumlah'] }} titik</span>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    @if ($tren['pesan'])
+                        <p class="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                            {{ $tren['pesan'] }}
+                        </p>
+                    @endif
+
+                    <p class="mt-3 text-xs text-gray-500 dark:text-gray-500">
+                        Nilai tengah pembanding per tahun. Naik-turunnya bisa berasal dari beda lokasi atau beda jenis objek,
+                        bukan semata pergerakan harga &mdash; baca bersama jumlah titiknya.
+                    </p>
+                @endif
+            </div>
+        @endif
+
         {{-- Peta sebaran pembanding (2026-09-26, permintaan user): biar kelihatan
              titik mana saja yang dipakai. Leaflet disimpan lokal seperti Tailwind,
              tidak menarik dari CDN; ubin peta tetap dari OpenStreetMap, jadi kalau
@@ -318,7 +372,14 @@
                     radius: 7, color: warna, fillColor: warna, fillOpacity: 0.8, weight: 1, warnaAsli: warna
                 }).addTo(peta);
 
-                penanda.on('click', function () { tulis(t, penanda); });
+                // Klik pada titik TIDAK boleh ikut memicu klik peta, kalau
+                // tidak yang muncul malah popup "Hitung dari titik ini"
+                // (2026-09-26, feedback user).
+                penanda.on('click', function (e) {
+                    L.DomEvent.stopPropagation(e);
+                    peta.closePopup();
+                    tulis(t, penanda);
+                });
                 penanda.bindTooltip(rupiah(t.rp), { direction: 'top' });
                 batas.push([t.la, t.lo]);
             });

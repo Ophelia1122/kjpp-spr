@@ -147,6 +147,59 @@ class EstimasiNilaiTanahTest extends TestCase
         $this->assertStringContainsString('"no":', $res->getContent());
     }
 
+    /** Data satu tahun saja: dikatakan apa adanya, tidak digambar sebagai tren. */
+    public function test_tren_tidak_dipaksa_bila_data_satu_tahun(): void
+    {
+        $this->titik(-6.30, 106.80, 4, 8_000_000, ['valuation_year' => 2022]);
+
+        $hasil = app(EstimasiNilaiTanah::class)->hitung(-6.30, 106.80);
+
+        $this->assertSame('satu_tahun', $hasil['tren']['status']);
+        $this->assertStringContainsString('hanya tahun 2022', $hasil['tren']['pesan']);
+
+        $this->actingAs($this->admin)
+            ->get(route('estimasi.index', ['koordinat' => '-6.30, 106.80']))
+            ->assertOk()
+            ->assertSee('hanya tahun 2022');
+    }
+
+    /** Data beberapa tahun: laju per tahun dihitung dan dirinci per tahun. */
+    public function test_tren_muncul_bila_data_menyebar_beberapa_tahun(): void
+    {
+        $this->titik(-6.3000, 106.8000, 2, 10_000_000, ['valuation_year' => 2020]);
+        $this->titik(-6.3001, 106.8001, 2, 12_000_000, ['valuation_year' => 2022]);
+        $this->titik(-6.3002, 106.8002, 2, 15_000_000, ['valuation_year' => 2024]);
+
+        $hasil = app(EstimasiNilaiTanah::class)->hitung(-6.30, 106.80);
+        $tren  = $hasil['tren'];
+
+        $this->assertSame('ada', $tren['status']);
+        $this->assertSame(3, count($tren['tahun']));
+        $this->assertSame(2020, $tren['dari']);
+        $this->assertSame(2024, $tren['sampai']);
+        // Naik dari 10 juta ke 15 juta dalam 4 tahun ~ +10,7%/tahun.
+        $this->assertGreaterThan(9, $tren['laju']);
+        $this->assertLessThan(12, $tren['laju']);
+
+        $this->actingAs($this->admin)
+            ->get(route('estimasi.index', ['koordinat' => '-6.30, 106.80']))
+            ->assertOk()
+            ->assertSee('Kecenderungan antar tahun')
+            ->assertSee('per tahun');
+    }
+
+    /** Dua tahun dengan titik sedikit: ditandai belum cukup untuk disebut tren. */
+    public function test_tren_tipis_ditandai(): void
+    {
+        $this->titik(-6.3000, 106.8000, 2, 10_000_000, ['valuation_year' => 2021]);
+        $this->titik(-6.3001, 106.8001, 1, 12_000_000, ['valuation_year' => 2023]);
+
+        $tren = app(EstimasiNilaiTanah::class)->hitung(-6.30, 106.80)['tren'];
+
+        $this->assertSame('tipis', $tren['status']);
+        $this->assertStringContainsString('belum cukup', $tren['pesan']);
+    }
+
     public function test_koordinat_salah_diberi_tahu_bukan_galat_500(): void
     {
         $this->actingAs($this->admin)

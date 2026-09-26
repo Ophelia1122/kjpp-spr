@@ -126,7 +126,76 @@ class EstimasiNilaiTanah
             'tahun_min'   => (int) $dalam->min(fn ($b) => $b['titik']->valuation_year),
             'tahun_maks'  => (int) $dalam->max(fn ($b) => $b['titik']->valuation_year),
             'kelompok'    => $kelompok,
+            'tren'        => $this->tren($dalam),
             'pembanding'  => $dalam,
+        ];
+    }
+
+    /**
+     * Kecenderungan nilai antar tahun dari pembanding yang dipakai
+     * (2026-09-26, permintaan user). Kalau datanya cuma satu tahun, katakan
+     * apa adanya — jangan menggambar garis dari satu titik.
+     *
+     * Laju per tahun dihitung dengan regresi kuadrat terkecil atas logaritma
+     * nilai terhadap tahun, jadi hasilnya berupa persentase pertumbuhan dan
+     * seluruh titik ikut menentukan, bukan hanya tahun pertama & terakhir.
+     */
+    public function tren(Collection $dalam): array
+    {
+        $perTahun = [];
+
+        foreach ($dalam as $b) {
+            $perTahun[(int) $b['titik']->valuation_year][] = (float) $b['titik']->land_rate;
+        }
+
+        ksort($perTahun);
+
+        $tahun = [];
+        foreach ($perTahun as $th => $nilai) {
+            sort($nilai);
+            $tengah = count($nilai) % 2
+                ? $nilai[intdiv(count($nilai), 2)]
+                : ($nilai[count($nilai) / 2 - 1] + $nilai[count($nilai) / 2]) / 2;
+
+            $tahun[] = ['tahun' => $th, 'jumlah' => count($nilai), 'tengah' => (int) round($tengah)];
+        }
+
+        if (count($tahun) < 2) {
+            return [
+                'status' => 'satu_tahun',
+                'tahun'  => $tahun,
+                'pesan'  => 'Data di lokasi ini hanya tahun ' . ($tahun[0]['tahun'] ?? '-')
+                    . ', jadi kecenderungan antar tahun belum bisa dilihat.',
+            ];
+        }
+
+        // Regresi ln(nilai) terhadap tahun.
+        $n = $sx = $sy = $sxy = $sxx = 0;
+
+        foreach ($dalam as $b) {
+            $x = (float) $b['titik']->valuation_year;
+            $y = log(max(1, (float) $b['titik']->land_rate));
+            $n++;
+            $sx += $x;
+            $sy += $y;
+            $sxy += $x * $y;
+            $sxx += $x * $x;
+        }
+
+        $pembagi = ($n * $sxx) - ($sx * $sx);
+        $laju    = $pembagi != 0.0 ? (exp((($n * $sxy) - ($sx * $sy)) / $pembagi) - 1) * 100 : null;
+
+        $cukup = $n >= 5 && count($tahun) >= 3;
+
+        return [
+            'status'    => $cukup ? 'ada' : 'tipis',
+            'tahun'     => $tahun,
+            'laju'      => $laju === null ? null : round($laju, 1),
+            'dari'      => $tahun[0]['tahun'],
+            'sampai'    => $tahun[count($tahun) - 1]['tahun'],
+            'pesan'     => $cukup
+                ? null
+                : 'Datanya tersebar di ' . count($tahun) . ' tahun dengan ' . $n . ' titik saja — arah angkanya ditampilkan apa adanya, belum cukup untuk disebut tren.',
         ];
     }
 
@@ -182,6 +251,10 @@ class EstimasiNilaiTanah
                 'tahun_maks' => (int) $titik->max('valuation_year'),
                 'kelompok'   => $kelompok,
                 'jarak_acuan' => $terdekat['jarak'],
+                'tren'       => $this->tren($titik->map(fn ($p) => [
+                    'titik' => $p,
+                    'jarak' => self::jarakKm($lat, $lon, $p->latitude, $p->longitude),
+                ])->values()),
                 'pembanding' => $titik->map(fn ($p) => [
                     'titik' => $p,
                     'jarak' => self::jarakKm($lat, $lon, $p->latitude, $p->longitude),
