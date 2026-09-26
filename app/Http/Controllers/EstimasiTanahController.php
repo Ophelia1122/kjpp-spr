@@ -20,6 +20,9 @@ class EstimasiTanahController extends Controller
             'kelompok'  => 'nullable|string|in:' . implode(',', array_keys(LandValuePoint::GROUPS)),
             // Radius diketik bebas (2026-09-26, permintaan user); kosong = 5 km.
             'radius'    => 'nullable|numeric|min:0.1|max:50',
+            // Rentang tahun data (penggeser di formulir).
+            'tahun_min' => 'nullable|integer|min:1990|max:2100',
+            'tahun_max' => 'nullable|integer|min:1990|max:2100',
         ]);
 
         $titik  = EstimasiNilaiTanah::baca((string) ($data['koordinat'] ?? ''));
@@ -30,19 +33,33 @@ class EstimasiTanahController extends Controller
             $galat = 'Koordinat tidak terbaca. Tempel dari Google Maps, contoh: -6.304484, 106.805611';
         }
 
+        $batasTahun = [
+            (int) (LandValuePoint::min('valuation_year') ?: 2019),
+            (int) (LandValuePoint::max('valuation_year') ?: (int) now()->year),
+        ];
+
+        $tahunMin = (int) ($data['tahun_min'] ?? $batasTahun[0]);
+        $tahunMax = (int) ($data['tahun_max'] ?? $batasTahun[1]);
+
+        if ($tahunMin > $tahunMax) {
+            [$tahunMin, $tahunMax] = [$tahunMax, $tahunMin];
+        }
+
+        $tahun = [$tahunMin, $tahunMax] === $batasTahun ? null : [$tahunMin, $tahunMax];
+
         $lepasSaringan = false;
 
         if ($titik) {
             [$lat, $lon] = $titik;
             $radius = isset($data['radius']) ? (float) $data['radius'] : null;
 
-            $hasil = $estimasi->hitung($lat, $lon, $data['kelompok'] ?? null, $radius);
+            $hasil = $estimasi->hitung($lat, $lon, $data['kelompok'] ?? null, $radius, $tahun);
 
             // Sebaran data masih renggang (2026-09-26): kalau saringan jenis
             // properti membuat pembandingnya habis, ulangi tanpa saringan dan
             // katakan apa adanya — lebih berguna daripada layar kosong.
             if (in_array($hasil['status'], ['kosong', 'wilayah'], true) && ! empty($data['kelompok'])) {
-                $tanpa = $estimasi->hitung($lat, $lon, null, $radius);
+                $tanpa = $estimasi->hitung($lat, $lon, null, $radius, $tahun);
 
                 if ($tanpa['status'] === 'ok') {
                     $hasil = $tanpa;
@@ -59,7 +76,9 @@ class EstimasiTanahController extends Controller
             'kelompok' => $data['kelompok'] ?? null,
             'radius'   => $data['radius'] ?? null,
             'totalTitik' => LandValuePoint::count(),
-            'tahunData'  => [LandValuePoint::min('valuation_year'), LandValuePoint::max('valuation_year')],
+            'tahunData'  => $batasTahun,
+            'tahunMin'   => $tahunMin,
+            'tahunMax'   => $tahunMax,
         ];
 
         // Klik pada peta memanggil halaman ini dengan ?partial=1 lewat fetch,

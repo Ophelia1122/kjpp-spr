@@ -218,12 +218,7 @@
                                 {{ request()->routeIs('timeline') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
                             <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg> Timeline Project
                         </a>
-                        {{-- Estimasi Nilai Tanah dari koordinat (2026-09-26, permintaan user). --}}
-                        <a href="{{ route('estimasi.index') }}"
-                        class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                {{ request()->routeIs('estimasi.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg> Estimasi Nilai Tanah
-                        </a>
+
                         {{-- SPJ Surveyor: rekap survei per penilai (2026-09-19, feedback user). --}}
                         @can('survey.view')
                             <a href="{{ route('spj.index') }}"
@@ -232,6 +227,13 @@
                                 <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"/></svg> SPJ Surveyor
                             </a>
                         @endcan
+
+                        {{-- Map Market: estimasi nilai tanah dari koordinat (2026-09-26). --}}
+                        <a href="{{ route('estimasi.index') }}"
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
+                                  {{ request()->routeIs('estimasi.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg> Map Market
+                        </a>
                     @endcan
 
                     {{-- ===== BAGIAN 2: Ringkasan Project, Dashboard Pembayaran, Database Klien ===== --}}
@@ -265,65 +267,176 @@
                         </div>
                     @endcanany
 
-                    {{-- ===== BAGIAN 3: Pengaturan Sistem ===== --}}
+                    {{-- ===== BAGIAN 3: Pengaturan Sistem =====
+                         Tujuh menu dikelompokkan jadi tiga cabang lipat
+                         (2026-09-26, permintaan user) supaya sidebar tidak
+                         menumpuk sampai dasar layar. Cabang terbuka sendiri
+                         bila halaman yang sedang dibuka ada di dalamnya, dan
+                         pilihan buka/tutup diingat lewat localStorage. --}}
 
                     @canany(['proposals.manage', 'proposal_defaults.manage', 'roles.manage', 'users.manage', 'banks.manage', 'audit.view'])
-                        <div class="pt-4 mt-4 border-t border-gray-800">
+                        <div class="pt-4 mt-4 border-t border-gray-800" id="menuPengaturan">
                             <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pengaturan Sistem</p>
 
-                            {{-- Urutan menu mengikuti seberapa sering dipakai
-                                 (2026-09-25, permintaan user). --}}
-                            {{-- Teks Baku Proposal per tujuan penilaian (2026-09-25, permintaan user). --}}
-                            @can('proposal_defaults.manage')
-                                <a href="{{ route('settings.proposalDefaults.index') }}"
-                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                        {{ request()->routeIs('settings.proposalDefaults.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg aria-hidden="true" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg> Teks Baku Proposal
-                                </a>
-                            @endcan
-                            @can('users.manage')
-                                <a href="{{ route('users.index') }}"
-                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                        {{ request()->routeIs('users.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg> Kelola Pengguna
-                                </a>
-                            @endcan
-                            @can('banks.manage')
-                                <a href="{{ route('banks.index') }}"
-                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                        {{ request()->routeIs('banks.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z"/></svg> Kelola Rekening Bank
-                                </a>
-                            @endcan
-                            @can('roles.manage')
-                                <a href="{{ route('roles.index') }}"
-                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                        {{ request()->routeIs('roles.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg> Kelola Role & Izin
-                                </a>
-                            @endcan
-                            @can('users.manage')
-                                <a href="{{ route('settings.whatsapp.edit') }}"
-                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                        {{ request()->routeIs('settings.whatsapp.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg> Bot WhatsApp
-                                </a>
-                            @endcan
-                            @can('proposals.manage')
-                                <a href="{{ route('trash.index') }}"
-                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                        {{ request()->routeIs('trash.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg aria-hidden="true" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg> Sampah
-                                </a>
-                            @endcan
-                            @can('audit.view')
-                                <a href="{{ route('audit.index') }}"
-                                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
-                                        {{ request()->routeIs('audit.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
-                                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg> Log Aktivitas
-                                </a>
-                            @endcan
+                            @canany(['users.manage', 'roles.manage'])
+                                @php $buka = request()->routeIs('users.*') || request()->routeIs('roles.*'); @endphp
+                                <div data-cabang="pengguna">
+                                    <button type="button" data-tombol
+                                            aria-expanded="{{ $buka ? 'true' : 'false' }}"
+                                            class="flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+                                        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg> <span>Pengguna &amp; Akses</span>
+                                        <svg data-panah class="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 {{ $buka ? 'rotate-90' : '' }}"
+                                             fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+                                        </svg>
+                                    </button>
+
+                                    <div data-panel
+                                         class="grid transition-[grid-template-rows] duration-200 ease-out {{ $buka ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]' }}">
+                                        <div class="overflow-hidden">
+                                            <div class="mb-1 ml-5 space-y-0.5 border-l border-gray-700 pl-2">
+                                    @can('users.manage')
+                                        <a href="{{ route('users.index') }}"
+                                           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium
+                                                  {{ request()->routeIs('users.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg> Kelola Pengguna
+                                        </a>
+                                    @endcan
+                                    @can('roles.manage')
+                                        <a href="{{ route('roles.index') }}"
+                                           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium
+                                                  {{ request()->routeIs('roles.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg> Kelola Role & Izin
+                                        </a>
+                                    @endcan
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endcanany
+
+                            @canany(['proposal_defaults.manage', 'banks.manage'])
+                                @php $buka = request()->routeIs('settings.proposalDefaults.*') || request()->routeIs('banks.*'); @endphp
+                                <div data-cabang="data">
+                                    <button type="button" data-tombol
+                                            aria-expanded="{{ $buka ? 'true' : 'false' }}"
+                                            class="flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+                                        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z"/></svg> <span>Data Master</span>
+                                        <svg data-panah class="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 {{ $buka ? 'rotate-90' : '' }}"
+                                             fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+                                        </svg>
+                                    </button>
+
+                                    <div data-panel
+                                         class="grid transition-[grid-template-rows] duration-200 ease-out {{ $buka ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]' }}">
+                                        <div class="overflow-hidden">
+                                            <div class="mb-1 ml-5 space-y-0.5 border-l border-gray-700 pl-2">
+                                    @can('proposal_defaults.manage')
+                                        <a href="{{ route('settings.proposalDefaults.index') }}"
+                                           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium
+                                                  {{ request()->routeIs('settings.proposalDefaults.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                            <svg aria-hidden="true" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg> Teks Baku Proposal
+                                        </a>
+                                    @endcan
+                                    @can('banks.manage')
+                                        <a href="{{ route('banks.index') }}"
+                                           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium
+                                                  {{ request()->routeIs('banks.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z"/></svg> Kelola Rekening Bank
+                                        </a>
+                                    @endcan
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endcanany
+
+                            @canany(['users.manage', 'proposals.manage', 'audit.view'])
+                                @php $buka = request()->routeIs('settings.whatsapp.*') || request()->routeIs('trash.*') || request()->routeIs('audit.*'); @endphp
+                                <div data-cabang="sistem">
+                                    <button type="button" data-tombol
+                                            aria-expanded="{{ $buka ? 'true' : 'false' }}"
+                                            class="flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+                                        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M20.982 9.36l-1.41-.513M3.018 9.36l1.41-.513"/></svg> <span>Sistem</span>
+                                        <svg data-panah class="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 {{ $buka ? 'rotate-90' : '' }}"
+                                             fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+                                        </svg>
+                                    </button>
+
+                                    <div data-panel
+                                         class="grid transition-[grid-template-rows] duration-200 ease-out {{ $buka ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]' }}">
+                                        <div class="overflow-hidden">
+                                            <div class="mb-1 ml-5 space-y-0.5 border-l border-gray-700 pl-2">
+                                    @can('users.manage')
+                                        <a href="{{ route('settings.whatsapp.edit') }}"
+                                           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium
+                                                  {{ request()->routeIs('settings.whatsapp.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg> Bot WhatsApp
+                                        </a>
+                                    @endcan
+                                    @can('proposals.manage')
+                                        <a href="{{ route('trash.index') }}"
+                                           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium
+                                                  {{ request()->routeIs('trash.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                            <svg aria-hidden="true" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg> Sampah
+                                        </a>
+                                    @endcan
+                                    @can('audit.view')
+                                        <a href="{{ route('audit.index') }}"
+                                           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium
+                                                  {{ request()->routeIs('audit.*') ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white' }}">
+                                            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg> Log Aktivitas
+                                        </a>
+                                    @endcan
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endcanany
+
                         </div>
+
+                        <script>
+                        (function () {
+                            var wadah = document.getElementById('menuPengaturan');
+                            if (!wadah) return;
+
+                            wadah.querySelectorAll('[data-cabang]').forEach(function (cabang) {
+                                var tombol = cabang.querySelector('[data-tombol]');
+                                var panel  = cabang.querySelector('[data-panel]');
+                                var panah  = cabang.querySelector('[data-panah]');
+                                var kunci  = 'sidebar-cabang-' + cabang.dataset.cabang;
+
+                                function pasang(buka) {
+                                    panel.classList.toggle('grid-rows-[1fr]', buka);
+                                    panel.classList.toggle('grid-rows-[0fr]', !buka);
+                                    panah.classList.toggle('rotate-90', buka);
+                                    tombol.setAttribute('aria-expanded', buka ? 'true' : 'false');
+                                }
+
+                                // Cabang berisi halaman yang sedang dibuka tetap terbuka.
+                                if (tombol.getAttribute('aria-expanded') !== 'true') {
+                                    try {
+                                        if (localStorage.getItem(kunci) === 'buka') pasang(true);
+                                    } catch (e) {
+                                        // Penyimpanan diblokir: abaikan.
+                                    }
+                                }
+
+                                tombol.addEventListener('click', function () {
+                                    var buka = tombol.getAttribute('aria-expanded') !== 'true';
+                                    pasang(buka);
+                                    try {
+                                        localStorage.setItem(kunci, buka ? 'buka' : 'tutup');
+                                    } catch (e) {
+                                        // Penyimpanan diblokir: abaikan.
+                                    }
+                                });
+                            });
+                        })();
+                        </script>
                     @endcanany
                 @endauth
             </nav>

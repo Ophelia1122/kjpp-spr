@@ -160,8 +160,8 @@ class EstimasiNilaiTanahTest extends TestCase
     {
         $service = app(EstimasiNilaiTanah::class);
 
-        // Kosong: selalu 5 km.
-        $this->assertSame([5.0], array_map('floatval', $service->tanggaRadius(null)));
+        // Kosong: selalu 3 km.
+        $this->assertSame([3.0], array_map('floatval', $service->tanggaRadius(null)));
         // Diisi: persis angka itu, tidak melebar & tidak berhenti lebih awal.
         $this->assertSame([2.5], array_map('floatval', $service->tanggaRadius(2.5)));
         $this->assertSame([12.0], array_map('floatval', $service->tanggaRadius(12)));

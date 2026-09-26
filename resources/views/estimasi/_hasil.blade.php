@@ -27,7 +27,7 @@
 @if ($hasil && $hasil['status'] === 'kosong')
     <div class="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
         {{ $hasil['pesan'] }}
-        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Coba lebarkan radius atau lepas saringan jenis properti.</p>
+        <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Coba lebarkan radius atau lepas saringan jenis properti.</p>
     </div>
 @endif
 
@@ -43,7 +43,7 @@
 
     <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="flex items-start justify-between gap-2">
-            <p class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Rentang indikatif per m&sup2;</p>
+            <p class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Rentang indikatif per m&sup2;</p>
             <span class="shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold {{ $nada }}" title="Tingkat keyakinan">{{ $hasil['keyakinan'] }}</span>
         </div>
 
@@ -56,25 +56,25 @@
         <p class="mt-1 whitespace-nowrap {{ $ukuran }} font-bold leading-tight tabular-nums text-gray-900 dark:text-gray-100">
             {{ $rp($hasil['bawah']) }}<span class="text-gray-400"> &ndash; </span>{{ $rp($hasil['atas']) }}
         </p>
-        <p class="text-xs text-gray-600 dark:text-gray-400">
+        <p class="text-xs text-gray-600 dark:text-gray-300">
             titik tengah <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $rp($hasil['tengah']) }}</span>
         </p>
 
         <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-gray-100 pt-3 text-sm dark:border-gray-700">
             <div>
-                <dt class="text-[11px] text-gray-500 dark:text-gray-500">Pembanding</dt>
+                <dt class="text-[11px] text-gray-500 dark:text-gray-400">Pembanding</dt>
                 <dd class="font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $hasil['jumlah'] }} titik</dd>
             </div>
             <div>
-                <dt class="text-[11px] text-gray-500 dark:text-gray-500">Cakupan</dt>
+                <dt class="text-[11px] text-gray-500 dark:text-gray-400">Cakupan</dt>
                 <dd class="font-semibold text-gray-900 dark:text-gray-100">{{ $hasil['cakupan'] }}</dd>
             </div>
             <div>
-                <dt class="text-[11px] text-gray-500 dark:text-gray-500">Tahun data</dt>
+                <dt class="text-[11px] text-gray-500 dark:text-gray-400">Tahun data</dt>
                 <dd class="font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $hasil['tahun_min'] }}&ndash;{{ $hasil['tahun_maks'] }}</dd>
             </div>
             <div>
-                <dt class="text-[11px] text-gray-500 dark:text-gray-500">Sebaran data</dt>
+                <dt class="text-[11px] text-gray-500 dark:text-gray-400">Sebaran data</dt>
                 <dd class="text-xs font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $rp($hasil['data_min']) }}&ndash;{{ $rp($hasil['data_maks']) }}</dd>
             </div>
         </dl>
@@ -112,7 +112,7 @@
                                 <div class="w-full rounded-t bg-blue-500/80 dark:bg-blue-500"
                                      style="height: {{ max(4, (int) round($t['tengah'] / $maks * 48)) }}px"></div>
                             </div>
-                            <span class="text-[10px] font-semibold tabular-nums text-gray-600 dark:text-gray-400">{{ $t['tahun'] }}</span>
+                            <span class="text-[10px] font-semibold tabular-nums text-gray-600 dark:text-gray-300">{{ $t['tahun'] }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -130,9 +130,9 @@
     <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="flex items-center justify-between px-4 py-2.5">
             <h2 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pembanding terdekat</h2>
-            <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ $hasil['pembanding']->count() }} titik</span>
+            <span class="text-[11px] text-gray-400 dark:text-gray-400">{{ $hasil['pembanding']->count() }} titik</span>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="max-h-[280px] min-h-0 flex-1 overflow-y-auto lg:max-h-none">
             <table class="w-full text-xs">
                 <thead class="sticky top-0 border-y border-gray-100 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
                     <tr class="text-left text-[10px] font-semibold uppercase tracking-wide">
@@ -152,8 +152,14 @@
                                     : number_format($baris['jarak'], 1, ',', '.') . ' km' }}
                             </td>
                             <td class="whitespace-nowrap px-3 py-2 font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $rp($p->land_rate) }}</td>
-                            <td class="whitespace-nowrap px-3 py-2 tabular-nums text-gray-600 dark:text-gray-400">{{ $p->valuation_year }}</td>
-                            <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $p->village ?: '—' }}, {{ $p->district }}</td>
+                            <td class="whitespace-nowrap px-3 py-2 tabular-nums text-gray-600 dark:text-gray-300">{{ $p->valuation_year }}</td>
+                            {{-- Lokasi membuka titiknya di Google Maps. --}}
+                            <td class="px-4 py-2">
+                                <a href="https://www.google.com/maps?q={{ $p->latitude }},{{ $p->longitude }}"
+                                   target="_blank" rel="noopener"
+                                   title="Buka {{ $p->latitude }}, {{ $p->longitude }} di Google Maps"
+                                   class="text-blue-600 hover:underline dark:text-blue-400">{{ $p->village ?: '—' }}, {{ $p->district }}</a>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

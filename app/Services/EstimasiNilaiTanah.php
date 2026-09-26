@@ -21,7 +21,7 @@ use Illuminate\Support\Collection;
 class EstimasiNilaiTanah
 {
     /** Radius pencarian bawaan (km) bila pemakai tidak mengisi. */
-    public const RADIUS_BAWAAN = 5.0;
+    public const RADIUS_BAWAAN = 3.0;
 
     /** Dipertahankan untuk pemanggil lama. */
     public const RADIUS = [0.5, 1, 2, 3, 5];
@@ -39,8 +39,18 @@ class EstimasiNilaiTanah
      * @param  string|null  $kelompok  Kunci LandValuePoint::GROUPS; null = semua jenis.
      * @param  float|null   $radiusMaks  Batasi radius (km); null = sampai 5 km.
      */
-    public function hitung(float $lat, float $lon, ?string $kelompok = null, ?float $radiusMaks = null): array
-    {
+    /** Rentang tahun data yang dipakai; null = semua tahun. */
+    private ?array $tahun = null;
+
+    public function hitung(
+        float $lat,
+        float $lon,
+        ?string $kelompok = null,
+        ?float $radiusMaks = null,
+        ?array $tahun = null,
+    ): array {
+        $this->tahun = $tahun && count($tahun) === 2 ? [(int) $tahun[0], (int) $tahun[1]] : null;
+
         $tahunIni = (int) now()->year;
         $radius   = $this->tanggaRadius($radiusMaks);
 
@@ -67,7 +77,7 @@ class EstimasiNilaiTanah
     }
 
     /**
-     * Radius yang dipakai: angka yang diketik, atau 5 km bila dikosongkan
+     * Radius yang dipakai: angka yang diketik, atau 3 km bila dikosongkan
      * (2026-09-26, feedback user). Tidak bertahap lagi — dulu pencarian
      * berhenti di radius rapat begitu dapat 3 pembanding, sehingga hasilnya
      * berbeda-beda tiap titik.
@@ -96,6 +106,10 @@ class EstimasiNilaiTanah
 
         if ($kelompok) {
             $query->where('property_group', $kelompok);
+        }
+
+        if ($this->tahun) {
+            $query->whereBetween('valuation_year', $this->tahun);
         }
 
         return $query->get()
@@ -237,6 +251,10 @@ class EstimasiNilaiTanah
 
             if ($kelompok) {
                 $query->where('property_group', $kelompok);
+            }
+
+            if ($this->tahun) {
+                $query->whereBetween('valuation_year', $this->tahun);
             }
 
             $titik = $query->get();
