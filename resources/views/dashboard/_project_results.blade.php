@@ -229,7 +229,7 @@
                         <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada proyek yang cocok</p>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Longgarkan filter atau pencarian, atau buat proposal baru.</p>
                         @can('proposals.manage')
-                            <x-btn :href="route('proposals.create')" class="mt-4">Buat Proposal Baru</x-btn>
+                            <x-btn type="button" onclick="bukaPilihLayanan()" class="mt-4">Buat Proposal Baru</x-btn>
                         @endcan
                     </td>
                 </tr>
@@ -317,7 +317,7 @@
             <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada proyek yang cocok</p>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Longgarkan filter atau pencarian, atau buat proposal baru.</p>
             @can('proposals.manage')
-                <x-btn :href="route('proposals.create')" class="mt-4">Buat Proposal Baru</x-btn>
+                <x-btn type="button" onclick="bukaPilihLayanan()" class="mt-4">Buat Proposal Baru</x-btn>
             @endcan
         </div>
     @endforelse

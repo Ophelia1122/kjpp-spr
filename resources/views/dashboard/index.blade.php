@@ -99,13 +99,13 @@
                     </button>
                 @endcan
                 @can('proposals.manage')
-                    <a href="{{ route('proposals.create') }}" title="Buat Proposal Baru" aria-label="Buat Proposal Baru"
+                    <button type="button" onclick="bukaPilihLayanan()" title="Buat Proposal Baru" aria-label="Buat Proposal Baru"
                        class="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-3 text-xs font-medium text-white hover:border-blue-700 hover:bg-blue-700">
                         <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                         </svg>
                         Proposal Baru
-                    </a>
+                    </button>
                 @endcan
             </div>
         </div>

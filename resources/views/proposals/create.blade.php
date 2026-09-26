@@ -31,9 +31,22 @@
 
 <div class="max-w-5xl mx-auto py-8 space-y-6">
 
+    {{-- Jenis layanan dipilih di modal sebelum halaman ini (2026-09-25).
+         $konsultasi menentukan blok mana yang tampil. --}}
+    @php
+        $konsultasi = ($serviceType ?? \App\Models\Project::SERVICE_PENILAIAN) === \App\Models\Project::SERVICE_KONSULTASI;
+        $labelLayanan = $konsultasi ? $consultingType : 'Penilaian Properti';
+        $labelObjek = $konsultasi ? 'Objek Pekerjaan' : 'Objek Penilaian';
+    @endphp
+
     {{-- ===================== HEADER ===================== --}}
     <x-page-header title="Buat Proposal Penawaran Baru"
         subtitle="Lengkapi seluruh bagian di bawah, lalu simpan untuk men-generate dokumen proposal.">
+        <span class="shrink-0 rounded-full border px-3 py-1 text-xs font-semibold
+                     {{ $konsultasi ? 'border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300'
+                                    : 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300' }}">
+            {{ $labelLayanan }}
+        </span>
         <a href="{{ route('dashboard') }}"
            class="shrink-0 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
             &larr; Kembali ke List Project
@@ -47,12 +60,14 @@
             <a href="#section-pihak" data-target="section-pihak" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Pihak Terkait</a>
             <a href="#section-lingkup" data-target="section-lingkup" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Lingkup &amp; SLA</a>
             <a href="#section-biaya" data-target="section-biaya" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Biaya</a>
-            <a href="#section-objek" data-target="section-objek" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Objek Penilaian</a>
+            <a href="#section-objek" data-target="section-objek" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">{{ $labelObjek }}</a>
         </div>
     </div>
 
     <form id="proposalForm" action="{{ route('proposals.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf
+        <input type="hidden" name="service_type" value="{{ $serviceType }}">
+        <input type="hidden" name="consulting_type" value="{{ $consultingType }}">
 
         {{-- ============================================================
              KARTU 1 — IDENTITAS PROPOSAL
@@ -306,27 +321,40 @@
 
             <div class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tujuan Penilaian</label>
-                        <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
-                                class="mt-1 w-full rounded-md shadow-sm {{ $errCls('proposal_purpose') }}">
-                            @foreach (['Penjaminan Utang', 'Jual Beli', 'Lelang', 'Pelaporan Keuangan'] as $purpose)
-                                <option value="{{ $purpose }}" @selected(old('proposal_purpose') === $purpose)>
-                                    {{ $purpose === 'Pelaporan Keuangan' ? 'Pelaporan Keuangan (LK Properti)' : $purpose }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" id="purpose_hint"></p>
-                        @error('proposal_purpose')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Laporan</label>
-                        <select name="report_style" class="mt-1 w-full rounded-md shadow-sm {{ $errCls('report_style') }}">
-                            <option value="Long Report" @selected(old('report_style') === 'Long Report')>Long Report — Laporan Terinci (Comprehensive Style)</option>
-                            <option value="Short Report" @selected(old('report_style') === 'Short Report')>Short Report — Laporan Ringkas (Short Form)</option>
-                        </select>
-                        @error('report_style')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
-                    </div>
+                    @unless ($konsultasi)
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tujuan Penilaian</label>
+                            <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
+                                    class="mt-1 w-full rounded-md shadow-sm {{ $errCls('proposal_purpose') }}">
+                                @foreach (['Penjaminan Utang', 'Jual Beli', 'Lelang', 'Pelaporan Keuangan'] as $purpose)
+                                    <option value="{{ $purpose }}" @selected(old('proposal_purpose') === $purpose)>
+                                        {{ $purpose === 'Pelaporan Keuangan' ? 'Pelaporan Keuangan (LK Properti)' : $purpose }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" id="purpose_hint"></p>
+                            @error('proposal_purpose')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Laporan</label>
+                            <select name="report_style" class="mt-1 w-full rounded-md shadow-sm {{ $errCls('report_style') }}">
+                                <option value="Long Report" @selected(old('report_style') === 'Long Report')>Long Report — Laporan Terinci (Comprehensive Style)</option>
+                                <option value="Short Report" @selected(old('report_style') === 'Short Report')>Short Report — Laporan Ringkas (Short Form)</option>
+                            </select>
+                            @error('report_style')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        </div>
+                    @else
+                        {{-- Konsultasi: tidak ada tujuan penilaian maupun Long/Short
+                             Report. Jenis pekerjaannya sudah dipilih di modal. --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Pekerjaan</label>
+                            <p class="mt-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                                {{ $consultingType }}
+                            </p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jasa Konsultasi (SPI 350). Ganti jenisnya lewat tombol Proposal Baru.</p>
+                        </div>
+                        <input type="hidden" name="report_style" value="{{ \App\Models\Project::REPORT_LONG }}">
+                    @endunless
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -478,8 +506,13 @@
         <div id="section-objek" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between gap-2 mb-2">
                 <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
-                    Identifikasi Objek Penilaian &amp; Kepemilikan
-                    @include('partials.icon-info', ['tip' => 'Setiap objek wajib diisi lokasi, bentuk/jenis hak, dan atas nama secara manual — sesuai format tabel "Identifikasi Obyek Penilaian" pada dokumen resmi KJPP.'])
+                    @if ($konsultasi)
+                        Objek Pekerjaan
+                        @include('partials.icon-info', ['tip' => 'Cukup isi lokasi tiap objek. Kategori aset, bentuk hak, dan atas nama hanya dipakai pada proposal penilaian.'])
+                    @else
+                        Identifikasi Objek Penilaian &amp; Kepemilikan
+                        @include('partials.icon-info', ['tip' => 'Setiap objek wajib diisi lokasi, bentuk/jenis hak, dan atas nama secara manual — sesuai format tabel "Identifikasi Obyek Penilaian" pada dokumen resmi KJPP.'])
+                    @endif
                 </h2>
                 <button type="button" onclick="addObjectRow()"
                         class="inline-flex shrink-0 items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
@@ -490,7 +523,23 @@
                 </button>
             </div>
 
-            <div id="objects_container" class="space-y-3"></div>
+            @if ($konsultasi)
+                {{-- Kalimat objek pekerjaan (2026-09-25, permintaan user): dicetak
+                     apa adanya di bab Objek Pekerjaan pada proposal DAN sebagai
+                     paragraf uraian objek di Surat Tugas. --}}
+                <div class="mb-3">
+                    <label for="work_object_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Uraian Objek Pekerjaan
+                    </label>
+                    <textarea name="work_object_description" id="work_object_description" rows="3" maxlength="2000"
+                              placeholder="Contoh: Rencana pengembangan Ruko/Rukan pada Project Pantai Indah Mutiara yang dikembangkan oleh PT Cakra Agung Propertindo yang terletak di Kawasan Golden Prawn, Batam."
+                              class="mt-1 w-full rounded-md text-sm shadow-sm {{ $errCls('work_object_description') }}">{{ old('work_object_description') }}</textarea>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Satu paragraf. Dipakai di bab Objek Pekerjaan pada proposal dan di Surat Tugas.</p>
+                    @error('work_object_description')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+            @endif
+
+            <div id="objects_container" class="space-y-3" @if ($konsultasi) data-konsultasi="1" @endif></div>
         </div>
     </form>
 </div>
@@ -529,7 +578,7 @@
         </div>
 
         <div class="object-body grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-200 p-3 dark:border-gray-700">
-            <div class="sm:col-span-2">
+            <div class="khusus-penilaian sm:col-span-2">
                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Kategori Aset/Properti</label>
                 <select class="object-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600" required>
                     <option value="">-- Pilih Kategori --</option>
@@ -547,24 +596,24 @@
             </div>
 
             {{-- Field khusus kategori "Lainnya" --}}
-            <div class="other-category-fields hidden sm:col-span-2">
+            <div class="other-category-fields khusus-penilaian hidden sm:col-span-2">
                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Sebutkan Jenis Aset/Properti</label>
                 <input type="text" class="object-custom-category mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600"
                        placeholder="Contoh: Kapal / Pesawat / Hak Sewa / Tanaman Keras">
             </div>
 
             {{-- Field khusus Real Properti --}}
-            <div class="real-property-fields hidden">
+            <div class="real-property-fields khusus-penilaian hidden">
                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Luas Tanah (m²)</label>
                 <input type="number" step="0.01" min="0" class="object-land-area mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
             </div>
-            <div class="real-property-fields hidden">
+            <div class="real-property-fields khusus-penilaian hidden">
                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Luas Bangunan (m²)</label>
                 <input type="number" step="0.01" min="0" class="object-building-area mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
             </div>
 
             {{-- Field khusus Personal Properti --}}
-            <div class="personal-property-fields hidden sm:col-span-2">
+            <div class="personal-property-fields khusus-penilaian hidden sm:col-span-2">
                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Jumlah Unit</label>
                 <input type="number" min="0" class="object-unit-quantity mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
             </div>
@@ -575,12 +624,12 @@
                           placeholder="Masukkan alamat lengkap beserta kelurahan, kecamatan, kota/kabupaten dan Provinsi"></textarea>
             </div>
 
-            <div>
+            <div class="khusus-penilaian">
                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Bentuk/Jenis Hak Atas Tanah</label>
                 <input type="text" class="object-ownership-form mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600" required
                        placeholder="Contoh: Tunggal - SHGB No. 11948">
             </div>
-            <div>
+            <div class="khusus-penilaian">
                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Atas Nama</label>
                 <input type="text" class="object-owner-name mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600" required
                        placeholder="Contoh: PT. Kembang Griya Cahaya">
@@ -668,6 +717,14 @@
         row.querySelector('.object-owner-name').name = `objects[${index}][owner_name]`;
         row.querySelector('.object-notes').name = `objects[${index}][notes]`;
 
+        // Proposal konsultasi: objek cukup lokasi saja (2026-09-25).
+        if (document.getElementById('objects_container').dataset.konsultasi) {
+            row.querySelectorAll('.khusus-penilaian').forEach((blok) => {
+                blok.classList.add('hidden');
+                blok.querySelectorAll('[required]').forEach((el) => el.removeAttribute('required'));
+            });
+        }
+
         // Isi ulang nilai lama (dipakai saat validasi gagal)
         if (data) {
             const setVal = (sel, key) => {
@@ -732,6 +789,9 @@
     }
 
     function toggleObjectFields(row) {
+        // Proposal konsultasi tidak memakai field khusus penilaian sama sekali.
+        if (document.getElementById('objects_container').dataset.konsultasi) return;
+
         const category = row.querySelector('.object-category').value;
         const isReal = category.startsWith('Real Properti');
         const isPersonal = category.startsWith('Personal Properti');
@@ -1141,7 +1201,11 @@
     };
 
     function toggleLkFields() {
-        const purpose = document.getElementById('proposal_purpose').value;
+        // Proposal konsultasi tidak merender dropdown tujuannya.
+        const select = document.getElementById('proposal_purpose');
+        if (! select) return;
+
+        const purpose = select.value;
         document.getElementById('lk_fields').classList.toggle('hidden', purpose !== 'Pelaporan Keuangan');
         document.getElementById('purpose_hint').textContent = purposeHints[purpose] ?? '';
     }

@@ -773,6 +773,9 @@
     </script>
     @auth
         @include('partials.quick-palette')
+        @can('proposals.manage')
+            @include('partials.pilih-layanan')
+        @endcan
     @endauth
     @stack('scripts')
 

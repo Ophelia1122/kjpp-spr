@@ -154,6 +154,59 @@ class Project extends Model
     public const PURPOSE_LK_PROPERTI       = 'Pelaporan Keuangan';
 
     /**
+     * =========================================================================
+     * JENIS LAYANAN (2026-09-25, permintaan user)
+     *
+     * Penilaian  : pekerjaan penilaian properti, tunduk pada SPI 300. Seluruh
+     *              data lama masuk ke sini. Perilakunya tidak berubah.
+     * Konsultasi : jasa konsultasi, tunduk pada SPI 350 — penilai bertindak
+     *              sebagai konsultan. Tidak ada Dasar Nilai, Tanggal Penilaian,
+     *              Tingkat Kedalaman Investigasi, maupun Pendekatan Penilaian.
+     *
+     * Alur produksinya SAMA dengan penilaian; hanya istilah tahap review yang
+     * berbeda (lihat WORKFLOW_LABEL_KONSULTASI).
+     * =========================================================================
+     */
+    public const SERVICE_PENILAIAN  = 'Penilaian';
+    public const SERVICE_KONSULTASI = 'Konsultasi';
+
+    public const SERVICE_TYPES = [
+        self::SERVICE_PENILAIAN,
+        self::SERVICE_KONSULTASI,
+    ];
+
+    /** Jenis pekerjaan konsultasi. Hanya diisi bila service_type = Konsultasi. */
+    public const CONSULTING_RAB        = 'Kajian Kewajaran RAB';
+    public const CONSULTING_FS         = 'Studi Kelayakan';
+    public const CONSULTING_PENGAWASAN = 'Pengawasan Proyek';
+
+    public const CONSULTING_TYPES = [
+        self::CONSULTING_RAB,
+        self::CONSULTING_FS,
+        self::CONSULTING_PENGAWASAN,
+    ];
+
+    /** Keterangan singkat tiap jenis, dipakai di modal pemilih. */
+    public const CONSULTING_HINTS = [
+        self::CONSULTING_RAB        => 'Analisis kewajaran Rencana Anggaran Biaya pembangunan.',
+        self::CONSULTING_FS         => 'Studi kelayakan proyek: pasar, teknis, keuangan, risiko.',
+        self::CONSULTING_PENGAWASAN => 'Pemantauan progres fisik & biaya proyek pembangunan.',
+    ];
+
+    /**
+     * Istilah tahap review untuk proyek Konsultasi. Langkah alurnya identik
+     * dengan penilaian, hanya kata "Nilai"/"Resume" diganti "Summary".
+     */
+    public const WORKFLOW_LABEL_KONSULTASI = [
+        'Review Nilai'   => 'Review Summary',
+        'Draft Resume'   => 'Summary',
+        'Resume'         => 'Summary',
+        'review nilai'   => 'review summary',
+        'Nilai'          => 'Summary',
+        'nilai'          => 'summary',
+    ];
+
+    /**
      * Jenis laporan penilaian.
      * Long Report  = Laporan Terinci (Comprehensive Style Report)
      * Short Report = Laporan Ringkas (Short Form Report)
@@ -298,6 +351,9 @@ class Project extends Model
     protected $fillable = [
         'proposal_number',
         'proposal_date',
+        'service_type',
+        'consulting_type',
+        'work_object_description',
         'request_basis',
         'instructing_client_id',
         'asset_type',
@@ -453,6 +509,42 @@ class Project extends Model
     }
 
     /** Pekerjaan sedang berjalan (In-Progress s/d Pengiriman Buku). */
+    /** Proyek jasa konsultasi (SPI 350), bukan penilaian properti. */
+    public function isKonsultasi(): bool
+    {
+        return $this->service_type === self::SERVICE_KONSULTASI;
+    }
+
+    /**
+     * Nama layanan untuk ditampilkan: "Penilaian Properti" atau jenis
+     * konsultasinya, mis. "Studi Kelayakan".
+     */
+    public function getServiceLabelAttribute(): string
+    {
+        return $this->isKonsultasi()
+            ? (string) ($this->consulting_type ?: self::SERVICE_KONSULTASI)
+            : 'Penilaian Properti';
+    }
+
+    /**
+     * Istilah alur produksi sesuai jenis layanan. Proyek penilaian memakai
+     * kalimat aslinya; proyek konsultasi memakai "Summary" menggantikan
+     * "Nilai"/"Resume" (2026-09-25, permintaan user).
+     */
+    public function istilahAlur(string $teks): string
+    {
+        return $this->isKonsultasi() ? strtr($teks, self::WORKFLOW_LABEL_KONSULTASI) : $teks;
+    }
+
+    /**
+     * Jenis layanan masih boleh diganti selama proposal belum dikirim ke
+     * klien. Sesudah itu isian formnya sudah dipakai di dokumen resmi.
+     */
+    public function canChangeServiceType(): bool
+    {
+        return $this->status === self::STATUS_DRAFT;
+    }
+
     public function isWorkActive(): bool
     {
         return in_array($this->status, self::WORK_STATUSES, true);
