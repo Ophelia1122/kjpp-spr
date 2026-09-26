@@ -594,6 +594,44 @@ class Project extends Model
         ]);
     }
 
+    /**
+     * Kalimat "Untuk Pembayaran" pada Invoice & Kwitansi, mengikuti contoh
+     * dokumen kantor (2026-09-26). Proposal penilaian memakai kalimat lamanya;
+     * Non-Penilaian memakai kalimat per jenis dari
+     * config/proposal_clauses_konsultasi.php yang bisa disunting.
+     *
+     * @param  string  $an  Nama pihak pada bagian "an." (dipilih per invoice).
+     */
+    public function uraianTagihan(string $an): string
+    {
+        if (! $this->isKonsultasi()) {
+            return 'Biaya Jasa Penilaian Properti an. ' . $an;
+        }
+
+        $kunci = [
+            self::CONSULTING_RAB        => 'rab',
+            self::CONSULTING_FS         => 'fs',
+            self::CONSULTING_PENGAWASAN => 'pengawasan',
+        ][$this->consulting_type] ?? null;
+
+        $teks = $kunci
+            ? (config('proposal_clauses_konsultasi')[$kunci]['uraian_invoice'] ?? '')
+            : '';
+
+        if (trim($teks) === '') {
+            return 'Biaya Jasa ' . ($this->consulting_type ?: 'Konsultasi') . ' an. ' . $an;
+        }
+
+        $objek = $this->valuationObjects->first();
+
+        return trim(preg_replace('/\s+/', ' ', strtr($teks, [
+            ':an'     => $an,
+            ':klien'  => $this->effective_client_name,
+            ':proyek' => trim((string) ($objek->notes ?? '')),
+            ':lokasi' => (string) ($objek->location ?? ''),
+        ])));
+    }
+
     public function isWorkActive(): bool
     {
         return in_array($this->status, self::WORK_STATUSES, true);

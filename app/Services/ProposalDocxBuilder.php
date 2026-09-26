@@ -556,7 +556,10 @@ class ProposalDocxBuilder
 
         $this->s->addTextBreak(1);
         $this->s->addText(
-            'Perihal : ' . ($this->klKonsultasi['perihal'] ?? ('Proposal ' . $this->project->consulting_type)),
+            'Perihal : ' . strtr(
+                (string) ($this->klKonsultasi['perihal'] ?? ('Proposal ' . $this->project->consulting_type)),
+                $this->placeholderProyek()
+            ),
             $this->fBold,
             ['spaceAfter' => 120]
         );
@@ -1791,9 +1794,19 @@ class ProposalDocxBuilder
         ':tanggal_proposal' => 'Tanggal proposal',
         ':tujuan'           => 'Tujuan penilaian',
         ':dasar_nilai'      => 'Dasar nilai (Nilai Pasar/Nilai Wajar/...)',
-        ':objek_pekerjaan'  => 'Uraian Objek Pekerjaan (proposal konsultasi)',
+        ':objek_pekerjaan'  => 'Uraian Objek Pekerjaan (proposal Non-Penilaian)',
+        ':proyek'           => 'Nama Singkat Proyek (Catatan Tambahan objek pertama)',
         ':lokasi'           => 'Lokasi objek pertama',
+        ':sla_final'        => 'SLA Laporan Final, mis. "14 (empat belas)"',
     ];
+
+    /** "14 (empat belas)" — angka SLA beserta terbilangnya. */
+    private function slaTerbilang(?int $hari): string
+    {
+        $hari = (int) $hari;
+
+        return $hari > 0 ? $hari . ' (' . Terbilang::words($hari) . ')' : '';
+    }
 
     private function placeholderProyek(): array
     {
@@ -1807,7 +1820,12 @@ class ProposalDocxBuilder
             ':tujuan'           => (string) $this->project->proposal_purpose,
             ':dasar_nilai'      => (string) $this->project->value_basis_label,
             ':objek_pekerjaan'  => trim((string) $this->project->work_object_description),
+            // Nama singkat proyek disimpan di Catatan Tambahan objek pertama
+            // (2026-09-26, permintaan user) — frasa pendek tanpa nama klien
+            // dan tanpa alamat, disisipkan ke tengah kalimat.
+            ':proyek'           => trim((string) ($this->project->valuationObjects->first()->notes ?? '')),
             ':lokasi'           => (string) ($this->project->valuationObjects->first()->location ?? ''),
+            ':sla_final'        => $this->slaTerbilang($this->project->sla_final_days),
         ];
     }
 

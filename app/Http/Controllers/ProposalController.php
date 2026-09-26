@@ -942,7 +942,10 @@ class ProposalController extends Controller
             'objects.*.location'        => 'required|string',
             'objects.*.ownership_form'  => $wajibPenilaian . '|string|max:255',
             'objects.*.owner_name'      => $wajibPenilaian . '|string|max:255',
-            'objects.*.notes'           => 'nullable|string',
+            // Pada proposal Non-Penilaian, Catatan Tambahan menampung NAMA
+            // SINGKAT PROYEK yang disisipkan ke kalimat Invoice, Kwitansi, dan
+            // beberapa bab proposal — jadi wajib diisi (2026-09-26).
+            'objects.*.notes'           => [$konsultasi ? 'required' : 'nullable', 'string', 'max:255'],
         ], [
             'signature_barcode.required'   => 'Unggah file barcode tanda tangan, atau pilih "Tidak".',
             'signature_barcode.mimes'      => 'Barcode harus berformat PNG atau JPG/JPEG.',

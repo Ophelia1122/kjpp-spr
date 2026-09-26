@@ -58,7 +58,7 @@
             </td>
             <td>
                 Pembayaran {{ $invoice->term_description ?: 'Biaya Jasa Penilaian' }}
-                Biaya Jasa Penilaian Properti an. {{ $invoice->on_behalf_name }}
+                {{ $project->uraianTagihan($invoice->on_behalf_name) }}
             </td>
         </tr>
         <tr class="dots-row">

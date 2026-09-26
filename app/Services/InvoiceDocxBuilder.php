@@ -117,8 +117,9 @@ class InvoiceDocxBuilder
         $this->p($c, 'UNTUK PEMBAYARAN', $this->f(10.5, true, false, true));
         $this->p($c, 'FOR PAYMENT', $this->f(9, false, true));
         $this->p($c, '');
+        // Uraian jasa berbeda per jenis layanan (2026-09-26).
         $this->p($c, 'Pembayaran ' . ($inv->term_description ?: 'Biaya Jasa Penilaian')
-            . ' Biaya Jasa Penilaian Properti an. ' . $inv->on_behalf_name . ' yang berlokasi di :', $this->f(10.5, true, true));
+            . ' ' . $p->uraianTagihan($inv->on_behalf_name) . ' yang berlokasi di :', $this->f(10.5, true, true));
         $this->p($c, '');
 
         // Uraian lokasi 9,5pt, sedikit lebih kecil dari isi (2026-09-14, feedback user).
@@ -232,7 +233,7 @@ class InvoiceDocxBuilder
             ['Banyaknya Uang', 'Amount Received', fn (Cell $c) => $this->p($c, '# ' . $this->terbilang($inv->amount) . ' #', $this->f($size, true, true))],
             ['Untuk Pembayaran', 'For payment of', function (Cell $c) use ($inv, $p, $size) {
                 $this->p($c, 'Pembayaran ' . ($inv->term_description ?: 'Biaya Jasa Penilaian')
-                    . ' Biaya Jasa Penilaian Properti an. ' . $inv->on_behalf_name, $this->f($size));
+                    . ' ' . $p->uraianTagihan($inv->on_behalf_name), $this->f($size));
                 $this->p($c, 'Sesuai dengan Surat Penawaran No. ' . $p->proposal_number
                     . ' tanggal ' . $p->effective_proposal_date->translatedFormat('d F Y'), $this->f($size));
             }],

@@ -48,7 +48,11 @@ class ProposalKonsultasiTest extends TestCase
             'sla_final_days'          => 14,
             'payment_terms'           => '50,50',
             // Objek konsultasi: lokasi saja, tanpa kategori/hak/atas nama.
-            'objects'                 => [['location' => 'Jl. Raya Mantup KM 16, Lamongan']],
+            // Catatan Tambahan = Nama Singkat Proyek, wajib pada Non-Penilaian.
+            'objects'                 => [[
+                'location' => 'Jl. Raya Mantup KM 16, Lamongan',
+                'notes'    => 'Pabrik Pengolahan Tembakau',
+            ]],
         ], $timpa);
     }
 
@@ -121,6 +125,33 @@ class ProposalKonsultasiTest extends TestCase
         $this->assertNull($objek->ownership_form);
     }
 
+    public function test_nama_singkat_proyek_wajib_diisi(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('proposals.store'), $this->data([
+                'objects' => [['location' => 'Jl. Raya Mantup KM 16, Lamongan']],
+            ]))
+            ->assertSessionHasErrors('objects.0.notes');
+    }
+
+    /** Kalimat Invoice & Kwitansi berbeda per jenis pekerjaan. */
+    public function test_uraian_tagihan_mengikuti_jenis_pekerjaan(): void
+    {
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->data());
+        $proyek = Project::where('proposal_number', 'KONS/2026/001')->firstOrFail();
+
+        $uraian = $proyek->uraianTagihan('PT Uji Konsultasi');
+        $this->assertStringContainsString('Studi Kelayakan (Feasibility Study)', $uraian);
+        $this->assertStringContainsString('Pabrik Pengolahan Tembakau', $uraian);
+        $this->assertStringNotContainsString('Penilaian Properti', $uraian);
+
+        $penilaian = new Project(['service_type' => Project::SERVICE_PENILAIAN]);
+        $this->assertSame(
+            'Biaya Jasa Penilaian Properti an. PT Contoh',
+            $penilaian->uraianTagihan('PT Contoh')
+        );
+    }
+
     public function test_uraian_objek_pekerjaan_wajib_diisi(): void
     {
         $this->actingAs($this->admin)
@@ -136,7 +167,7 @@ class ProposalKonsultasiTest extends TestCase
                 'service_type'     => Project::SERVICE_PENILAIAN,
                 'consulting_type'  => null,
                 'proposal_purpose' => Project::PURPOSE_JUAL_BELI,
-                'objects'          => [['location' => 'Jl. Objek']],
+                'objects'          => [['location' => 'Jl. Objek', 'notes' => 'Ruko dua lantai']],
             ]))
             ->assertSessionHasErrors(['objects.0.asset_category', 'objects.0.ownership_form', 'objects.0.owner_name']);
     }

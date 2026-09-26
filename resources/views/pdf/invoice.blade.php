@@ -74,8 +74,9 @@
                 <span class="italic small">FOR PAYMENT</span>
                 <br><br>
                 <span class="bold italic">
+                    {{-- Uraian jasa berbeda per jenis layanan (2026-09-26). --}}
                     Pembayaran {{ $invoice->term_description ?: 'Biaya Jasa Penilaian' }}
-                    Biaya Jasa Penilaian Properti an. {{ $invoice->on_behalf_name }}
+                    {{ $project->uraianTagihan($invoice->on_behalf_name) }}
                     yang berlokasi di :
                 </span>
                 <br>

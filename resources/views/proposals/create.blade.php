@@ -548,9 +548,13 @@
                         Uraian Objek Pekerjaan
                     </label>
                     <textarea name="work_object_description" id="work_object_description" rows="3" maxlength="2000"
-                              placeholder="Contoh: Rencana pengembangan Ruko/Rukan pada Project Pantai Indah Mutiara yang dikembangkan oleh PT Cakra Agung Propertindo yang terletak di Kawasan Golden Prawn, Batam."
+                              placeholder="Contoh : Rencana pengembangan ____ yang dikembangkan oleh ______ yang terletak di ____"
                               class="mt-1 w-full rounded-md text-sm shadow-sm {{ $errCls('work_object_description') }}">{{ old('work_object_description') }}</textarea>
-                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Satu paragraf. Dipakai di bab Objek Pekerjaan pada proposal dan di Surat Tugas.</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <span class="font-medium">Tulis satu kalimat utuh</span> — sebutkan apa yang dikerjakan, siapa yang mengembangkan, dan di mana lokasinya.
+                        Dicetak apa adanya sebagai paragraf di <span class="font-medium">Surat Tugas</span> dan di bab
+                        <span class="font-medium">Objek Pekerjaan</span> pada proposal.
+                    </p>
                     @error('work_object_description')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
             @endif
@@ -652,9 +656,28 @@
             </div>
 
             <div class="sm:col-span-2">
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Catatan Tambahan (opsional)</label>
-                <input type="text" class="object-notes mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600"
-                       placeholder="Contoh: Rumah Tinggal 2 Lantai / sesuai list yang diterima">
+                @if ($konsultasi)
+                    {{-- Pada proposal Non-Penilaian kolom ini menampung NAMA SINGKAT
+                         proyek, bukan catatan bebas (2026-09-26, permintaan user).
+                         Frasanya disisipkan ke kalimat Invoice, Kwitansi, dan
+                         beberapa bab proposal lewat kode :proyek. --}}
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">
+                        Nama Singkat Proyek <span class="font-normal text-red-500">*</span>
+                    </label>
+                    <input type="text" class="object-notes mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600"
+                           placeholder="Tulis rencana pengembangan/objek pekerjaan disini">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <span class="font-medium">Tulis frasa pendek saja, tanpa nama klien dan tanpa alamat.</span>
+                        Contoh: <span class="font-medium">Pabrik Pengolahan Tembakau</span> &middot;
+                        <span class="font-medium">Resort Tahap II</span> &middot;
+                        <span class="font-medium">Ruko/Rukan pada Project Pantai Indah Mutiara</span>.
+                        Dipakai di kalimat Invoice, Kwitansi, dan bab proposal — nama klien &amp; lokasi ditambahkan otomatis.
+                    </p>
+                @else
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Catatan Tambahan (opsional)</label>
+                    <input type="text" class="object-notes mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600"
+                           placeholder="Contoh: Rumah Tinggal 2 Lantai / sesuai list yang diterima">
+                @endif
             </div>
         </div>
     </div>

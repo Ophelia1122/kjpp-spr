@@ -21,7 +21,7 @@
 return [
 
     'rab' => [
-        'perihal'     => 'Proposal Pekerjaan Konsultasi Kajian Kewajaran Rencana Anggaran Biaya (RAB) Pembangunan #####',
+        'perihal'     => 'Proposal Pekerjaan Konsultasi Kajian Kewajaran Rencana Anggaran Biaya (RAB) Pembangunan :proyek',
         'pembuka'     => 'Menindaklanjuti informasi dan komunikasi dengan pihak **:klien** yang disampaikan melalui email pada tanggal **## ### ####**, maka bersama ini kami **Kantor Jasa Penilai Publik(KJPP) SUGIANTO PRASODJO DAN REKAN,** menyampaikan proposal Pekerjaan Konsultasi dalam rangka melakukan Kajian Kewajaran Rencana Anggaran Biaya (RAB) Pembangunan #### yang diprakarsai oleh **:klien.**',
         'biaya_intro' => 'Untuk melaksanakan pekerjaan penilaian ini, kami mengajukan Biaya Profesional Jasa Konsultasi Analisis Kewajaran adalah sebesar :',
         'termin_first' => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum dilakukan inspeksi lapangan.',
@@ -29,6 +29,7 @@ return [
         'termin_last' => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
         'termin_tahap' => false,
         'kalimat_surat_tugas' => 'melakukan inspeksi lokasi dan analisis kewajaran Rencana Anggaran Biaya (RAB) atas nama :klien.',
+        'uraian_invoice' => 'Biaya Jasa Pekerjaan Konsultasi beserta Transportasi dan Akomodasi an. :an',
         'judul_biaya' => 'Biaya Jasa Konsultasi Analisis Kewajaran',
         'judul_tor'   => '',
         'bab' => [
@@ -38,7 +39,7 @@ return [
             ],
             'latar_belakang_penugasan' => [
                 'judul' => "Latar Belakang Penugasan",
-                'teks'  => "Maksud dan tujuan penugasan ini adalah untuk menyajikan informasi tentang Kewajaran Rencana Anggaran Biaya (RAB) dalam rencana pembangunan **-----------------** yang telah dikembangkan oleh **:klien** dan digunakan sebagai salah satu informasi pendukung dalam rangka pembiayaan dengan pihak **:klien**.",
+                'teks'  => "Maksud dan tujuan penugasan ini adalah untuk menyajikan informasi tentang Kewajaran Rencana Anggaran Biaya (RAB) dalam rencana pembangunan **:proyek** yang telah dikembangkan oleh **:klien** dan digunakan sebagai salah satu informasi pendukung dalam rangka pembiayaan dengan pihak **:klien**.",
             ],
             'pemberi_tugas_dan_pengguna_laporan' => [
                 'judul' => "Pemberi Tugas dan Pengguna Laporan",
@@ -46,7 +47,7 @@ return [
             ],
             'objek_pekerjaan' => [
                 'judul' => "Objek Pekerjaan",
-                'teks'  => "Yang menjadi objek dalam pekerjaan ini adalah Rencana Anggaran Biaya (RAB) terhadap rencana pembangunan **####** yang dikembangkan oleh **:klien** yang berlokasi di ####.",
+                'teks'  => "Yang menjadi objek dalam pekerjaan ini adalah Rencana Anggaran Biaya (RAB) terhadap rencana pembangunan **:proyek** yang dikembangkan oleh **:klien** yang berlokasi di :lokasi.",
             ],
             'bentuk_kepemilikan' => [
                 'judul' => "Bentuk Kepemilikan",
@@ -163,6 +164,7 @@ return [
         'termin_last' => 'Tahap :tahap : :pct% dari biaya jasa sebesar **:rp (:terbilang),** dibayarkan sebelum final report diserahkan.',
         'termin_tahap' => true,
         'kalimat_surat_tugas' => 'melakukan Jasa Penyusunan Laporan Studi Kelayakan atas nama :klien.',
+        'uraian_invoice' => 'Biaya Jasa Studi Kelayakan (Feasibility Study) Proyek Pembangunan :proyek :klien',
         'judul_biaya' => 'Biaya Jasa Studi Kelayakan',
         'judul_tor'   => 'Penyusunan Studi Kelayakan',
         'bab' => [
@@ -612,20 +614,21 @@ return [
     ],
 
     'pengawasan' => [
-        'perihal'     => 'Proposal Penawaran Jasa Pengawasan Proyek Pembangunan ---- :klien',
-        'pembuka'     => 'Menindaklanjuti permintaan ----- untuk penyusunan Laporan Pengawasan *(Monitoring)* proyek pembangunan ----- yang diprakarsai oleh :klien, bersama ini kami dari KJPP Sugianto Prasodjo dan Rekan menyampaikan proposal penawaran biaya jasa penyusunan Laporan Pengawasan dilengkapi dengan Kerangka Acuan Kerja (KAK), sebagai berikut:',
+        'perihal'     => 'Proposal Penawaran Jasa Pengawasan Proyek Pembangunan :proyek :klien',
+        'pembuka'     => 'Menindaklanjuti permintaan untuk penyusunan Laporan Pengawasan *(Monitoring)* proyek pembangunan :proyek yang diprakarsai oleh :klien, bersama ini kami dari KJPP Sugianto Prasodjo dan Rekan menyampaikan proposal penawaran biaya jasa penyusunan Laporan Pengawasan dilengkapi dengan Kerangka Acuan Kerja (KAK), sebagai berikut:',
         'biaya_intro' => 'Biaya jasa profesional pengawasan Proyek Pembangunan Konstruksi untuk 1 (satu) kali kunjungan adalah sebesar:',
         'termin_first' => 'Tahap :tahap : :pct% dari biaya jasa sebesar **:rp (:terbilang),** dibayarkan pada saat penandatanganan Surat Perjanjian Kerja (SPK)',
         'termin_mid' => 'Tahap :tahap : :pct% dari biaya jasa sebesar **:rp (:terbilang),** dibayarkan setelah draft laporan diserahkan.',
         'termin_last' => 'Tahap :tahap : :pct% dari biaya jasa sebesar **:rp (:terbilang),** dibayarkan sebelum final report diserahkan.',
         'termin_tahap' => true,
         'kalimat_surat_tugas' => 'melakukan Jasa Pengawasan Proyek Pembangunan atas nama :klien.',
+        'uraian_invoice' => 'Jasa Pengawasan Proyek Pembangunan :proyek yang diprakarsai oleh :klien',
         'judul_biaya' => 'Biaya Jasa',
         'judul_tor'   => 'Penyusunan Laporan Pengawasan',
         'bab' => [
             'ringkasan_proposal' => [
                 'judul' => "Ringkasan Proposal",
-                'teks'  => "Proposal ini disusun untuk memberikan gambaran menyeluruh mengenai ruang lingkup pekerjaan, pendekatan pengawasan, metodologi pelaksanaan, jadwal kegiatan, susunan tim pelaksana, serta estimasi biaya jasa dalam rangka pelaksanaan pekerjaan pengawasan proyek pembangunan ---- yang diprakarsai oleh **:klien** dan berlokasi di -----. Pekerjaan pengawasan ini bertujuan untuk memastikan bahwa pelaksanaan konstruksi berjalan sesuai dengan perencanaan, spesifikasi teknis, ketentuan kontrak, serta ketentuan lainnya yang berlaku.",
+                'teks'  => "Proposal ini disusun untuk memberikan gambaran menyeluruh mengenai ruang lingkup pekerjaan, pendekatan pengawasan, metodologi pelaksanaan, jadwal kegiatan, susunan tim pelaksana, serta estimasi biaya jasa dalam rangka pelaksanaan pekerjaan pengawasan proyek pembangunan :proyek yang diprakarsai oleh **:klien** dan berlokasi di :lokasi. Pekerjaan pengawasan ini bertujuan untuk memastikan bahwa pelaksanaan konstruksi berjalan sesuai dengan perencanaan, spesifikasi teknis, ketentuan kontrak, serta ketentuan lainnya yang berlaku.",
             ],
             'latar_belakang_dan_tujuan_pekerjaan' => [
                 'judul' => "Latar Belakang dan Tujuan Pekerjaan",
@@ -692,7 +695,7 @@ return [
             ],
             'tim_pelaksana' => [
                 'judul' => "Tim Pelaksana",
-                'teks'  => "Dalam melakukan Pekerjaan Pengawasan Proyek Pembangunan ---sebutkan proyek apa--- yang diprakarsai oleh :klien, tenaga ahli yang terlibat secara langsung dan tidak langsung adalah sebagai berikut:\n"
+                'teks'  => "Dalam melakukan Pekerjaan Pengawasan Proyek Pembangunan :proyek yang diprakarsai oleh :klien, tenaga ahli yang terlibat secara langsung dan tidak langsung adalah sebagai berikut:\n"
                           . "\n"
                           . "Tenaga Ahli\n",
             ],
@@ -715,7 +718,7 @@ return [
             ],
             'pelaporan' => [
                 'judul' => "Pelaporan",
-                'teks'  => "Laporan final akan diserahkan dalam jangka waktu --- (----) hari kerja, dengan jangka waktu pekerjaan sebagaimana tercantum pada Lampiran 1 Kerangka Acuan Kerja (KAK)/*Term of Reference (ToR)* bagian XIII.",
+                'teks'  => "Laporan final akan diserahkan dalam jangka waktu :sla_final hari kerja, dengan jangka waktu pekerjaan sebagaimana tercantum pada Lampiran 1 Kerangka Acuan Kerja (KAK)/*Term of Reference (ToR)* bagian XIII.",
             ],
             'pembatalan_penugasan' => [
                 'judul' => "Pembatalan Penugasan",
@@ -800,8 +803,8 @@ return [
             ],
             'tor_objek_dan_lokasi_pengawasan' => [
                 'judul' => "objek dan lokasi pengawasan",
-                'teks'  => "1. Obyek pengawasan adalah Proyek Pembangunan ------ yang diprakarsai oleh :klien, sebagaimana tercantum dalam dokumen perencanaan dan spesifikasi proyek yang disusun oleh :klien dan telah memperoleh persetujuan dari Pihak Bank.\n"
-                          . "2. Lokasi Objek Pengawasan Pembangunan adalah Proyek –pembangunan apa-- yang berlokasi di -----.\n",
+                'teks'  => "1. Obyek pengawasan adalah Proyek Pembangunan :proyek yang diprakarsai oleh :klien, sebagaimana tercantum dalam dokumen perencanaan dan spesifikasi proyek yang disusun oleh :klien dan telah memperoleh persetujuan dari Pihak Bank.\n"
+                          . "2. Lokasi Objek Pengawasan Pembangunan adalah Proyek :proyek yang berlokasi di :lokasi.\n",
             ],
             'tor_pelaksanaan_pengawasan' => [
                 'judul' => "pelaksanaan pengawasan",
@@ -924,7 +927,7 @@ return [
                 'judul' => "pelaksanaan DAN JANGKA WAKTU pekerjaan",
                 'teks'  => "Pengawasan dilaksanakan sesuai dengan kebutuhan PIHAK BANK, dengan tetap memperhatikan ketentuan penugasan dan standar profesional yang berlaku pada KJPP Sugianto Prasodjo dan Rekan.\n"
                           . "\n"
-                          . "Laporan pengawasan proyek akan kami serahkan dalam jangka waktu xx (-----) hari kerja terhitung setelah datadata yang lengkap terima dilakukan sebanyak 2 (dua) buku, dan disusun dalam Bahasa Indonesia. Adapun jadwal pelaksanaan pengerjaan penyusunan laporan pengawasan proyek sebagai berikut:\n",
+                          . "Laporan pengawasan proyek akan kami serahkan dalam jangka waktu :sla_final hari kerja terhitung setelah datadata yang lengkap terima dilakukan sebanyak 2 (dua) buku, dan disusun dalam Bahasa Indonesia. Adapun jadwal pelaksanaan pengerjaan penyusunan laporan pengawasan proyek sebagai berikut:\n",
             ],
             'tor_penutup' => [
                 'judul' => "PENUTUP",
