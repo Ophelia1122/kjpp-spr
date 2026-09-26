@@ -6,10 +6,8 @@
     $menuPalet = collect([
         ['judul' => 'Beranda',             'url' => route('home'),                 'izin' => null],
         ['judul' => 'List Project',        'url' => route('dashboard'),            'izin' => 'dashboard.view'],
-        ['judul' => 'Proposal Baru — Penilaian Properti', 'url' => route('proposals.create'), 'izin' => 'proposals.manage'],
-        ['judul' => 'Proposal Baru — Kajian Kewajaran RAB', 'url' => route('proposals.create', ['layanan' => \App\Models\Project::SERVICE_KONSULTASI, 'jenis' => \App\Models\Project::CONSULTING_RAB]), 'izin' => 'proposals.manage'],
-        ['judul' => 'Proposal Baru — Studi Kelayakan', 'url' => route('proposals.create', ['layanan' => \App\Models\Project::SERVICE_KONSULTASI, 'jenis' => \App\Models\Project::CONSULTING_FS]), 'izin' => 'proposals.manage'],
-        ['judul' => 'Proposal Baru — Pengawasan Proyek', 'url' => route('proposals.create', ['layanan' => \App\Models\Project::SERVICE_KONSULTASI, 'jenis' => \App\Models\Project::CONSULTING_PENGAWASAN]), 'izin' => 'proposals.manage'],
+        ['judul' => 'Proposal Baru — Real Properti / Personal Properti', 'url' => route('proposals.create'), 'izin' => 'proposals.manage'],
+        ['judul' => 'Proposal Baru — Non-Penilaian', 'url' => route('proposals.create', ['layanan' => \App\Models\Project::SERVICE_KONSULTASI]), 'izin' => 'proposals.manage'],
         ['judul' => 'Timeline Project',    'url' => route('timeline'),             'izin' => 'dashboard.view'],
         ['judul' => 'SPJ Surveyor',        'url' => route('spj.index'),            'izin' => 'survey.view'],
         ['judul' => 'Ringkasan Project',   'url' => route('dashboard.overview'),   'izin' => 'dashboard.overview'],

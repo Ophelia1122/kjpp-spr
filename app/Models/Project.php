@@ -170,6 +170,16 @@ class Project extends Model
     public const SERVICE_PENILAIAN  = 'Penilaian';
     public const SERVICE_KONSULTASI = 'Konsultasi';
 
+    /**
+     * Nama kelompok layanan yang dipakai di layar (2026-09-26, permintaan
+     * user). Nilai yang tersimpan di kolom service_type tidak berubah;
+     * hanya tulisannya yang berbeda supaya sejajar dengan istilah kantor.
+     */
+    public const SERVICE_LABELS = [
+        self::SERVICE_PENILAIAN  => 'Real Properti / Personal Properti',
+        self::SERVICE_KONSULTASI => 'Non-Penilaian',
+    ];
+
     public const SERVICE_TYPES = [
         self::SERVICE_PENILAIAN,
         self::SERVICE_KONSULTASI,
@@ -517,14 +527,25 @@ class Project extends Model
     }
 
     /**
-     * Nama layanan untuk ditampilkan: "Penilaian Properti" atau jenis
-     * konsultasinya, mis. "Studi Kelayakan".
+     * Nama layanan untuk ditampilkan: jenis pekerjaan Non-Penilaian
+     * (mis. "Studi Kelayakan"), atau kelompok penilaian properti.
      */
     public function getServiceLabelAttribute(): string
     {
         return $this->isKonsultasi()
-            ? (string) ($this->consulting_type ?: self::SERVICE_KONSULTASI)
-            : 'Penilaian Properti';
+            ? (string) ($this->consulting_type ?: self::SERVICE_LABELS[self::SERVICE_KONSULTASI])
+            : self::SERVICE_LABELS[self::SERVICE_PENILAIAN];
+    }
+
+    /**
+     * Tujuan penilaian / jenis pekerjaan dikunci begitu proposal tersimpan
+     * (2026-09-26, permintaan user): keduanya menentukan susunan bab dokumen,
+     * jadi menggantinya di tengah jalan membuat teks bab yang sudah disunting
+     * tidak lagi cocok. Salah pilih = buat proposal baru.
+     */
+    public function canChangePurpose(): bool
+    {
+        return ! $this->exists;
     }
 
     /**

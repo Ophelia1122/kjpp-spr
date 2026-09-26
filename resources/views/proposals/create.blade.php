@@ -35,7 +35,7 @@
          $konsultasi menentukan blok mana yang tampil. --}}
     @php
         $konsultasi = ($serviceType ?? \App\Models\Project::SERVICE_PENILAIAN) === \App\Models\Project::SERVICE_KONSULTASI;
-        $labelLayanan = $konsultasi ? $consultingType : 'Penilaian Properti';
+        $labelLayanan = \App\Models\Project::SERVICE_LABELS[$serviceType] ?? $serviceType;
         $labelObjek = $konsultasi ? 'Objek Pekerjaan' : 'Objek Penilaian';
     @endphp
 
@@ -67,7 +67,6 @@
     <form id="proposalForm" action="{{ route('proposals.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf
         <input type="hidden" name="service_type" value="{{ $serviceType }}">
-        <input type="hidden" name="consulting_type" value="{{ $consultingType }}">
 
         {{-- ============================================================
              KARTU 1 — IDENTITAS PROPOSAL
@@ -346,12 +345,19 @@
                     @else
                         {{-- Konsultasi: tidak ada tujuan penilaian maupun Long/Short
                              Report. Jenis pekerjaannya sudah dipilih di modal. --}}
+                        {{-- Jenis pekerjaan Non-Penilaian dipilih di sini, sejajar
+                             dengan Tujuan Penilaian pada proposal penilaian
+                             (2026-09-26, permintaan user). --}}
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Pekerjaan</label>
-                            <p class="mt-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
-                                {{ $consultingType }}
-                            </p>
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jasa Konsultasi (SPI 350). Ganti jenisnya lewat tombol Proposal Baru.</p>
+                            <label for="consulting_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Pekerjaan</label>
+                            <select name="consulting_type" id="consulting_type" required
+                                    class="mt-1 w-full rounded-md shadow-sm {{ $errCls('consulting_type') }}">
+                                @foreach (\App\Models\Project::CONSULTING_TYPES as $jenis)
+                                    <option value="{{ $jenis }}" @selected(old('consulting_type', $consultingType) === $jenis)>{{ $jenis }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jasa Konsultasi (SPI 350). Tidak bisa diubah setelah proposal disimpan.</p>
+                            @error('consulting_type')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                     <div>
                         <label for="letter_attn" class="block text-sm font-medium text-gray-700 dark:text-gray-300">

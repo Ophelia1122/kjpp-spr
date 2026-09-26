@@ -110,7 +110,6 @@
         @csrf
         @method('PUT')
         <input type="hidden" name="service_type" value="{{ $project->service_type }}">
-        <input type="hidden" name="consulting_type" value="{{ $project->consulting_type }}">
 
         {{-- ============================================================
              KARTU 1 — IDENTITAS PROPOSAL
@@ -373,18 +372,17 @@
             <div class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     @unless ($konsultasi)
+                        {{-- Tujuan Penilaian dikunci setelah proposal tersimpan
+                             (2026-09-26, permintaan user): tujuannya menentukan
+                             susunan bab dokumen. Salah pilih = buat proposal baru. --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tujuan Penilaian</label>
-                            <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
-                                    class="mt-1 w-full rounded-md shadow-sm {{ $errCls('proposal_purpose') }}">
-                                @foreach (['Penjaminan Utang', 'Jual Beli', 'Lelang', 'Pelaporan Keuangan'] as $purpose)
-                                    <option value="{{ $purpose }}" @selected(old('proposal_purpose', $project->proposal_purpose) === $purpose)>
-                                        {{ $purpose === 'Pelaporan Keuangan' ? 'Pelaporan Keuangan (LK Properti)' : $purpose }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" id="purpose_hint"></p>
-                            @error('proposal_purpose')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                            <p class="mt-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                                {{ $project->proposal_purpose === 'Pelaporan Keuangan' ? 'Pelaporan Keuangan (LK Properti)' : $project->proposal_purpose }}
+                            </p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Tidak bisa diubah setelah proposal dibuat.</p>
+                            <input type="hidden" name="proposal_purpose" value="{{ $project->proposal_purpose }}">
+                            <input type="hidden" id="proposal_purpose" value="{{ $project->proposal_purpose }}">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Laporan</label>
@@ -400,7 +398,8 @@
                             <p class="mt-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
                                 {{ $project->consulting_type }}
                             </p>
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jasa Konsultasi (SPI 350).</p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jasa Konsultasi (SPI 350). Tidak bisa diubah setelah proposal dibuat.</p>
+                            <input type="hidden" name="consulting_type" value="{{ $project->consulting_type }}">
                         </div>
                     <div>
                         <label for="letter_attn" class="block text-sm font-medium text-gray-700 dark:text-gray-300">

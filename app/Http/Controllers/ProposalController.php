@@ -25,12 +25,11 @@ class ProposalController extends Controller
             ? Project::SERVICE_KONSULTASI
             : Project::SERVICE_PENILAIAN;
 
-        $jenis = $layanan === Project::SERVICE_KONSULTASI
-            && in_array($request->query('jenis'), Project::CONSULTING_TYPES, true)
-                ? $request->query('jenis')
-                : null;
-
-        abort_if($layanan === Project::SERVICE_KONSULTASI && ! $jenis, 404);
+        // Jenis pekerjaan Non-Penilaian dipilih di dalam form (2026-09-26);
+        // querystring hanya dipakai untuk memilih jenis awal bila dikirim.
+        $jenis = in_array($request->query('jenis'), Project::CONSULTING_TYPES, true)
+            ? $request->query('jenis')
+            : null;
 
         return view('proposals.create', [
             'signers'        => User::penanggungJawab()->orderBy('name')->get(),
@@ -333,11 +332,14 @@ class ProposalController extends Controller
             'report_style'             => $validated['report_style'],
             'sla_draft_days'           => $validated['sla_draft_days'],
             'sla_final_days'           => $validated['sla_final_days'],
-            'service_type'             => $validated['service_type'] ?? Project::SERVICE_PENILAIAN,
-            'consulting_type'          => $validated['consulting_type'] ?? null,
+            'service_type'             => $project->service_type,
+            // Tujuan penilaian & jenis pekerjaan DIKUNCI setelah proposal
+            // dibuat (2026-09-26, permintaan user): keduanya menentukan
+            // susunan bab dokumen. Nilai dari form sengaja diabaikan.
+            'consulting_type'          => $project->consulting_type,
             'work_object_description'  => $validated['work_object_description'] ?? null,
             'letter_attn'              => $validated['letter_attn'] ?? null,
-            'proposal_purpose'         => $this->jenisPekerjaan($validated),
+            'proposal_purpose'         => $project->proposal_purpose,
             'psak_classification'      => $validated['psak_classification'] ?? null,
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
             'is_public_company'        => $request->boolean('is_public_company'),

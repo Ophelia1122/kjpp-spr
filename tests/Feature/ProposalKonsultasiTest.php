@@ -57,16 +57,38 @@ class ProposalKonsultasiTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('proposals.create', ['layanan' => Project::SERVICE_KONSULTASI, 'jenis' => Project::CONSULTING_RAB]))
             ->assertOk()
-            ->assertSee('Kajian Kewajaran RAB')
             ->assertSee('Uraian Objek Pekerjaan')
             ->assertDontSee('Tujuan Penilaian');
     }
 
-    public function test_jenis_konsultasi_yang_tidak_dikenal_ditolak(): void
+    public function test_jenis_pekerjaan_dipilih_di_dalam_form(): void
     {
+        // Jenis pekerjaan tidak lagi dipilih di modal, jadi halaman Buat
+        // Proposal Non-Penilaian terbuka tanpa parameter jenis.
         $this->actingAs($this->admin)
-            ->get(route('proposals.create', ['layanan' => Project::SERVICE_KONSULTASI, 'jenis' => 'Karangan Bebas']))
-            ->assertNotFound();
+            ->get(route('proposals.create', ['layanan' => Project::SERVICE_KONSULTASI]))
+            ->assertOk()
+            ->assertSee('Jenis Pekerjaan')
+            ->assertSee(Project::CONSULTING_RAB)
+            ->assertSee(Project::CONSULTING_FS)
+            ->assertSee(Project::CONSULTING_PENGAWASAN);
+    }
+
+    public function test_jenis_pekerjaan_tidak_bisa_diubah_setelah_dibuat(): void
+    {
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->data());
+        $proyek = Project::where('proposal_number', 'KONS/2026/001')->firstOrFail();
+        $this->assertSame(Project::CONSULTING_FS, $proyek->consulting_type);
+
+        // Kiriman yang mencoba mengganti jenis pekerjaan diabaikan.
+        $this->actingAs($this->admin)
+            ->put(route('proposals.update', $proyek), $this->data([
+                'consulting_type' => Project::CONSULTING_PENGAWASAN,
+            ]))
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame(Project::CONSULTING_FS, $proyek->fresh()->consulting_type);
+        $this->assertSame(Project::CONSULTING_FS, $proyek->fresh()->proposal_purpose);
     }
 
     public function test_form_penilaian_tetap_seperti_semula(): void
