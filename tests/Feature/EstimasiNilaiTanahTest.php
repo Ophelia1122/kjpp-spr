@@ -136,10 +136,15 @@ class EstimasiNilaiTanahTest extends TestCase
             ->assertOk()
             ->assertSee('Peta sebaran')
             ->assertSee('petaEstimasi', false)
-            ->assertSee('js/leaflet/leaflet.js', false);
+            ->assertSee('js/leaflet/leaflet.js', false)
+            // Kotak rincian + pilihan Peta/Satelit (2026-09-26, permintaan user).
+            ->assertSee('petaRincian', false)
+            ->assertSee('Klik salah satu titik di peta')
+            ->assertSee('Satelit', false);
 
-        // Koordinat pembanding dikirim ke peta, bukan tabel saja.
+        // Rincian titik dikirim ke peta, bukan hanya nilai untuk tabel.
         $this->assertStringContainsString('"rp":8000000', $res->getContent());
+        $this->assertStringContainsString('"no":', $res->getContent());
     }
 
     public function test_koordinat_salah_diberi_tahu_bukan_galat_500(): void

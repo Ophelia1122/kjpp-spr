@@ -144,7 +144,33 @@
                     <span class="inline-flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-full bg-rose-500"></span> di atas tengah</span>
                 </div>
             </div>
-            <div id="petaEstimasi" class="h-[380px] w-full border-t border-gray-100 dark:border-gray-700" style="background:#e5e7eb"></div>
+            <div class="grid grid-cols-1 border-t border-gray-100 lg:grid-cols-[1fr_320px] dark:border-gray-700">
+                <div id="petaEstimasi" class="h-[300px] w-full lg:h-[520px]" style="background:#e5e7eb"></div>
+
+                {{-- Kotak rincian titik yang diklik (2026-09-26, permintaan user). --}}
+                <div id="petaRincian" class="border-t border-gray-100 p-4 lg:border-l lg:border-t-0 dark:border-gray-700">
+                    <p id="petaKosong" class="text-sm text-gray-400 dark:text-gray-500">
+                        Klik salah satu titik di peta untuk melihat rinciannya.
+                    </p>
+                    <div id="petaIsi" hidden>
+                        <p class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Nilai tanah</p>
+                        <p id="rincNilai" class="text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100"></p>
+                        <p id="rincBanding" class="text-xs"></p>
+
+                        <dl class="mt-3 space-y-2 border-t border-gray-100 pt-3 text-sm dark:border-gray-700">
+                            <div><dt class="text-xs text-gray-500 dark:text-gray-500">Jenis</dt><dd id="rincJenis" class="text-gray-800 dark:text-gray-200"></dd></div>
+                            <div><dt class="text-xs text-gray-500 dark:text-gray-500">Tanggal penilaian</dt><dd id="rincTgl" class="text-gray-800 dark:text-gray-200"></dd></div>
+                            <div><dt class="text-xs text-gray-500 dark:text-gray-500">Luas tanah / bangunan</dt><dd id="rincLuas" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
+                            <div><dt class="text-xs text-gray-500 dark:text-gray-500">Jarak dari titik dicari</dt><dd id="rincJarak" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
+                            <div><dt class="text-xs text-gray-500 dark:text-gray-500">Lokasi</dt><dd id="rincLokasi" class="text-gray-800 dark:text-gray-200"></dd></div>
+                            <div><dt class="text-xs text-gray-500 dark:text-gray-500">Nomor laporan</dt><dd id="rincNomor" class="break-all text-xs text-gray-600 dark:text-gray-400"></dd></div>
+                        </dl>
+
+                        <a id="rincMaps" href="#" target="_blank" rel="noopener"
+                           class="mt-3 inline-block text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">Buka di Google Maps &rarr;</a>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -201,9 +227,15 @@
                 'lo' => (float) $b['titik']->longitude,
                 'rp' => (int) $b['titik']->land_rate,
                 'th' => (int) $b['titik']->valuation_year,
+                'tgl' => $b['titik']->valuation_date?->translatedFormat('d F Y'),
                 'jn' => $b['titik']->property_type ?: $b['titik']->group_label,
                 'km' => round($b['jarak'], 2),
                 'lk' => trim(($b['titik']->village ?: '') . ', ' . ($b['titik']->district ?: '')),
+                'kota' => $b['titik']->city,
+                'almt' => $b['titik']->address,
+                'lt' => $b['titik']->land_area,
+                'lb' => $b['titik']->building_area,
+                'no' => $b['titik']->report_number,
             ])->values();
         @endphp
 
@@ -220,36 +252,81 @@
             var tengah = {{ $hasil['tengah'] }};
             var titik = @json($petaTitik);
 
-            var peta = L.map(wadah, { scrollWheelZoom: false });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(peta);
+            var peta = L.map(wadah, {
+                scrollWheelZoom: true,      // zoom bebas seperti Google Maps
+                zoomControl: true,
+            });
+
+            var jalan = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19, attribution: '&copy; OpenStreetMap'
+            });
+            var satelit = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19, attribution: 'Citra &copy; Esri'
+            });
+            var label = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19
+            });
+
+            jalan.addTo(peta);
+
+            // Pilihan Peta / Satelit, sama seperti tombol di Google Maps.
+            L.control.layers({
+                'Peta': jalan,
+                'Satelit': L.layerGroup([satelit, label]),
+            }, null, { position: 'topright' }).addTo(peta);
 
             var rupiah = function (n) { return 'Rp' + n.toLocaleString('id-ID'); };
+            var jarakTeks = function (km) { return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(2).replace('.', ',') + ' km'; };
+
+            // ---- kotak rincian ----
+            var kosong = document.getElementById('petaKosong');
+            var isi    = document.getElementById('petaIsi');
+            var terpilih = null;
+
+            function tulis(t, penanda) {
+                kosong.hidden = true;
+                isi.hidden = false;
+
+                document.getElementById('rincNilai').textContent = rupiah(t.rp) + ' /m²';
+
+                var selisih = tengah ? Math.round((t.rp - tengah) / tengah * 100) : 0;
+                var banding = document.getElementById('rincBanding');
+                banding.textContent = selisih === 0
+                    ? 'sama dengan titik tengah'
+                    : (selisih > 0 ? '+' : '') + selisih + '% terhadap titik tengah';
+                banding.className = 'text-xs ' + (selisih > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400');
+
+                document.getElementById('rincJenis').textContent  = t.jn || '—';
+                document.getElementById('rincTgl').textContent    = t.tgl || ('Tahun ' + t.th);
+                document.getElementById('rincLuas').textContent   =
+                    (t.lt ? t.lt.toLocaleString('id-ID') + ' m²' : '—') + ' / ' + (t.lb ? t.lb.toLocaleString('id-ID') + ' m²' : '—');
+                document.getElementById('rincJarak').textContent  = jarakTeks(t.km);
+                document.getElementById('rincLokasi').textContent = t.almt || [t.lk, t.kota].filter(Boolean).join(', ') || '—';
+                document.getElementById('rincNomor').textContent  = t.no || '—';
+                document.getElementById('rincMaps').href          = 'https://www.google.com/maps?q=' + t.la + ',' + t.lo;
+
+                if (terpilih) terpilih.setStyle({ weight: 1, color: terpilih.options.warnaAsli });
+                penanda.setStyle({ weight: 4, color: '#111827' });
+                terpilih = penanda;
+            }
 
             var batas = [[pusat[0], pusat[1]]];
 
             titik.forEach(function (t) {
-                L.circleMarker([t.la, t.lo], {
-                    radius: 6,
-                    color: t.rp > tengah ? '#e11d48' : '#10b981',
-                    fillColor: t.rp > tengah ? '#e11d48' : '#10b981',
-                    fillOpacity: 0.75,
-                    weight: 1
-                }).addTo(peta).bindPopup(
-                    '<b>' + rupiah(t.rp) + '</b> /m&sup2;<br>' +
-                    t.jn + ' &middot; ' + t.th + '<br>' +
-                    t.lk + '<br>' +
-                    '<span style="color:#6b7280">' + (t.km < 1 ? Math.round(t.km * 1000) + ' m' : t.km + ' km') + ' dari titik</span>'
-                );
+                var warna = t.rp > tengah ? '#e11d48' : '#10b981';
+                var penanda = L.circleMarker([t.la, t.lo], {
+                    radius: 7, color: warna, fillColor: warna, fillOpacity: 0.8, weight: 1, warnaAsli: warna
+                }).addTo(peta);
+
+                penanda.on('click', function () { tulis(t, penanda); });
+                penanda.bindTooltip(rupiah(t.rp), { direction: 'top' });
                 batas.push([t.la, t.lo]);
             });
 
             // Titik yang dicari + lingkaran radius yang benar-benar dipakai.
             L.circleMarker([pusat[0], pusat[1]], {
-                radius: 8, color: '#1d4ed8', fillColor: '#2563eb', fillOpacity: 1, weight: 2
-            }).addTo(peta).bindPopup('Titik yang dicari');
+                radius: 9, color: '#1d4ed8', fillColor: '#2563eb', fillOpacity: 1, weight: 2
+            }).addTo(peta).bindTooltip('Titik yang dicari', { direction: 'top' });
 
             if (radius > 0) {
                 L.circle([pusat[0], pusat[1]], {
@@ -258,7 +335,23 @@
                 }).addTo(peta);
             }
 
-            peta.fitBounds(L.latLngBounds(batas).pad(0.15), { maxZoom: 16 });
+            // Klik di area kosong = hitung ulang dari titik itu, seperti
+            // memindahkan pin di Google Maps (2026-09-26, permintaan user).
+            peta.on('click', function (e) {
+                var la = e.latlng.lat.toFixed(6), lo = e.latlng.lng.toFixed(6);
+                var url = new URL(window.location.href);
+                url.searchParams.set('koordinat', la + ', ' + lo);
+
+                L.popup()
+                    .setLatLng(e.latlng)
+                    .setContent(
+                        '<div style="text-align:center">' + la + ', ' + lo + '<br>' +
+                        '<a href="' + url.toString() + '" style="color:#2563eb;font-weight:600">Hitung dari titik ini &rarr;</a></div>'
+                    )
+                    .openOn(peta);
+            });
+
+            peta.fitBounds(L.latLngBounds(batas).pad(0.15), { maxZoom: 17 });
         })();
         </script>
     @endif
