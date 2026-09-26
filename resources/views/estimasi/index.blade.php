@@ -366,21 +366,36 @@
 
             var batas = [[pusat[0], pusat[1]]];
 
+            var penandaSemua = [];
+
             titik.forEach(function (t) {
                 var warna = t.rp > tengah ? '#e11d48' : '#10b981';
                 var penanda = L.circleMarker([t.la, t.lo], {
                     radius: 7, color: warna, fillColor: warna, fillOpacity: 0.8, weight: 1, warnaAsli: warna
                 }).addTo(peta);
 
-                // Klik pada titik TIDAK boleh ikut memicu klik peta, kalau
-                // tidak yang muncul malah popup "Hitung dari titik ini"
-                // (2026-09-26, feedback user).
-                penanda.on('click', function (e) {
-                    L.DomEvent.stopPropagation(e);
+                function buka(e) {
+                    // Klik pada titik TIDAK boleh ikut memicu klik peta, kalau
+                    // tidak yang muncul malah popup "Hitung dari titik ini"
+                    // (2026-09-26, feedback user).
+                    if (e) L.DomEvent.stopPropagation(e);
                     peta.closePopup();
                     tulis(t, penanda);
-                });
+                }
+
+                penanda.on('click', buka);
                 penanda.bindTooltip(rupiah(t.rp), { direction: 'top' });
+
+                // Lingkaran bening yang lebih besar: titik berdiameter 14 px
+                // terlalu kecil untuk jari/kursor, meleset sedikit saja klik
+                // jatuh ke peta (2026-09-26, feedback user).
+                // fillOpacity 0.01, bukan 0: bidang dengan opacity nol tidak
+                // selalu menerima klik di semua peramban.
+                L.circleMarker([t.la, t.lo], {
+                    radius: 18, opacity: 0, fillOpacity: 0.01, fillColor: warna, weight: 0, interactive: true
+                }).addTo(peta).on('click', buka);
+
+                penandaSemua.push({ data: t, penanda: penanda, buka: buka });
                 batas.push([t.la, t.lo]);
             });
 
@@ -399,6 +414,20 @@
             // Klik di area kosong = hitung ulang dari titik itu, seperti
             // memindahkan pin di Google Maps (2026-09-26, permintaan user).
             peta.on('click', function (e) {
+                // Klik yang jatuh dekat sebuah titik dianggap mengklik titik itu.
+                var layar = peta.latLngToContainerPoint(e.latlng), dekat = null, jarakPx = 1e9;
+
+                penandaSemua.forEach(function (x) {
+                    var p = peta.latLngToContainerPoint(x.penanda.getLatLng());
+                    var d = Math.hypot(p.x - layar.x, p.y - layar.y);
+                    if (d < jarakPx) { jarakPx = d; dekat = x; }
+                });
+
+                if (dekat && jarakPx <= 32) {
+                    dekat.buka();
+                    return;
+                }
+
                 var la = e.latlng.lat.toFixed(6), lo = e.latlng.lng.toFixed(6);
                 var url = new URL(window.location.href);
                 url.searchParams.set('koordinat', la + ', ' + lo);
