@@ -126,14 +126,45 @@ class EstimasiNilaiTanahTest extends TestCase
             ->assertSee('Pembanding terdekat');
     }
 
+    /** Klik peta memanggil ?partial=1 dan hanya menerima panel hasil. */
+    public function test_partial_mengembalikan_panel_saja(): void
+    {
+        $this->titik(-6.30, 106.80, 4, 7_500_000);
+
+        $res = $this->actingAs($this->admin)
+            ->get(route('estimasi.index', ['koordinat' => '-6.30, 106.80', 'partial' => 1]))
+            ->assertOk()
+            ->assertSee('Rp7.500.000')
+            ->assertSee('dataPeta', false);
+
+        // Tanpa kerangka halaman: tidak ada <html>, peta, atau formulir.
+        $isi = $res->getContent();
+        $this->assertStringNotContainsString('<html', $isi);
+        $this->assertStringNotContainsString('petaEstimasi', $isi);
+        $this->assertStringNotContainsString('leaflet.js', $isi);
+    }
+
+    /** Halaman penuh tetap membawa peta walau belum ada koordinat. */
+    public function test_peta_tampil_walau_belum_ada_koordinat(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('estimasi.index'))
+            ->assertOk()
+            ->assertSee('petaEstimasi', false)
+            ->assertSee('js/leaflet/leaflet.js', false)
+            ->assertSee('Klik titik mana pun di peta');
+    }
+
     /** Radius diketik bebas; kosong berarti 5 km. */
     public function test_radius_bebas_diketik(): void
     {
         $service = app(EstimasiNilaiTanah::class);
 
-        $this->assertSame([0.5, 1.0, 2.0, 3.0, 5.0], array_map('floatval', $service->tanggaRadius(null)));
-        $this->assertSame([0.5, 1.0, 2.0, 2.5], array_map('floatval', $service->tanggaRadius(2.5)));
-        $this->assertSame([0.5, 1.0, 2.0, 3.0, 5.0, 12.0], array_map('floatval', $service->tanggaRadius(12)));
+        // Kosong: selalu 5 km.
+        $this->assertSame([5.0], array_map('floatval', $service->tanggaRadius(null)));
+        // Diisi: persis angka itu, tidak melebar & tidak berhenti lebih awal.
+        $this->assertSame([2.5], array_map('floatval', $service->tanggaRadius(2.5)));
+        $this->assertSame([12.0], array_map('floatval', $service->tanggaRadius(12)));
 
         // Titik 7 km dari koordinat: di luar 5 km bawaan, masuk bila radius 8 km.
         $this->titik(-6.363, 106.80, 4, 4_000_000);
@@ -162,8 +193,8 @@ class EstimasiNilaiTanahTest extends TestCase
             ->assertSee('petaEstimasi', false)
             ->assertSee('js/leaflet/leaflet.js', false)
             // Kotak rincian + pilihan Peta/Satelit (2026-09-26, permintaan user).
-            ->assertSee('petaRincian', false)
-            ->assertSee('Klik titik di peta')
+            ->assertSee('petaIsi', false)
+            ->assertSee('rincTutup', false)
             ->assertSee('Satelit', false);
 
         // Rincian titik dikirim ke peta, bukan hanya nilai untuk tabel.
@@ -266,7 +297,7 @@ class EstimasiNilaiTanahTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('estimasi.index'))
             ->assertOk()
-            ->assertSee('Tempel koordinat lokasi');
+            ->assertSee('Klik titik mana pun di peta');
     }
 
     public function test_tamu_tidak_bisa_membuka(): void

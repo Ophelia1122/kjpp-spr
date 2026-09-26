@@ -20,7 +20,10 @@ use Illuminate\Support\Collection;
  */
 class EstimasiNilaiTanah
 {
-    /** Radius pencarian (km), melebar sampai pembanding cukup. */
+    /** Radius pencarian bawaan (km) bila pemakai tidak mengisi. */
+    public const RADIUS_BAWAAN = 5.0;
+
+    /** Dipertahankan untuk pemanggil lama. */
     public const RADIUS = [0.5, 1, 2, 3, 5];
 
     /** Pembanding minimum sebelum radius dilebarkan. */
@@ -64,21 +67,19 @@ class EstimasiNilaiTanah
     }
 
     /**
-     * Tangga radius yang dicoba berurutan, berhenti begitu pembandingnya
-     * cukup. Radius diketik bebas oleh pemakai (2026-09-26, permintaan user),
-     * jadi tangga bawaannya dipotong pada angka itu dan angka itu selalu ikut
-     * sebagai anak tangga terakhir.
+     * Radius yang dipakai: angka yang diketik, atau 5 km bila dikosongkan
+     * (2026-09-26, feedback user). Tidak bertahap lagi — dulu pencarian
+     * berhenti di radius rapat begitu dapat 3 pembanding, sehingga hasilnya
+     * berbeda-beda tiap titik.
      *
      * @return list<float>
      */
     public function tanggaRadius(?float $maks): array
     {
-        $maks = $maks !== null && $maks > 0 ? $maks : (float) self::RADIUS[count(self::RADIUS) - 1];
-
-        $tangga = array_values(array_filter(self::RADIUS, fn ($r) => $r < $maks));
-        $tangga[] = $maks;
-
-        return $tangga;
+        // Radius yang diketik dipakai APA ADANYA (2026-09-26, feedback user):
+        // dulu tangga tetap mulai dari 0,5 km dan berhenti begitu cukup,
+        // sehingga mengetik angka besar terasa tidak berpengaruh.
+        return [$maks !== null && $maks > 0 ? $maks : self::RADIUS_BAWAAN];
     }
 
     /** Titik dalam radius (km), sudah dihitung jaraknya & diurutkan. */

@@ -51,7 +51,7 @@ class EstimasiTanahController extends Controller
             }
         }
 
-        return view('estimasi.index', [
+        $data = [
             'titik'    => $titik,
             'hasil'    => $hasil,
             'galat'    => $galat,
@@ -60,6 +60,15 @@ class EstimasiTanahController extends Controller
             'radius'   => $data['radius'] ?? null,
             'totalTitik' => LandValuePoint::count(),
             'tahunData'  => [LandValuePoint::min('valuation_year'), LandValuePoint::max('valuation_year')],
-        ]);
+        ];
+
+        // Klik pada peta memanggil halaman ini dengan ?partial=1 lewat fetch,
+        // lalu menukar isi panel saja (2026-09-26, permintaan user): peta tidak
+        // ikut dimuat ulang sehingga posisi & perbesarannya tetap.
+        if ($request->boolean('partial')) {
+            return view('estimasi._hasil', $data);
+        }
+
+        return view('estimasi.index', $data);
     }
 }
