@@ -21,6 +21,6 @@
                   file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:text-sm file:font-medium
                   file:bg-gray-100 file:text-gray-700 file:hover:bg-gray-200
                   dark:file:bg-gray-700 dark:file:text-gray-200 dark:file:hover:bg-gray-600">
-    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">PNG atau JPG/JPEG, maksimal 100 KB, dimensi tepat 370x370 piksel. Tersimpan otomatis begitu dipilih.</p>
+    <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">PNG atau JPG/JPEG, maksimal 100 KB, dimensi tepat 370x370 piksel. Tersimpan otomatis begitu dipilih.</p>
     <p class="assignment-letter-barcode-error mt-1 text-xs text-red-500" hidden></p>
 @endif

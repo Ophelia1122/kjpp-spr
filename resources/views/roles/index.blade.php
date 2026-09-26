@@ -29,7 +29,7 @@
                              hilang begitu kolom role digeser. --}}
                         <th class="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:bg-gray-900 dark:text-gray-400">Izin</th>
                         @foreach ($roles as $role)
-                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap dark:text-gray-500">
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase whitespace-nowrap dark:text-gray-400">
                                 {{ $role->name }}
                             </th>
                         @endforeach

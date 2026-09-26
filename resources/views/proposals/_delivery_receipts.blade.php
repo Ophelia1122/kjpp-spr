@@ -66,7 +66,7 @@
                             {{ $receipt->delivery_date->translatedFormat('d F Y') }} &middot;
                             {{ $receipt->recipient?->client_name ?: $project->effective_client_name }}
                         </p>
-                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">
                             @foreach ($receipt->documentRows() as $row)
                                 {{ $row['label'] }} ({{ $row['qty'] }} {{ $row['unit'] }}){{ ! $loop->last ? ' · ' : '' }}
                             @endforeach
@@ -145,7 +145,7 @@
                     </div>
                     <button type="button" onclick="ttClearClient()" class="text-blue-500 hover:text-blue-700 dark:text-blue-400">&times;</button>
                 </div>
-                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Kosong = memakai nama &amp; alamat klien proyek ini.</p>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Kosong = memakai nama &amp; alamat klien proyek ini.</p>
                 @error('recipient_client_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -161,11 +161,11 @@
                             <input type="number" id="tt_qty_{{ $key }}" name="documents[{{ $key }}]" min="0" max="999" step="1"
                                    value="{{ $qty }}" aria-label="Jumlah {{ $label }}"
                                    class="w-16 rounded-md border-gray-300 text-sm shadow-sm tabular-nums dark:border-gray-600 dark:bg-gray-900">
-                            <span class="w-12 text-xs text-gray-400 dark:text-gray-500">{{ $unit }}</span>
+                            <span class="w-12 text-xs text-gray-400 dark:text-gray-400">{{ $unit }}</span>
                         </div>
                     @endforeach
                 </div>
-                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jenis dokumen selalu tercetak &ldquo;Asli&rdquo;. Jumlah 0 = tidak ikut dikirim.</p>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Jenis dokumen selalu tercetak &ldquo;Asli&rdquo;. Jumlah 0 = tidak ikut dikirim.</p>
 
                 <script>
                 (function () {
@@ -370,9 +370,9 @@
                     ? clients.map((c, i) => `
                         <button type="button" data-i="${i}" class="w-full border-b border-gray-100 px-3 py-2 text-left text-sm last:border-0 hover:bg-blue-50 dark:border-gray-800 dark:hover:bg-blue-900/30">
                             <div class="font-medium text-gray-800 dark:text-gray-200">${esc(c.client_name)}</div>
-                            <div class="whitespace-pre-line text-xs text-gray-400 dark:text-gray-500">${esc(c.address) || 'Alamat belum diisi'}</div>
+                            <div class="whitespace-pre-line text-xs text-gray-400 dark:text-gray-400">${esc(c.address) || 'Alamat belum diisi'}</div>
                         </button>`).join('')
-                    : '<div class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">Tidak ditemukan. Coba &ldquo;Klien Baru&rdquo;.</div>';
+                    : '<div class="px-3 py-2 text-sm text-gray-400 dark:text-gray-400">Tidak ditemukan. Coba &ldquo;Klien Baru&rdquo;.</div>';
                 results.querySelectorAll('button[data-i]').forEach(btn => btn.addEventListener('click', () => ttSetClient(clients[+btn.dataset.i])));
                 results.classList.remove('hidden');
             }, 300);

@@ -10,6 +10,7 @@ use App\Services\DocxToPdf;
 use App\Services\ProposalDocxBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ProposalController extends Controller
@@ -456,6 +457,87 @@ class ProposalController extends Controller
         return response()
             ->download($doc->save(), $doc->fileName() . '.docx')
             ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Unduh proposal beberapa proyek sekaligus sebagai satu berkas .zip
+     * (2026-09-26, permintaan user) — dipakai bilah "x dipilih" di List
+     * Project. Format bebas: Word atau PDF.
+     */
+    public function exportZip(Request $request)
+    {
+        $data = $request->validate([
+            'ids'    => 'required|array|min:1|max:50',
+            'ids.*'  => 'integer',
+            'format' => 'required|in:pdf,word',
+        ]);
+
+        $projects = Project::whereIn('id', $data['ids'])->get();
+
+        abort_if($projects->isEmpty(), 404, 'Proyek tidak ditemukan.');
+
+        $zipPath = storage_path('app/tmp/' . Str::uuid() . '.zip');
+        @mkdir(dirname($zipPath), 0775, true);
+
+        $zip = new \ZipArchive();
+        abort_unless($zip->open($zipPath, \ZipArchive::CREATE) === true, 500, 'Gagal membuat berkas zip.');
+
+        $gagal = [];
+        $sementara = [];   // dihapus sesudah zip ditutup
+        $dipakai = [];     // nama berkas di dalam zip, dijaga tetap unik
+
+        foreach ($projects as $project) {
+            try {
+                $builder = ProposalDocxBuilder::for($project);
+                $docx    = $builder->save();
+
+                // safeName() memakai nomor + nama klien, jadi dua proyek dari
+                // klien yang sama bisa bernama persis sama dan saling menimpa
+                // di dalam zip. Yang kedua diberi akhiran.
+                $nama = $builder->safeName();
+
+                if (isset($dipakai[$nama])) {
+                    $nama .= ' (' . ++$dipakai[$nama] . ')';
+                } else {
+                    $dipakai[$nama] = 1;
+                }
+
+                if ($data['format'] === 'word') {
+                    $zip->addFile($docx, $nama . '.docx');
+                    $sementara[] = $docx;
+                    continue;
+                }
+
+                $pdf = DocxToPdf::convert($docx);
+                @unlink($docx);
+                $zip->addFile($pdf, $nama . '.pdf');
+                $sementara[] = $pdf;
+            } catch (\Throwable $e) {
+                $gagal[] = $project->proposal_number;
+                report($e);
+            }
+        }
+
+        // Proyek yang gagal dicatat di dalam zip, bukan dibiarkan hilang diam-diam.
+        if ($gagal) {
+            $zip->addFromString('GAGAL DIBUAT.txt',
+                "Proposal berikut gagal dibuat:
+- " . implode("
+- ", $gagal) . "
+");
+        }
+
+        $jumlah = $projects->count() - count($gagal);
+
+        $zip->close();
+
+        foreach ($sementara as $berkas) {
+            @unlink($berkas);
+        }
+
+        $nama = 'Proposal ' . $jumlah . ' proyek ' . now()->format('Y-m-d') . '.zip';
+
+        return response()->download($zipPath, $nama)->deleteFileAfterSend(true);
     }
 
     public function exportWord(Project $project)

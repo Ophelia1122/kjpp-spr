@@ -270,7 +270,7 @@
                                             <span class="mt-0.5 block underline">{{ $item['cta'] }}</span>
                                         </a>
                                     @elseif (isset($item['group']))
-                                        <p class="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ $item['group'] }}</p>
+                                        <p class="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-400">{{ $item['group'] }}</p>
                                     @else
                                         <a href="{{ $item['url'] }}" role="menuitem"
                                            class="flex items-center justify-between gap-4 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/60">

@@ -20,7 +20,7 @@
 
     <div data-dropdown-menu role="menu" style="display: none;"
          class="z-50 w-56 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-lg dark:border-gray-700 dark:bg-gray-800">
-        <p class="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Invoice</p>
+        <p class="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-400">Invoice</p>
         <a href="{{ route('invoices.exportInvoice', $inv) }}" role="menuitem" class="{{ $menuItem }}">
             Unduh Invoice <span class="{{ $fmtBadge }} border-rose-300 text-rose-600 dark:border-rose-800 dark:text-rose-400">PDF</span>
         </a>
@@ -29,7 +29,7 @@
         </a>
 
         <div class="my-1 border-t border-gray-100 dark:border-gray-700"></div>
-        <p class="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Kwitansi</p>
+        <p class="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-400">Kwitansi</p>
         {{-- Kwitansi: setelah Dibayar, atau kapan saja untuk skema Bayar Nanti. --}}
         @if ($kwitansiAvailable)
             <a href="{{ route('invoices.exportKwitansi', $inv) }}" role="menuitem" class="{{ $menuItem }}">
@@ -39,7 +39,7 @@
                 Unduh Kwitansi <span class="{{ $fmtBadge }} border-blue-300 text-blue-600 dark:border-blue-800 dark:text-blue-400">Word</span>
             </a>
         @else
-            <p class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500" aria-disabled="true">
+            <p class="px-3 py-2 text-sm text-gray-400 dark:text-gray-400" aria-disabled="true">
                 Kwitansi PDF &amp; Word
                 <span class="block text-[11px]">Tersedia setelah invoice ditandai dibayar</span>
             </p>

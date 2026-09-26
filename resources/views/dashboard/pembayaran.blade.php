@@ -41,7 +41,7 @@
             <a href="{{ route('dashboard.pembayaran', ['from' => now()->startOfMonth()->toDateString(), 'to' => now()->endOfMonth()->toDateString()]) }}"
                class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Bulan ini</a>
             @if ($periodActive)
-                <a href="{{ route('dashboard.pembayaran') }}" class="px-3 py-2 text-sm text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200">Semua waktu</a>
+                <a href="{{ route('dashboard.pembayaran') }}" class="px-3 py-2 text-sm text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">Semua waktu</a>
             @endif
             {{-- Pengaturan nomor terakhir Invoice & Kwitansi (2026-09-14, feedback user). --}}
             @can('invoices.manage')
@@ -62,12 +62,12 @@
          plus yang Belum Ditagih (2026-09-13). Proyek Draft/Batal tidak dihitung. --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-500">Nilai Kontrak</span>
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Nilai Kontrak</span>
             <div class="mt-1 text-2xl font-bold text-gray-900 tabular-nums break-words dark:text-gray-100">{{ $rp($totalContract) }}</div>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Proyek berjalan &amp; selesai (posisi saat ini).</p>
         </div>
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-500">Sudah Ditagih</span>
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Sudah Ditagih</span>
             <div class="mt-1 text-2xl font-bold text-blue-700 tabular-nums break-words dark:text-blue-400">{{ $rp($totalBilled) }}</div>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {{ $periodActive ? 'Invoice terbit dalam periode.' : 'Invoice terbit 12 bulan terakhir.' }}
@@ -81,12 +81,12 @@
             @endif
         </div>
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-500">Sudah Diterima</span>
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Sudah Diterima</span>
             <div class="mt-1 text-2xl font-bold text-emerald-700 tabular-nums break-words dark:text-emerald-400">{{ $rp($totalPaid) }}</div>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $periodActive ? 'Dibayar dalam periode (tgl. bayar)' : 'Dibayar 12 bulan terakhir' }} — kwitansi terbit.</p>
         </div>
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-500">Belum Ditagih</span>
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Belum Ditagih</span>
             <div class="mt-1 text-2xl font-bold text-amber-600 tabular-nums break-words dark:text-amber-400">{{ $rp($totalNotBilled) }}</div>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Bagian kontrak yang belum dibuatkan invoice.</p>
         </div>
@@ -95,14 +95,14 @@
     {{-- ===================== PROYEK DENGAN SISA TAGIHAN ===================== --}}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden lift dark:bg-gray-800 dark:border-gray-700">
         <div class="px-6 pt-6 pb-1">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Proyek dengan Sisa Pelunasan <span class="font-normal normal-case">({{ $outstandingProjects->count() }})</span></h2>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Proyek dengan Sisa Pelunasan <span class="font-normal normal-case">({{ $outstandingProjects->count() }})</span></h2>
             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Sisa = nilai kontrak dikurangi yang sudah dibayar. "Belum Ditagih" = bagian yang belum dibuatkan invoice.</p>
         </div>
         {{-- Maks. ±5 baris lalu scroll, header tetap menempel. Seluruh baris bisa diklik. --}}
         <div class="hidden md:block mt-3 max-h-[18rem] overflow-auto">
         <table class="min-w-[860px] w-full text-sm">
             <thead class="sticky top-0 z-10 bg-gray-50 border-y border-gray-200 dark:bg-gray-900 dark:border-gray-700">
-                <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
+                <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
                     <th class="px-6 py-3">No. Proposal</th>
                     <th class="px-6 py-3">Nama Klien</th>
                     <th class="px-6 py-3 text-right">Nilai Kontrak</th>
@@ -122,7 +122,7 @@
                         <td class="px-6 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-gray-100" title="{{ $p->proposal_number }}">
                             {{ $p->proposal_number_short }}
                         </td>
-                        <td class="px-6 py-3 text-gray-600 dark:text-gray-500">{{ $p->effective_client_name ?: '-' }}</td>
+                        <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</td>
                         <td class="px-6 py-3 text-right tabular-nums whitespace-nowrap text-gray-900 dark:text-gray-100">{{ $rp($p->total_fee) }}</td>
                         <td class="px-6 py-3">
                             <div class="flex items-center justify-between gap-2 text-xs tabular-nums">
@@ -199,7 +199,7 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="font-medium text-gray-900 dark:text-gray-100">{{ $p->proposal_number_short }}</p>
-                            <p class="truncate text-xs text-gray-500 dark:text-gray-500">{{ $p->effective_client_name ?: '-' }}</p>
+                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</p>
                         </div>
                         <div class="shrink-0 text-right">
                             <p class="text-[11px] text-gray-500 dark:text-gray-400">Sisa pelunasan</p>
@@ -247,13 +247,13 @@
         <input type="hidden" name="dir" value="{{ request('dir') }}">
         <input type="hidden" name="per_page" value="{{ request('per_page') }}">
         <div class="flex-1 min-w-[220px]">
-            <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-500">Cari</label>
+            <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">Cari</label>
             <input type="text" name="q" value="{{ request('q') }}"
                    placeholder="No. invoice, kwitansi, proposal, atau nama klien..."
                    class="w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
         </div>
         <div class="min-w-[180px]">
-            <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-500">Status</label>
+            <label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">Status</label>
             <select name="status" class="w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
                 <option value="">Semua Status</option>
                 <option value="{{ \App\Models\Invoice::STATUS_UNPAID }}" @selected(request('status') === \App\Models\Invoice::STATUS_UNPAID)>Belum Dibayar</option>
@@ -280,7 +280,7 @@
     <div class="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Tandai Dibayar</h2>
-            <button type="button" onclick="closeMarkPaidModal()" class="text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+            <button type="button" onclick="closeMarkPaidModal()" class="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
         </div>
         <p id="markPaidInfo" class="mb-3 text-sm text-gray-600 dark:text-gray-300"></p>
         <form id="markPaidForm" method="POST" class="space-y-3">
@@ -307,9 +307,9 @@
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-2">
             <h2 class="text-lg font-semibold">Penomoran Dokumen</h2>
-            <button type="button" onclick="closeNumberingModal()" class="text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200" aria-label="Tutup">&times;</button>
+            <button type="button" onclick="closeNumberingModal()" class="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200" aria-label="Tutup">&times;</button>
         </div>
-        <p class="mb-4 text-sm text-gray-500 dark:text-gray-500">
+        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
             Isi nomor urut <b>terakhir</b> yang sudah terbit tahun {{ now()->year }}, termasuk yang dibuat di luar aplikasi.
             Nomor berikutnya melanjutkan dari angka ini.
         </p>
@@ -324,7 +324,7 @@
                            value="{{ old($field, $n['last']) }}"
                            data-numbering-input data-issued="{{ $n['issued'] }}" data-tail="{{ $n['tail'] }}" data-preview="{{ $field }}_preview"
                            class="mt-1 w-full rounded-md border-gray-300 shadow-sm tabular-nums dark:border-gray-600">
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Berikutnya: <span id="{{ $field }}_preview" class="font-semibold text-gray-800 tabular-nums dark:text-gray-200">{{ $n['next'] }}</span>
                     </p>
                     @if ($n['issued'] > 0)

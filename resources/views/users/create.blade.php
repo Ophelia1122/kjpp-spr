@@ -26,7 +26,7 @@
                     <input type="text" name="username" value="{{ old('username') }}" required autocapitalize="none" spellcheck="false"
                            placeholder="contoh: budi.p"
                            class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Dipakai untuk login. Huruf kecil, angka, titik, garis bawah, strip. Hanya Administrator yang bisa mengubah.</p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Dipakai untuk login. Huruf kecil, angka, titik, garis bawah, strip. Hanya Administrator yang bisa mengubah.</p>
                     @error('username') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
@@ -42,7 +42,7 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
             <input type="password" name="password" required minlength="8"
                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Minimal 8 karakter.</p>
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Minimal 8 karakter.</p>
         </div>
 
         @include('partials.whatsapp-field', ['waValue' => null])
@@ -70,7 +70,7 @@
                         <option value="{{ $j }}" @selected(old('jabatan') === $j)>{{ $j }}</option>
                     @endforeach
                 </select>
-                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">
                     Field biodata di bawah menyesuaikan Jabatan. Boleh dikosongkan; yang kosong memakai data baku kantor saat mengisi proposal.
                 </p>
             </div>
@@ -98,7 +98,7 @@
                     <input type="text" name="partner_status" value="{{ old('partner_status') }}"
                            placeholder="Partner / Managing Partner"
                            class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Status di perusahaan — tercetak sebagai jabatan pada blok tanda tangan proposal.</p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Status di perusahaan — tercetak sebagai jabatan pada blok tanda tangan proposal.</p>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -150,7 +150,7 @@
                 <label class="mt-3 block text-xs font-medium text-gray-500 dark:text-gray-400" for="ojk_sectors_other">Sektor lain (di luar daftar di atas), satu per baris</label>
                 <textarea id="ojk_sectors_other" name="ojk_sectors_other" rows="2" placeholder="Contoh: Pergadaian"
                 class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600">{{ old('ojk_sectors_other', '') }}</textarea>
-                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Dicetak berurutan di bab Penjelasan Status Penilai.</p>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Dicetak berurutan di bab Penjelasan Status Penilai.</p>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="sm:col-span-2">

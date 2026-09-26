@@ -40,7 +40,7 @@
 
     {{-- ===================== GANTT ===================== --}}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 overflow-x-auto lift dark:bg-gray-800 dark:border-gray-700">
-        <p class="-mt-2 mb-2 flex items-center justify-end gap-1 text-xs text-gray-500 md:hidden dark:text-gray-500">
+        <p class="-mt-2 mb-2 flex items-center justify-end gap-1 text-xs text-gray-500 md:hidden dark:text-gray-400">
             Geser ke samping
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
         </p>
@@ -60,7 +60,7 @@
                     <div class="w-48 shrink-0"></div>
                     <div class="relative flex-1 h-5">
                         @foreach ($ticks as $tick)
-                            <span class="absolute -translate-x-1/2 text-[11px] text-gray-500 whitespace-nowrap dark:text-gray-500"
+                            <span class="absolute -translate-x-1/2 text-[11px] text-gray-500 whitespace-nowrap dark:text-gray-400"
                                   style="left: {{ $tick['pct'] }}%">{{ $tick['label'] }}</span>
                         @endforeach
                     </div>
@@ -87,7 +87,7 @@
                                    title="{{ $bar['project']->proposal_number }}" aria-label="{{ $bar['project']->proposal_number }}">
                                     {{ $bar['project']->proposal_number_short }}
                                 </a>
-                                <span class="block text-[11px] text-gray-500 truncate dark:text-gray-500">
+                                <span class="block text-[11px] text-gray-500 truncate dark:text-gray-400">
                                     {{ $bar['project']->effective_client_name ?: '-' }}<br>
                                     <b>{{ $bar['project']->assigned_appraiser ?: '-' }}</b>
                                 </span>
@@ -101,7 +101,7 @@
 
                                 {{-- Tanggal mulai (survei), nempel di ujung kiri batang — supaya
                                      rentang tanggal langsung kelihatan tanpa harus hover. --}}
-                                <span class="absolute top-0 -translate-x-1/2 text-[10px] text-gray-500 whitespace-nowrap dark:text-gray-500"
+                                <span class="absolute top-0 -translate-x-1/2 text-[10px] text-gray-500 whitespace-nowrap dark:text-gray-400"
                                       style="left: {{ $bar['left'] }}%">{{ $bar['startShort'] }}</span>
 
                                 @if ($bar['draftDone'])
@@ -183,7 +183,7 @@
     @if ($unscheduled->isNotEmpty())
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden lift dark:bg-gray-800 dark:border-gray-700">
             <div class="px-5 pt-5 pb-3">
-                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Belum Terjadwal</h2>
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Belum Terjadwal</h2>
                 <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                     Sudah In-Progress / Scheduled tapi tanggal survei belum diisi, sehingga belum bisa dipetakan di timeline.
                 </p>
@@ -193,7 +193,7 @@
                    class="flex items-center justify-between gap-4 px-5 py-3 border-t border-gray-100 hover:bg-blue-50/40 dark:hover:bg-blue-900/20 dark:border-gray-800">
                     <span class="min-w-0">
                         <span class="block text-sm font-medium text-gray-900 truncate dark:text-gray-100" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</span>
-                        <span class="block text-xs text-gray-500 truncate dark:text-gray-500">{{ $p->effective_client_name ?: '-' }}</span>
+                        <span class="block text-xs text-gray-500 truncate dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</span>
                     </span>
                     <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
                         {{ $p->status_short }}

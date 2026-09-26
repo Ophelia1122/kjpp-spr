@@ -65,10 +65,10 @@
                     @php [$plain, $who] = WhatsAppNotification::STEP_LABELS[$step] ?? [$def['title'], '']; @endphp
                     <span class="min-w-0">
                         <span class="block font-medium text-gray-900 dark:text-gray-100">{{ $plain }}</span>
-                        <span class="block text-xs text-gray-400 dark:text-gray-500">Ditekan {{ $who }} &middot; tombol &ldquo;{{ $def['button'] }}&rdquo;</span>
+                        <span class="block text-xs text-gray-400 dark:text-gray-400">Ditekan {{ $who }} &middot; tombol &ldquo;{{ $def['button'] }}&rdquo;</span>
                     </span>
                     <span class="ml-auto flex items-center gap-2">
-                        <span class="hidden text-xs text-gray-400 sm:inline dark:text-gray-500">{{ $recipientLabel((array) $n->recipients) }}</span>
+                        <span class="hidden text-xs text-gray-400 sm:inline dark:text-gray-400">{{ $recipientLabel((array) $n->recipients) }}</span>
                         @if ($n->enabled)
                             <span class="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:bg-green-900/40 dark:text-green-300">Aktif</span>
                         @else

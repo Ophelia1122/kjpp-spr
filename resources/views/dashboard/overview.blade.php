@@ -33,7 +33,7 @@
         subtitle="Ringkasan monitoring proyek &middot; {{ now()->translatedFormat('d F Y') }}" />
 
     @if ($totalProposals === 0)
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-10 text-center text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-10 text-center text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
             Belum ada proposal. Widget monitoring akan muncul setelah proposal pertama dibuat.
         </div>
     @else
@@ -43,7 +43,7 @@
         {{-- Total Proposal --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-500">Total Proposal</span>
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Total Proposal</span>
                 <span class="grid h-8 w-8 place-items-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                     <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
@@ -51,13 +51,13 @@
                 </span>
             </div>
             <div class="mt-2 text-3xl font-bold text-gray-900 tabular-nums dark:text-gray-100">{{ number_format($totalProposals, 0, ',', '.') }}</div>
-            <p class="text-xs text-gray-500 mt-1 dark:text-gray-500">1 proyek = 1 proposal</p>
+            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">1 proyek = 1 proposal</p>
         </div>
 
         {{-- Pending / Belum Deal --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-500">Belum Ada Pembayaran</span>
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Belum Ada Pembayaran</span>
                 <span class="grid h-8 w-8 place-items-center rounded-md bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
                     <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
@@ -65,13 +65,13 @@
                 </span>
             </div>
             <div class="mt-2 text-3xl font-bold text-gray-900 tabular-nums dark:text-gray-100">{{ number_format($pendingCount, 0, ',', '.') }}</div>
-            <p class="text-xs text-gray-500 mt-1 dark:text-gray-500">Proposal aktif, klien belum membayar</p>
+            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Proposal aktif, klien belum membayar</p>
         </div>
 
         {{-- Deal --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-500">Sudah Ada Pembayaran</span>
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Sudah Ada Pembayaran</span>
                 <span class="grid h-8 w-8 place-items-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                     <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
@@ -79,13 +79,13 @@
                 </span>
             </div>
             <div class="mt-2 text-3xl font-bold text-gray-900 tabular-nums dark:text-gray-100">{{ number_format($dealCount, 0, ',', '.') }}</div>
-            <p class="text-xs text-gray-500 mt-1 dark:text-gray-500">Minimal satu invoice sudah dibayar</p>
+            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Minimal satu invoice sudah dibayar</p>
         </div>
 
         {{-- Batal --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 lift dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-500">Batal</span>
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Batal</span>
                 <span class="grid h-8 w-8 place-items-center rounded-md bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">
                     <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
@@ -93,7 +93,7 @@
                 </span>
             </div>
             <div class="mt-2 text-3xl font-bold text-gray-900 tabular-nums dark:text-gray-100">{{ number_format($cancelledCount, 0, ',', '.') }}</div>
-            <p class="text-xs text-gray-500 mt-1 dark:text-gray-500">Data tetap tersimpan</p>
+            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Data tetap tersimpan</p>
         </div>
     </div>
 
@@ -105,12 +105,12 @@
 
         {{-- Proyek per Status --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-500">Proyek per Status</h2>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-400">Proyek per Status</h2>
             <div class="space-y-3">
                 @foreach ($statusCounts as $label => $count)
                     <div class="flex items-center gap-3 text-sm">
                         {{-- Label status singkat, sama dengan List Project (2026-09-14). --}}
-                        <span class="w-32 shrink-0 text-gray-600 truncate dark:text-gray-500" title="{{ $label }}">{{ Project::STATUS_SHORT_LABELS[$label] ?? $label }}</span>
+                        <span class="w-32 shrink-0 text-gray-600 truncate dark:text-gray-400" title="{{ $label }}">{{ Project::STATUS_SHORT_LABELS[$label] ?? $label }}</span>
                         <span class="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden dark:bg-gray-800">
                             <span class="block h-full rounded-full"
                                   style="width: {{ $count ? max(4, round($count / $maxStatus * 100)) : 0 }}%; background: {{ $statusHex[$label] ?? '#9ca3af' }};"></span>
@@ -124,10 +124,10 @@
         {{-- Top 5 Bank Pemberi Tugas — pie 3D, menggantikan Komposisi Pipeline
              (2026-09-21, feedback user). --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-500"
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-400"
                 title="Jumlah proyek per bank (tanpa proyek batal). Nama bank yang sama digabung walau alamatnya beda.">Top 5 Bank Pemberi Tugas</h2>
             @if (empty($topBanks['slices']))
-                <p class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">Belum ada proyek dari klien bank.</p>
+                <p class="py-10 text-center text-sm text-gray-400 dark:text-gray-400">Belum ada proyek dari klien bank.</p>
             @else
                 {{-- Pie di atas, legenda DI BAWAH (2026-09-25, feedback user):
                      kartu Proyek per Status di kiri memanjang sejak status
@@ -146,7 +146,7 @@
                             @endforeach
                         </ul>
                         @if ($topBanks['nonBank'] > 0)
-                            <p class="mt-3 text-[11px] text-gray-400 dark:text-gray-500">Di luar grafik: {{ $topBanks['nonBank'] }} proyek dari Pemberi Tugas non-bank.</p>
+                            <p class="mt-3 text-[11px] text-gray-400 dark:text-gray-400">Di luar grafik: {{ $topBanks['nonBank'] }} proyek dari Pemberi Tugas non-bank.</p>
                         @endif
                     </div>
                 </div>
@@ -159,16 +159,16 @@
          siapa yang penuh dan siapa yang kosong. --}}
     <div class="rounded-lg border border-gray-200 bg-white shadow-sm lift dark:border-gray-700 dark:bg-gray-800">
         <div class="px-6 pt-6">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">Progress Status Penilai</h2>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Progress Status Penilai</h2>
             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Proyek In-Progress yang sedang dipegang, urut dari yang paling banyak. Satu proyek bisa dipegang beberapa penilai.</p>
         </div>
         @if ($workload->isEmpty())
-            <p class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">Belum ada akun penilai aktif.</p>
+            <p class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-400">Belum ada akun penilai aktif.</p>
         @else
             <div class="hidden overflow-x-auto md:block">
                 <table class="mt-3 w-full min-w-[720px] text-sm">
                     <thead class="border-y border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
-                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-500">
+                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             <th class="px-6 py-3">Penilai</th>
                             <th class="px-4 py-3 text-right" title="Tanggal survei di masa depan">Akan Survei</th>
                             <th class="px-4 py-3 text-right" title="Sudah/sedang survei, nilai belum diajukan">Survei &amp; Penilaian</th>
@@ -183,7 +183,7 @@
                             <tr class="{{ $w['total'] === 0 ? 'bg-gray-50/60 dark:bg-gray-900/30' : '' }}">
                                 <td class="px-6 py-3">
                                     <p class="font-medium text-gray-900 dark:text-gray-100">{{ $w['user']->name }}</p>
-                                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ $w['user']->jabatan ?: '-' }}</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-400">{{ $w['user']->jabatan ?: '-' }}</p>
                                 </td>
                                 @foreach (['upcoming', 'surveying', 'review', 'draft'] as $k)
                                     <td class="px-4 py-3 text-right tabular-nums {{ $w[$k] ? 'text-gray-800 dark:text-gray-200' : 'text-gray-300 dark:text-gray-600' }}">{{ $w[$k] }}</td>
@@ -208,7 +208,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <p class="truncate font-medium text-gray-900 dark:text-gray-100">{{ $w['user']->name }}</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ $w['user']->jabatan ?: '-' }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-400">{{ $w['user']->jabatan ?: '-' }}</p>
                             </div>
                             @if ($w['total'] === 0)
                                 <span class="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-400">Kosong</span>
@@ -216,7 +216,7 @@
                                 <span class="shrink-0 text-right"><span class="text-lg font-bold tabular-nums text-gray-900 dark:text-gray-100">{{ $w['total'] }}</span> <span class="text-xs text-gray-400">aktif</span></span>
                             @endif
                         </div>
-                        <div class="mt-2 grid grid-cols-5 gap-1 text-center text-[10px] text-gray-400 dark:text-gray-500">
+                        <div class="mt-2 grid grid-cols-5 gap-1 text-center text-[10px] text-gray-400 dark:text-gray-400">
                             @foreach (['upcoming' => 'Akan survei', 'surveying' => 'Survei', 'review' => 'Review', 'draft' => 'Draft', 'doneMonth' => 'Selesai'] as $k => $lbl)
                                 <div><p class="text-sm font-semibold tabular-nums {{ $w[$k] ? 'text-gray-800 dark:text-gray-200' : 'text-gray-300 dark:text-gray-600' }}">{{ $w[$k] }}</p>{{ $lbl }}</div>
                             @endforeach
@@ -232,7 +232,7 @@
 
         {{-- Proposal masuk per bulan --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-500">Proposal Masuk &mdash; 6 Bulan Terakhir</h2>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-400">Proposal Masuk &mdash; 6 Bulan Terakhir</h2>
             <div class="flex items-end justify-between gap-2 h-40">
                 @foreach ($monthly as $m)
                     <div class="flex-1 flex flex-col items-center justify-end h-full">
@@ -240,7 +240,7 @@
                         <div class="w-full max-w-[42px] rounded-t bg-blue-500/90"
                              style="height: {{ $m['count'] ? max(4, round($m['count'] / $maxMonthly * 100)) : 1 }}%;"
                              title="{{ $m['label'] }}: {{ $m['count'] }} proposal"></div>
-                        <span class="mt-2 text-[11px] text-gray-500 text-center dark:text-gray-500">{{ $m['label'] }}</span>
+                        <span class="mt-2 text-[11px] text-gray-500 text-center dark:text-gray-400">{{ $m['label'] }}</span>
                     </div>
                 @endforeach
             </div>
@@ -248,11 +248,11 @@
 
         {{-- Proyek per jenis proposal --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-500">Proyek per Tujuan Penilaian</h2>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-400">Proyek per Tujuan Penilaian</h2>
             <div class="space-y-3">
                 @foreach ($purposeCounts as $label => $count)
                     <div class="flex items-center gap-3 text-sm">
-                        <span class="w-40 shrink-0 text-gray-600 truncate dark:text-gray-500" title="{{ $label }}">{{ $label }}</span>
+                        <span class="w-40 shrink-0 text-gray-600 truncate dark:text-gray-400" title="{{ $label }}">{{ $label }}</span>
                         <span class="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden dark:bg-gray-800">
                             <span class="block h-full rounded-full bg-indigo-500"
                                   style="width: {{ $count ? max(4, round($count / $maxPurpose * 100)) : 0 }}%;"></span>
@@ -274,7 +274,7 @@
         <div class="hidden overflow-x-auto md:block">
         <table class="min-w-[640px] w-full text-sm mt-3">
             <thead class="bg-gray-50 border-y border-gray-200 dark:bg-gray-900 dark:border-gray-700">
-                <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-500">
+                <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
                     <th class="px-6 py-3">No. Proposal</th>
                     <th class="px-6 py-3">Nama Klien</th>
                     <th class="px-6 py-3">Jenis</th>
@@ -288,14 +288,14 @@
                         <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">
                             <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" title="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
                         </td>
-                        <td class="px-6 py-3 text-gray-600 dark:text-gray-500">{{ $p->effective_client_name ?: '-' }}</td>
-                        <td class="px-6 py-3 text-gray-500 dark:text-gray-500">{{ $p->proposal_purpose }}</td>
+                        <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</td>
+                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $p->proposal_purpose }}</td>
                         <td class="px-6 py-3">
                             <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
                                 {{ $p->status_short }}
                             </span>
                         </td>
-                        <td class="px-6 py-3 text-gray-500 whitespace-nowrap dark:text-gray-500">{{ $p->created_at->translatedFormat('d M Y') }}</td>
+                        <td class="px-6 py-3 text-gray-500 whitespace-nowrap dark:text-gray-400">{{ $p->created_at->translatedFormat('d M Y') }}</td>
                     </tr>
                 @endforeach
             </tbody>

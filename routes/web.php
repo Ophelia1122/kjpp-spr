@@ -128,6 +128,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/proposals/{project}/cancel', [ProposalController::class, 'cancel'])->name('proposals.cancel');
         // Batalkan beberapa proyek sekaligus dari List Project (2026-09-24).
         Route::post('/proposals/cancel-many', [ProposalController::class, 'cancelMany'])->name('proposals.cancelMany');
+        // Unduh proposal beberapa proyek sekaligus jadi satu .zip (2026-09-26).
+        Route::post('/proposals/export-zip', [ProposalController::class, 'exportZip'])->name('proposals.exportZip');
         // Urutan petugas Surat Tugas diubah dengan digeser (2026-09-24).
         Route::post('/projects/{project}/assignment-staff/reorder', [ProjectController::class, 'reorderAssignmentStaff'])->name('projects.assignmentStaff.reorder');
         // Urungkan penghapusan petugas (2026-09-25).

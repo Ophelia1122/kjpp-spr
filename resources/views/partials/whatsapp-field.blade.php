@@ -5,6 +5,6 @@
     <input type="tel" name="whatsapp_number" value="{{ old('whatsapp_number', $waValue ?? null) }}"
            placeholder="Contoh: 081234567890" inputmode="tel"
            class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Dipakai bot untuk me-mention di grup WhatsApp kantor.</p>
+    <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Dipakai bot untuk me-mention di grup WhatsApp kantor.</p>
     @error('whatsapp_number') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
 </div>

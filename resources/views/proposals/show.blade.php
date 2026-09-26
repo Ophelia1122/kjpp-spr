@@ -17,7 +17,7 @@
         if ($project->assigned_appraiser && $project->survey_date && $project->isWorkActive()) {
             $activeSla = ($project->isReviewApproved() && $project->estimated_final_completion_date)
                 ? ['label' => 'SLA Laporan Final', 'state' => $project->final_sla_state, 'text' => $project->final_sla_label, 'target' => $project->estimated_final_completion_date_formatted]
-                : ['label' => 'SLA Draft/Resume', 'state' => $project->sla_state, 'text' => $project->sla_label, 'target' => $project->estimated_completion_date_formatted];
+                : ['label' => $project->istilahAlur('SLA Draft/Resume'), 'state' => $project->sla_state, 'text' => $project->sla_label, 'target' => $project->estimated_completion_date_formatted];
         }
         $slaBadgeTone = [
             'overdue'  => 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800',
@@ -30,17 +30,13 @@
         <x-slot:meta>
             <p class="text-sm text-gray-500 dark:text-gray-400">
                 Tanggal proposal: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $project->effective_proposal_date->translatedFormat('d F Y') }}</span>
-                <span class="text-gray-400 dark:text-gray-500">&middot; input {{ $project->created_at->translatedFormat('d F Y') }}</span>
+                <span class="text-gray-400 dark:text-gray-400">&middot; input {{ $project->created_at->translatedFormat('d F Y') }}</span>
             </p>
             {{-- Badge SLA dipindah ke ujung kanan bar navigasi cepat
                  (2026-09-14, feedback user — sebagai kotak besar di sini
                  terasa mengganjal & memotong hierarki header). Di bar nav
                  dia ikut sticky, jadi malah selalu terlihat saat scroll. --}}
-            {{-- "Batalkan Project"/"Aktifkan Kembali" dipindah jadi ikon di
-                 kanan status badge (2026-09-14, feedback user — dulu numpuk
-                 vertikal dengan Edit Bab Proposal, terasa ganjal). Info
-                 tanggal dibatalkan pindah ke sini juga, jadi bagian dari
-                 meta info tanggal proyek. --}}
+            {{-- Batalkan/Aktifkan Kembali sebagai ikon di kanan badge status. --}}
             @if ($project->isCancelled())
                 <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">
                     Dibatalkan {{ optional($project->cancelled_at)->translatedFormat('d F Y') ?? '—' }}
@@ -96,11 +92,9 @@
     @include('proposals._stage_bar')
 
     {{-- ===================== NAVIGASI CEPAT (QUICK NAV) =====================
-         Pill tab bar sticky (2026-09-14, feedback user — Opsi A dari 2
-         alternatif yang diajukan). JS di bawah otomatis membuang pill yang
-         section-nya tidak dirender (izin/status tidak cocok) supaya tidak
-         pernah ada link mati, dan menandai pill aktif sesuai section yang
-         sedang terlihat (scrollspy sederhana pakai IntersectionObserver). --}}
+         JS di bawah membuang pill yang section-nya tidak dirender (izin/status
+         tidak cocok) supaya tidak ada link mati, dan menandai pill aktif
+         mengikuti section yang terlihat. --}}
     <div class="sticky top-14 lg:top-3 z-10 flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1.5 shadow-sm dark:bg-gray-800 dark:border-gray-700">
     <div id="quickNav" class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
         <a href="#section-info" data-target="section-info" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Info</a>
@@ -160,11 +154,8 @@
                 sections.forEach(function (s) { observer.observe(s.el); });
                 setActive(sections[0].id);
             }
-            {{-- Script ini sengaja ditaruh SEBELUM kartu-kartu lain di HTML
-                 (letaknya persis di bawah nav-nya, biar dekat) — tapi kartu
-                 section-nya baru di-parse browser SETELAH baris ini, jadi
-                 WAJIB nunggu DOMContentLoaded, bukan langsung jalan (2026-09-14,
-                 dites: getElementById selalu null kalau dijalankan langsung). --}}
+            {{-- Script ini berada di atas kartu-kartu yang diacu, jadi WAJIB
+                 menunggu DOMContentLoaded — tanpa itu getElementById selalu null. --}}
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', initQuickNav);
             } else {
@@ -252,7 +243,7 @@
                 <dd class="font-medium text-gray-900 dark:text-gray-100">
                     {{ $project->effective_client_name }}
                     @unless ($project->client_id || trim((string) $project->client_name))
-                        <span class="text-gray-400 font-normal dark:text-gray-500" title="Nama Klien belum diisi — memakai nama Pemberi Tugas.">(= Pemberi Tugas)</span>
+                        <span class="text-gray-400 font-normal dark:text-gray-400" title="Nama Klien belum diisi — memakai nama Pemberi Tugas.">(= Pemberi Tugas)</span>
                     @endunless
                 </dd>
                 @if ($project->namedClient)
@@ -279,12 +270,8 @@
                     @endforeach
                 </dd>
             </div>
-            {{-- Jenis Aset & Lokasi Aset dibuang dari sini (2026-09-14,
-                 feedback user) — sudah dicakup per-objek di bagian
-                 "Objek Penilaian" di bawah, jadi dobel kalau ditampilkan
-                 di sini juga. Kolom asset_type/asset_address di database
-                 TETAP dipakai (ringkasan dipakai PDF/dashboard/tabel),
-                 cuma tidak ditampilkan lagi di kartu ini. --}}
+            {{-- Jenis & Lokasi Aset tidak ditampilkan di sini: sudah per objek di
+                 bawah. Kolom asset_type/asset_address tetap dipakai PDF & dashboard. --}}
 
             {{-- ===================== RINCIAN OBJEK PENILAIAN ===================== --}}
             @if ($project->valuationObjects && $project->valuationObjects->isNotEmpty())
@@ -373,11 +360,7 @@
             </div>
             {{-- Marketing tidak ditampilkan lagi; Penanggung Jawab pindah ke sini (2026-09-22). --}}
             <div>
-                {{-- Caption sekunder ("biodata dari akun pengguna" / "belum
-                     dipilih di proposal") dibuang (2026-09-14, feedback
-                     user) — cuma catatan asal data, tidak perlu selalu
-                     tampil. Jabatan/gelar penandatangan tetap ditampilkan
-                     karena itu info substantif, bukan catatan provenance. --}}
+                {{-- Jabatan/gelar penandatangan ditampilkan; catatan asal datanya tidak. --}}
                 <dt class="text-gray-500 dark:text-gray-400">Penanggung Jawab</dt>
                 @if ($project->signedBy)
                     <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->signedBy->name }}</dd>
@@ -473,7 +456,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Nama Penilai Lapangan <span class="font-normal text-gray-400">(1–{{ \App\Models\Project::MAX_APPRAISERS }} orang)</span>
-                                <span class="inline-block align-text-bottom text-gray-400 dark:text-gray-500" title="Daftar ini menampilkan semua pengguna aktif, pilih akun Surveyor yang benar-benar turun lapangan karena mengikat pada Timeline Proyek.">
+                                <span class="inline-block align-text-bottom text-gray-400 dark:text-gray-400" title="Daftar ini menampilkan semua pengguna aktif, pilih akun Surveyor yang benar-benar turun lapangan karena mengikat pada Timeline Proyek.">
                                     <svg aria-hidden="true" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/>
                                     </svg>
@@ -525,7 +508,7 @@
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                             {{-- Keterangan dulu tersembunyi di balik ikon hover; dipindah
                                  jadi tulisan tetap di bawah kolom (2026-09-24, feedback user). --}}
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">
                                 Kosongkan untuk memakai tanggal survei paling akhir. Isi manual bila tanggal penilaian berbeda.
                                 Tanggal survei terakhir: {{ $project->survey_date?->translatedFormat('d F Y') ?: '—' }}
                             </p>
@@ -538,7 +521,7 @@
                     <div class="mt-4 rounded-md border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between gap-2 px-4 py-2.5">
                             <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Survei per Objek</p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500">Selesai kosong = survei 1 hari &middot; semua penilai terpilih = semua turun</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-400">Selesai kosong = survei 1 hari &middot; semua penilai terpilih = semua turun</p>
                         </div>
                         <div class="divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-700 dark:border-gray-700">
                             @forelse ($project->valuationObjects as $obj)
@@ -583,7 +566,7 @@
                                                    data-survey-field aria-label="Tanggal mulai survei objek {{ $loop->iteration }}"
                                                    value="{{ old('surveys.' . $obj->id . '.start', $obj->survey_start_date?->toDateString()) }}"
                                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-[150px] dark:border-gray-600">
-                                            <span class="text-xs text-gray-400 dark:text-gray-500">s/d</span>
+                                            <span class="text-xs text-gray-400 dark:text-gray-400">s/d</span>
                                             <input type="date" name="surveys[{{ $obj->id }}][end]" lang="id" @disabled($hasSurvey)
                                                    data-survey-field aria-label="Tanggal selesai survei objek {{ $loop->iteration }}"
                                                    value="{{ old('surveys.' . $obj->id . '.end', $obj->survey_end_date?->toDateString()) }}"
@@ -592,7 +575,7 @@
                                     </div>
                                 </div>
                             @empty
-                                <p class="px-4 py-4 text-sm text-gray-400 dark:text-gray-500">Proyek belum punya objek penilaian.</p>
+                                <p class="px-4 py-4 text-sm text-gray-400 dark:text-gray-400">Proyek belum punya objek penilaian.</p>
                             @endforelse
                         </div>
                         @error('surveys') <p class="px-4 pb-3 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -877,7 +860,7 @@
                              class="mt-1 h-16 w-16 border border-gray-200 rounded object-contain dark:border-gray-600">
                     </div>
                 @endif
-                <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Hanya Administrator &amp; General Admin yang dapat mengisi.</p>
+                <p class="mt-2 text-xs text-gray-400 dark:text-gray-400">Hanya Administrator &amp; General Admin yang dapat mengisi.</p>
             @endcan
 
 
@@ -885,7 +868,7 @@
                  (2026-09-24, feedback user). --}}
             @can('survey.view')
                 @if (! $project->assigned_appraiser || ! $project->survey_date)
-                    <p class="mt-4 text-xs text-gray-400 dark:text-gray-500">
+                    <p class="mt-4 text-xs text-gray-400 dark:text-gray-400">
                         Surat Tugas bisa diunduh lewat tombol <b>Unduh</b> setelah penilai lapangan &amp; tanggal survei diisi.
                     </p>
                 @endif
@@ -947,7 +930,7 @@
                 {{-- Sisa Tagihan = belum di-invoice; Sisa Pelunasan = belum dibayar (2026-09-21). --}}
                 @if ($project->remaining_balance > 0)
                     <div class="flex items-center gap-x-4 gap-y-1 flex-wrap text-xs font-semibold">
-                        <span class="whitespace-nowrap {{ $project->uninvoiced_balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500' }}"
+                        <span class="whitespace-nowrap {{ $project->uninvoiced_balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-400' }}"
                               title="Nilai kontrak yang belum dibuatkan invoice">
                             Sisa Tagihan: Rp {{ number_format($project->uninvoiced_balance, 0, ',', '.') }}
                         </span>
@@ -967,7 +950,7 @@
                             <div>
                                 <p class="font-medium text-gray-900 text-sm dark:text-gray-100">
                                     {{ $inv->invoice_number }}
-                                    <span class="text-gray-400 font-normal dark:text-gray-500">— {{ $inv->term_description ?? $inv->invoice_type }}</span>
+                                    <span class="text-gray-400 font-normal dark:text-gray-400">— {{ $inv->term_description ?? $inv->invoice_type }}</span>
                                 </p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
                                     Rp {{ number_format($inv->amount, 0, ',', '.') }} —
@@ -1039,7 +1022,7 @@
                     @endforeach
                 </div>
             @else
-                <p class="text-sm text-gray-400 dark:text-gray-500">Belum ada invoice diterbitkan.</p>
+                <p class="text-sm text-gray-400 dark:text-gray-400">Belum ada invoice diterbitkan.</p>
             @endif
 
             @can('invoices.manage')
@@ -1143,24 +1126,14 @@
                         <dd class="font-medium text-gray-900 dark:text-gray-100">{{ $project->tax_invoice_date?->translatedFormat('d F Y') ?: '(belum diisi)' }}</dd>
                     </div>
                 </dl>
-                <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Hanya Administrator &amp; General Admin yang dapat mengisi.</p>
+                <p class="mt-2 text-xs text-gray-400 dark:text-gray-400">Hanya Administrator &amp; General Admin yang dapat mengisi.</p>
             @endcan
         </div>
     @endcanany
 
     {{-- ===================== CARD NOMOR LAPORAN RESMI =====================
-         Dipisah dari kartu "Aksi Tersedia" (2026-09-13, feedback user: field
-         ini butuh kartu sendiri yang lebar penuh, bukan numpang sempit di
-         Aksi Tersedia). Muncul mulai draft laporan telah direview (proses
-         cetak) sampai Selesai — wajib diisi sebelum "Buku Selesai Dicetak".
-         Badge pembayaran di header MURNI informasi, tidak lagi mengunci
-         form. Pola kunci/edit form-nya sama seperti Faktur Pajak: sekali
-         terisi, field terkunci sampai ikon Edit ditekan.
-
-         Izin KHUSUS final_report.manage/.view (2026-09-14, feedback user:
-         hanya Admin Produksi/Admin Keuangan/Administrator yang boleh
-         isi — BUKAN Surveyor, beda dari data survei lapangan yang
-         dipakai kartu Penilai Lapangan). --}}
+         Muncul sejak draft laporan direview sampai proyek Selesai. Wajib diisi
+         sebelum "Buku Selesai Dicetak" (dijaga di ProjectController). --}}
     @canany(['final_report.manage', 'final_report.view'])
         {{-- Muncul mulai draft laporan telah direview (proses cetak) — 2026-09-15. --}}
         @if ($project->isFinalReportStage())
@@ -1169,12 +1142,7 @@
                 <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
                     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Nomor Laporan Final</h2>
                     <div class="flex items-center gap-2">
-                        {{-- Badge "Menunggu lunas penuh" dibuang (2026-09-14,
-                             feedback user): Nomor Laporan Final tetap bisa
-                             diisi sebelum lunas, jadi badge itu menyesatkan
-                             (kesannya masih terkunci). Badge "sudah lunas"
-                             dipertahankan — itu murni info status proyek,
-                             tidak menyiratkan sedang terkunci. --}}
+                        {{-- Badge "sudah lunas" saja: Nomor Laporan Final tidak menunggu pelunasan. --}}
                         @if ($project->isDone())
                             <span class="text-xs font-semibold text-emerald-600 whitespace-nowrap dark:text-emerald-400">✔ Proyek selesai{{ $project->is_fully_paid ? ' · tagihan lunas' : '' }}.</span>
                         @endif
@@ -1273,7 +1241,7 @@
             @php
                 $isDraftStep = $project->status === \App\Models\Project::STATUS_DRAFT;
                 $stepNow  = 'font-semibold text-gray-800 dark:text-gray-200';
-                $stepDone = 'text-gray-400 line-through dark:text-gray-500';
+                $stepDone = 'text-gray-400 line-through dark:text-gray-400';
             @endphp
             <ol class="list-decimal list-inside space-y-1 text-xs text-gray-500 dark:text-gray-400">
                 <li class="{{ $isDraftStep ? $stepNow : $stepDone }}">Kirim proposal ke klien — tombol <b>Kirim ke Klien</b>.</li>
@@ -1320,7 +1288,7 @@
                     <p class="text-sm text-gray-600 dark:text-gray-300">
                         Tahap sekarang: <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $project->stage['label'] }}</span>
                         @if ($project->stage['actor'])
-                            <span class="text-gray-400 dark:text-gray-500">&middot; giliran {{ $project->stage['actor'] }}</span>
+                            <span class="text-gray-400 dark:text-gray-400">&middot; giliran {{ $project->stage['actor'] }}</span>
                         @endif
                     </p>
 
@@ -1362,7 +1330,7 @@
                      berwarna di kiri tidak bisa dibaca artinya. --}}
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                     @foreach (\App\Models\AuditLog::TIMELINE_LEGEND as $nada => $arti)
-                        <span class="inline-flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
+                        <span class="inline-flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-400">
                             <span class="h-2 w-2 rounded-full {{ \App\Models\AuditLog::TIMELINE_DOTS[$nada] }}"></span>{{ $arti }}
                         </span>
                     @endforeach
@@ -1385,12 +1353,12 @@
                         @if ($log->note)
                             <p class="mt-1 rounded-md bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700 whitespace-pre-line dark:bg-gray-900/50 dark:text-gray-300">{{ $log->note }}</p>
                         @else
-                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{{ $log->description }}</p>
+                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">{{ $log->description }}</p>
                         @endif
                     </div>
                 </div>
             @empty
-                <p class="text-xs text-gray-400 dark:text-gray-500">Belum ada riwayat.</p>
+                <p class="text-xs text-gray-400 dark:text-gray-400">Belum ada riwayat.</p>
             @endforelse
         </div>
     </div>
@@ -1410,7 +1378,7 @@
     <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Buat Invoice</h2>
-            <button type="button" onclick="closeInvoiceModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+            <button type="button" onclick="closeInvoiceModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
         </div>
 
         <form action="{{ route('invoices.store', $project) }}" method="POST" class="space-y-3">
@@ -1426,7 +1394,7 @@
                         <option value="{{ $opt['id'] }}" @selected($opt['id'] == $project->instructing_client_id)>{{ $opt['label'] }}</option>
                     @endforeach
                 </select>
-                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Nama &amp; alamatnya dicetak di Invoice dan Kwitansi.</p>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Nama &amp; alamatnya dicetak di Invoice dan Kwitansi.</p>
             </div>
             {{-- "Biaya Jasa Penilaian Properti an. …" — pilihan sama (2026-09-14, feedback user). --}}
             <div>
@@ -1515,7 +1483,7 @@
     <div class="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Edit Invoice</h2>
-            <button type="button" onclick="closeEditInvoiceModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+            <button type="button" onclick="closeEditInvoiceModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
         </div>
         <p id="editInvoiceWarning" hidden class="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 dark:text-amber-400 dark:bg-amber-900/20 dark:border-amber-800">
             ⚠️ Invoice ini sudah berstatus Lunas &amp; sudah punya nomor kwitansi. Mengubah nominal/keterangan di sini <strong>tidak</strong> otomatis mengubah PDF Invoice/Kwitansi yang mungkin sudah dicetak/dikirim ke klien — cetak ulang kalau perlu.
@@ -1566,7 +1534,7 @@
     <div class="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Verifikasi Pembayaran</h2>
-            <button type="button" onclick="closeVerifyPaidModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+            <button type="button" onclick="closeVerifyPaidModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
         </div>
         <form id="verifyPaidForm" method="POST" class="space-y-3">
             @csrf
@@ -1574,7 +1542,7 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Pembayaran Diterima</label>
                 <input type="date" name="payment_date" id="verify_payment_date" value="{{ now()->toDateString() }}" required lang="id"
                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
-                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Tanggal ini akan muncul di PDF Kwitansi sebagai tanggal penerimaan.</p>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Tanggal ini akan muncul di PDF Kwitansi sebagai tanggal penerimaan.</p>
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeVerifyPaidModal()"
@@ -1591,7 +1559,7 @@
     <div class="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
             <h2 id="reviewRejectTitle" class="text-lg font-semibold">Kembalikan</h2>
-            <button type="button" onclick="closeReviewRejectModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+            <button type="button" onclick="closeReviewRejectModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
         </div>
         <form id="reviewRejectForm" method="POST" class="space-y-3">
             @csrf

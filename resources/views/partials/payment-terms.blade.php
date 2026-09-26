@@ -122,7 +122,7 @@
                 <div class="min-w-0 flex-1">
                     <div class="truncate text-sm text-gray-600 dark:text-gray-300">${LABELS[values.length][i]}</div>
                     {{-- Layar sempit: nilai pasangannya pindah ke bawah label supaya label tidak terpotong. --}}
-                    <div class="text-xs tabular-nums text-gray-400 sm:hidden dark:text-gray-500" data-echo-sm="${i}"></div>
+                    <div class="text-xs tabular-nums text-gray-400 sm:hidden dark:text-gray-400" data-echo-sm="${i}"></div>
                 </div>
                 <div class="relative ${mode === 'nominal' ? 'w-40' : 'w-24'} shrink-0">
                     ${mode === 'nominal' ? '<span class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-gray-400">Rp</span>' : ''}

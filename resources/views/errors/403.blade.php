@@ -9,7 +9,7 @@
     </p>
 
     @auth
-        <p class="text-sm text-gray-400 mb-6 dark:text-gray-500">
+        <p class="text-sm text-gray-400 mb-6 dark:text-gray-400">
             Anda login sebagai <strong>{{ auth()->user()->name }}</strong>
             dengan role <strong>{{ auth()->user()->role->name ?? '-' }}</strong>.
             Kalau menurut Anda ini seharusnya bisa diakses, hubungi Administrator

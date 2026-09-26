@@ -20,12 +20,12 @@
     <div class="px-5 pt-5 pb-3 flex items-start justify-between gap-3">
         <div>
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Invoice tertunggak</h2>
-            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Belum dibayar lebih dari {{ $d['overdueDays'] }} hari sejak terbit.</p>
+            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">Belum dibayar lebih dari {{ $d['overdueDays'] }} hari sejak terbit.</p>
         </div>
         <a href="{{ route('dashboard.pembayaran') }}" class="text-xs font-medium text-blue-600 whitespace-nowrap hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Dashboard Pembayaran →</a>
     </div>
     @if ($d['overdue']->isEmpty())
-        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">🎉 Tidak ada invoice tertunggak.</div>
+        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-400">🎉 Tidak ada invoice tertunggak.</div>
     @else
         <div class="hidden md:block">
             <table class="w-full text-sm">
@@ -80,10 +80,10 @@
 <div class="{{ $panel }}">
     <div class="px-5 pt-5 pb-3">
         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Pekerjaan selesai, belum lunas</h2>
-        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Tenggat penagihan {{ $d['dueDays'] }} hari setelah buku selesai dicetak. Urut dari tenggat terdekat.</p>
+        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">Tenggat penagihan {{ $d['dueDays'] }} hari setelah buku selesai dicetak. Urut dari tenggat terdekat.</p>
     </div>
     @if ($d['unpaidDone']->isEmpty())
-        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">🎉 Semua pekerjaan selesai sudah lunas.</div>
+        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-400">🎉 Semua pekerjaan selesai sudah lunas.</div>
     @else
         <div class="hidden md:block">
             <table class="w-full text-sm">
@@ -106,12 +106,12 @@
                             </td>
                             <td class="px-4 py-3 text-xs text-gray-700 whitespace-nowrap dark:text-gray-300">{{ $row['doneAt']->translatedFormat('d M Y') }}</td>
                             <td class="px-4 py-3 text-right font-semibold tabular-nums whitespace-nowrap text-gray-900 dark:text-gray-100">{{ $rp($p->remaining_balance) }}</td>
-                            <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap {{ $row['notBilled'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500' }}">
+                            <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap {{ $row['notBilled'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-400' }}">
                                 <span class="tabular-nums">{{ $row['notBilled'] > 0 ? $rp($row['notBilled']) : '—' }}</span>
                             </td>
                             <td class="px-5 py-3 whitespace-nowrap">
                                 <p class="text-xs font-medium {{ $dueTone($row['dueDays']) }}">{{ $dueText($row['dueDays']) }}</p>
-                                <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ $row['due']->translatedFormat('d M Y') }}</p>
+                                <p class="text-[11px] text-gray-400 dark:text-gray-400">{{ $row['due']->translatedFormat('d M Y') }}</p>
                             </td>
                         </tr>
                     @endforeach
@@ -130,7 +130,7 @@
                             <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $clientOf($p) }}</p>
                         </div>
                         <div class="shrink-0 text-right">
-                            <p class="text-[11px] text-gray-400 dark:text-gray-500">Sisa pelunasan</p>
+                            <p class="text-[11px] text-gray-400 dark:text-gray-400">Sisa pelunasan</p>
                             <p class="font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $rp($p->remaining_balance) }}</p>
                         </div>
                     </div>

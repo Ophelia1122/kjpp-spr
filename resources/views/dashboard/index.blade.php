@@ -153,7 +153,7 @@
         {{-- Chip filter aktif — klik × untuk membuang satu filter saja. --}}
         @if (count($activeFilters) > 0)
             <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
-                <span class="text-xs text-gray-400 dark:text-gray-500">Filter aktif:</span>
+                <span class="text-xs text-gray-400 dark:text-gray-400">Filter aktif:</span>
                 @foreach ($activeFilters as $filter)
                     <a href="{{ route('dashboard', array_merge(request()->except([$filter['key'], 'page']), ['mine' => $mine ? 1 : 0])) }}"
                        class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
@@ -186,7 +186,7 @@
 
         <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Export ke Excel</h2>
-            <button type="button" onclick="closeExportModal()" class="text-2xl leading-none text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+            <button type="button" onclick="closeExportModal()" class="text-2xl leading-none text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
         </div>
 
         <fieldset class="space-y-2">
@@ -217,7 +217,7 @@
                            class="w-full rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600">
                 </div>
             </div>
-            <p class="text-xs text-gray-400 dark:text-gray-500">Kosongkan tanggal untuk mengekspor semua waktu.</p>
+            <p class="text-xs text-gray-400 dark:text-gray-400">Kosongkan tanggal untuk mengekspor semua waktu.</p>
         </fieldset>
 
         <fieldset class="grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 sm:grid-cols-2 dark:border-gray-700">

@@ -33,7 +33,7 @@
         <input type="hidden" name="remove_avatar" value="0" data-avatar-remove @if ($avatarForm) form="{{ $avatarForm }}" @endif>
     </div>
     {{-- Lebar tetap (w-28) & teks status pendek — caption tidak lagi melebarkan kolom foto. --}}
-    <p data-avatar-caption class="w-full text-center text-[11px] leading-tight text-gray-400 dark:text-gray-500">JPG/PNG · maks. 1 MB</p>
+    <p data-avatar-caption class="w-full text-center text-[11px] leading-tight text-gray-400 dark:text-gray-400">JPG/PNG · maks. 1 MB</p>
     @error('avatar') <p class="w-full text-center text-[11px] leading-tight text-red-600">{{ $message }}</p> @enderror
 
     {{-- ===================== EDITOR CROP ===================== --}}

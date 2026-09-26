@@ -30,7 +30,7 @@
             @endif
             <div class="min-w-0">
             <span class="font-medium text-gray-900 dark:text-gray-100">{{ $staff->user->name ?? '(pengguna terhapus)' }}</span>
-            <span class="text-gray-400 dark:text-gray-500">
+            <span class="text-gray-400 dark:text-gray-400">
                 {{-- Posisi manual menang atas Jabatan biodata (2026-09-26). --}}
                 — {{ $staff->position ?: ($staff->user->jabatan ?? '(jabatan belum diisi)') }}
                 @if ($staff->qualification)
@@ -68,14 +68,14 @@
             </div>
         </div>
     @else
-        <p class="text-xs text-gray-400 dark:text-gray-500">Belum ada petugas ditambahkan.</p>
+        <p class="text-xs text-gray-400 dark:text-gray-400">Belum ada petugas ditambahkan.</p>
     @endif
 @endforelse
 </div>
 
 @if ($petugasBoleh)
     @if ($project->assignmentStaff->count() > 1)
-        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Geser baris untuk mengubah urutan cetak di Surat Tugas.</p>
+        <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Geser baris untuk mengubah urutan cetak di Surat Tugas.</p>
     @endif
 
     <script>
@@ -146,7 +146,7 @@
     @if ($availableStaffUsers->isEmpty())
         {{-- Semua pengguna aktif sudah masuk daftar: kolom pilih disembunyikan
              supaya tidak ada kotak kosong menggantung (2026-09-24, feedback user). --}}
-        <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Semua pengguna aktif sudah ada di daftar petugas.</p>
+        <p class="mt-3 text-xs text-gray-400 dark:text-gray-400">Semua pengguna aktif sudah ada di daftar petugas.</p>
     @else
         {{-- min-w-0 + flex-wrap: nama petugas yang panjang membuat <select> selebar
              teks terpanjang dan melebarkan halaman di HP, sehingga bar tombol bawah

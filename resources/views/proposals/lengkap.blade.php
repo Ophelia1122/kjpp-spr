@@ -141,7 +141,7 @@
                     </dl>
                 </div>
             @empty
-                <p class="text-sm text-gray-400 dark:text-gray-500">Belum ada objek {{ $project->isKonsultasi() ? 'pekerjaan' : 'penilaian' }}.</p>
+                <p class="text-sm text-gray-400 dark:text-gray-400">Belum ada objek {{ $project->isKonsultasi() ? 'pekerjaan' : 'penilaian' }}.</p>
             @endforelse
         </div>
     </div>
@@ -166,7 +166,7 @@
                         </div>
                     </div>
                 @empty
-                    <p class="text-sm text-gray-400 dark:text-gray-500">Belum ada invoice.</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-400">Belum ada invoice.</p>
                 @endforelse
             </div>
         </div>
@@ -183,7 +183,7 @@
                         </p>
                     </div>
                 @empty
-                    <p class="text-sm text-gray-400 dark:text-gray-500">Belum ada tanda terima.</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-400">Belum ada tanda terima.</p>
                 @endforelse
             </div>
         </div>

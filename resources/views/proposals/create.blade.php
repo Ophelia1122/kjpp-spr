@@ -68,9 +68,7 @@
         @csrf
         <input type="hidden" name="service_type" value="{{ $serviceType }}">
 
-        {{-- ============================================================
-             KARTU 1 — IDENTITAS PROPOSAL
-             ============================================================ --}}
+        {{-- KARTU 1 — IDENTITAS PROPOSAL --}}
         <div id="section-identitas" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Identitas Proposal</h2>
 
@@ -100,7 +98,7 @@
                                    placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" maxlength="10"
                                    class="w-full rounded-md shadow-sm pr-10 {{ $errCls('proposal_date') }}">
                             <button type="button" id="proposal_date_pick" tabindex="-1" aria-label="Pilih dari kalender"
-                                    class="absolute inset-y-0 right-0 grid w-10 place-items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">
+                                    class="absolute inset-y-0 right-0 grid w-10 place-items-center text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">
                                 <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0V11.25A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
                                 </svg>
@@ -110,7 +108,7 @@
                         </div>
                         <input type="hidden" name="proposal_date" id="proposal_date_iso"
                                value="{{ old('proposal_date', now()->toDateString()) }}">
-                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Format dd/mm/yyyy</p>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Format dd/mm/yyyy</p>
                         @error('proposal_date')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -129,9 +127,7 @@
             </div>
         </div>
 
-        {{-- ============================================================
-             KARTU 2 — PIHAK TERKAIT
-             ============================================================ --}}
+        {{-- KARTU 2 — PIHAK TERKAIT --}}
         <div id="section-pihak" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Pihak Terkait</h2>
 
@@ -312,9 +308,7 @@
             </div>
         </div>
 
-        {{-- ============================================================
-             KARTU 3 — LINGKUP PEKERJAAN & SLA
-             ============================================================ --}}
+        {{-- KARTU 3 — LINGKUP PEKERJAAN & SLA --}}
         <div id="section-lingkup" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Lingkup Pekerjaan &amp; SLA</h2>
 
@@ -331,7 +325,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" id="purpose_hint"></p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-400" id="purpose_hint"></p>
                             @error('proposal_purpose')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                         <div>
@@ -356,7 +350,7 @@
                                     <option value="{{ $jenis }}" @selected(old('consulting_type', $consultingType) === $jenis)>{{ $jenis }}</option>
                                 @endforeach
                             </select>
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jasa Konsultasi (SPI 350). Tidak bisa diubah setelah proposal disimpan.</p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Jasa Konsultasi (SPI 350). Tidak bisa diubah setelah proposal disimpan.</p>
                             @error('consulting_type')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                     <div>
@@ -366,7 +360,7 @@
                         <input type="text" name="letter_attn" id="letter_attn" maxlength="150"
                                value="{{ old('letter_attn') }}" placeholder="Contoh: Bapak Sinyo, Kepala Divisi Kredit"
                                class="mt-1 w-full rounded-md text-sm shadow-sm {{ $errCls('letter_attn') }}">
-                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Tercetak di kop surat, di bawah alamat klien.</p>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Tercetak di kop surat, di bawah alamat klien.</p>
                         @error('letter_attn')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                     </div>
                         <input type="hidden" name="report_style" value="{{ \App\Models\Project::REPORT_LONG }}">
@@ -376,7 +370,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            SLA Laporan Draft/Resume (hari kerja)
+                            SLA Laporan {{ $konsultasi ? 'Draft/Summary' : 'Draft/Resume' }} (hari kerja)
                             @include('partials.icon-info', ['tip' => 'Dihitung sejak inspeksi lapangan & penerimaan data terakhir.'])
                         </label>
                         <input type="number" name="sla_draft_days" min="1" max="365" required
@@ -387,7 +381,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             SLA Laporan Final (hari kerja)
-                            @include('partials.icon-info', ['tip' => 'Dihitung sejak Laporan Draft/Resume disetujui Pemberi Tugas.'])
+                            @include('partials.icon-info', ['tip' => 'Dihitung sejak Laporan ' . ($konsultasi ? 'Draft/Summary' : 'Draft/Resume') . ' disetujui Pemberi Tugas.'])
                         </label>
                         <input type="number" name="sla_final_days" min="1" max="365" required
                                value="{{ old('sla_final_days') }}" placeholder="Contoh: 5"
@@ -424,9 +418,7 @@
             </div>
         </div>
 
-        {{-- ============================================================
-             KARTU 4 — BIAYA & PEMBAYARAN
-             ============================================================ --}}
+        {{-- KARTU 4 — BIAYA & PEMBAYARAN --}}
         <div id="section-biaya" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Biaya &amp; Pembayaran</h2>
 
@@ -465,7 +457,7 @@
                            placeholder="Contoh: 10.000.000"
                            class="mt-1 w-full rounded-md shadow-sm {{ $errCls('service_fee') }}">
                     <input type="hidden" name="service_fee" id="service_fee_raw" value="{{ old('service_fee') }}">
-                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" id="service_fee_hint"></p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-400" id="service_fee_hint"></p>
                     @error('service_fee')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
 
@@ -516,9 +508,7 @@
             </div>
         </div>
 
-        {{-- ============================================================
-             KARTU 5 — OBJEK PENILAIAN
-             ============================================================ --}}
+        {{-- KARTU 5 — OBJEK PENILAIAN --}}
         <div id="section-objek" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-4 dark:bg-gray-800 dark:border-gray-700">
             <div class="flex items-center justify-between gap-2 mb-2">
                 <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
@@ -689,7 +679,7 @@
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 dark:bg-gray-800">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">Tambah Klien Baru</h2>
-            <button type="button" onclick="closeClientModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+            <button type="button" onclick="closeClientModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
         </div>
         <div id="clientModalErrors" class="hidden mb-3 text-sm text-red-600 dark:text-red-400"></div>
         <div class="space-y-3">
@@ -903,7 +893,7 @@
 
     function renderResults(container, clients, onPick) {
         if (clients.length === 0) {
-            container.innerHTML = `<div class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">Tidak ditemukan. Coba "+ Klien Baru".</div>`;
+            container.innerHTML = `<div class="px-3 py-2 text-sm text-gray-400 dark:text-gray-400">Tidak ditemukan. Coba "+ Klien Baru".</div>`;
         } else {
             // Yang ditampilkan alamat, bukan jenis klien (2026-09-15, feedback
             // user) — satu nama seperti Bank Mandiri bisa punya banyak cabang.
@@ -911,7 +901,7 @@
                 <button type="button" data-index="${i}"
                         class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-0 dark:hover:bg-blue-900/30 dark:border-gray-800">
                     <div class="font-medium text-gray-800 dark:text-gray-200">${escapeHtml(c.client_name)}</div>
-                    <div class="text-xs text-gray-400 whitespace-pre-line dark:text-gray-500">${escapeHtml(c.address) || '<span class="italic">Alamat belum diisi</span>'}</div>
+                    <div class="text-xs text-gray-400 whitespace-pre-line dark:text-gray-400">${escapeHtml(c.address) || '<span class="italic">Alamat belum diisi</span>'}</div>
                 </button>
             `).join('');
             container.querySelectorAll('button[data-index]').forEach(btn => {
@@ -990,7 +980,7 @@
                     <div class="font-medium">${escapeHtml(u.client_name)}</div>
                     <div class="text-xs text-gray-500 whitespace-pre-line dark:text-gray-400">${escapeHtml(u.address) || 'Alamat belum diisi'}</div>
                 </div>
-                <button type="button" onclick="removeIntendedUser(${u.id})" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+                <button type="button" onclick="removeIntendedUser(${u.id})" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
             </div>
         `).join('');
 

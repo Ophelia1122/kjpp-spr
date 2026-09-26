@@ -25,10 +25,10 @@
 <div class="{{ $panel }}">
     <div class="px-5 pt-5 pb-3">
         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Perlu tindakan Admin Produksi</h2>
-        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Urut dari yang paling lama menunggu.</p>
+        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">Urut dari yang paling lama menunggu.</p>
     </div>
     @if ($d['actions']->isEmpty())
-        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">🎉 Tidak ada yang menunggu tindakan.</div>
+        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-400">🎉 Tidak ada yang menunggu tindakan.</div>
     @else
         <div class="hidden md:block">
             <table class="w-full text-sm">
@@ -50,14 +50,14 @@
                                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $clientOf($p) }}</p>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 whitespace-nowrap dark:bg-indigo-900/30 dark:text-indigo-300">{{ $actionLabel[$p->review_status] ?? $p->stage['label'] }}</span>
+                                <span class="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 whitespace-nowrap dark:bg-indigo-900/30 dark:text-indigo-300">{{ $p->istilahAlur($actionLabel[$p->review_status] ?? $p->stage['label']) }}</span>
                                 @if ($p->review_status === \App\Models\Project::STAGE_DRAFT_REVIEWED && ! $p->final_report_number)
                                     <span class="mt-0.5 block text-[11px] text-amber-600 dark:text-amber-400">Nomor Laporan Final belum diisi</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-xs whitespace-nowrap">
                                 <p class="text-gray-700 dark:text-gray-300">{{ $p->stage_since?->translatedFormat('d M Y, H:i') ?? '—' }}</p>
-                                <p class="{{ ($wait ?? 0) >= 3 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400 dark:text-gray-500' }}">{{ $waitText($wait) }}</p>
+                                <p class="{{ ($wait ?? 0) >= 3 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400 dark:text-gray-400' }}">{{ $waitText($wait) }}</p>
                             </td>
                             <td class="px-5 py-3">@include('dashboard.home._note', ['project' => $p])</td>
                             <td class="px-4 py-3">@include('dashboard.home._row_actions', ['project' => $p])</td>
@@ -79,7 +79,7 @@
                         </div>
                         <span class="shrink-0 text-xs font-medium {{ ($wait ?? 0) >= 3 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400' }}">{{ $waitText($wait) }}</span>
                     </div>
-                    <span class="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ $actionLabel[$p->review_status] ?? $p->stage['label'] }}</span>
+                    <span class="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ $p->istilahAlur($actionLabel[$p->review_status] ?? $p->stage['label']) }}</span>
                     @if ($p->review_status === \App\Models\Project::STAGE_DRAFT_REVIEWED && ! $p->final_report_number)
                         <p class="text-[11px] text-amber-600 dark:text-amber-400">Nomor Laporan Final belum diisi</p>
                     @endif
@@ -101,10 +101,10 @@
 <div class="{{ $panel }}">
     <div class="px-5 pt-5 pb-3">
         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Proyek dalam SLA Laporan Final</h2>
-        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Sejak Draft Resume disetujui sampai buku selesai dicetak. Urut dari tenggat terdekat.</p>
+        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">Sejak Draft Resume disetujui sampai buku selesai dicetak. Urut dari tenggat terdekat.</p>
     </div>
     @if ($d['finalSla']->isEmpty())
-        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">Belum ada proyek dalam SLA Laporan Final.</div>
+        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-400">Belum ada proyek dalam SLA Laporan Final.</div>
     @else
         <div class="hidden md:block">
             <table class="w-full text-sm">
@@ -128,9 +128,9 @@
                             <td class="px-5 py-3 whitespace-nowrap">
                                 @if ($p->estimated_final_completion_date)
                                     <p class="text-xs font-medium {{ $slaTone[$p->final_sla_state] ?? '' }}">{{ $p->final_sla_label }}</p>
-                                    <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ $p->estimated_final_completion_date->translatedFormat('d M Y') }}</p>
+                                    <p class="text-[11px] text-gray-400 dark:text-gray-400">{{ $p->estimated_final_completion_date->translatedFormat('d M Y') }}</p>
                                 @else
-                                    <span class="text-xs text-gray-400 dark:text-gray-500">SLA Final belum diisi</span>
+                                    <span class="text-xs text-gray-400 dark:text-gray-400">SLA Final belum diisi</span>
                                 @endif
                             </td>
                         </tr>
@@ -150,14 +150,14 @@
                         <div class="shrink-0 text-right">
                             @if ($p->estimated_final_completion_date)
                                 <p class="text-xs font-medium {{ $slaTone[$p->final_sla_state] ?? '' }}">{{ $p->final_sla_label }}</p>
-                                <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ $p->estimated_final_completion_date->translatedFormat('d M Y') }}</p>
+                                <p class="text-[11px] text-gray-400 dark:text-gray-400">{{ $p->estimated_final_completion_date->translatedFormat('d M Y') }}</p>
                             @else
-                                <span class="text-xs text-gray-400 dark:text-gray-500">SLA Final belum diisi</span>
+                                <span class="text-xs text-gray-400 dark:text-gray-400">SLA Final belum diisi</span>
                             @endif
                         </div>
                     </div>
                     <div>@include('dashboard.home._stage', ['project' => $p])</div>
-                    <p class="text-[11px] text-gray-400 dark:text-gray-500">Resume disetujui {{ $p->review_approved_at?->translatedFormat('d M Y') ?? '—' }}</p>
+                    <p class="text-[11px] text-gray-400 dark:text-gray-400">Resume disetujui {{ $p->review_approved_at?->translatedFormat('d M Y') ?? '—' }}</p>
                 </a>
             @endforeach
         </div>

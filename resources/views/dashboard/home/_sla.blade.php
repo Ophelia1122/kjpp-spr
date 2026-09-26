@@ -2,7 +2,7 @@
 @php $sla = $project->active_sla; @endphp
 @if ($sla)
     <p class="text-xs font-medium whitespace-nowrap {{ $slaTone[$sla['state']] ?? '' }}">{{ $sla['text'] }}</p>
-    <p class="text-[11px] text-gray-400 whitespace-nowrap dark:text-gray-500">SLA {{ $sla['phase'] }} &middot; {{ $sla['date']->translatedFormat('d M Y') }}</p>
+    <p class="text-[11px] text-gray-400 whitespace-nowrap dark:text-gray-400">SLA {{ $sla['phase'] }} &middot; {{ $sla['date']->translatedFormat('d M Y') }}</p>
 @else
-    <span class="text-xs text-gray-400 dark:text-gray-500">Belum terjadwal</span>
+    <span class="text-xs text-gray-400 dark:text-gray-400">Belum terjadwal</span>
 @endif

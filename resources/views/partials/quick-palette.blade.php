@@ -26,7 +26,7 @@
             </svg>
             <input type="text" id="qpInput" autocomplete="off" placeholder="Cari proyek atau menu…"
                    class="w-full border-0 bg-transparent py-3 text-sm focus:outline-none focus:ring-0 dark:text-gray-100">
-            <kbd class="shrink-0 rounded border border-gray-200 px-1.5 text-[10px] text-gray-400 dark:border-gray-600 dark:text-gray-500">Esc</kbd>
+            <kbd class="shrink-0 rounded border border-gray-200 px-1.5 text-[10px] text-gray-400 dark:border-gray-600 dark:text-gray-400">Esc</kbd>
         </div>
         <div id="qpHasil" class="max-h-[50vh] overflow-y-auto py-1"></div>
     </div>
@@ -54,11 +54,11 @@
                         class="qp-item flex w-full items-center gap-3 px-4 py-2 text-left text-sm ${i === pilih ? 'bg-blue-50 dark:bg-blue-900/30' : ''}">
                     <span class="min-w-0 flex-1">
                         <span class="block truncate font-medium text-gray-800 dark:text-gray-100">${esc(b.judul)}</span>
-                        ${b.sub ? `<span class="block truncate text-xs text-gray-400 dark:text-gray-500">${esc(b.sub)}</span>` : ''}
+                        ${b.sub ? `<span class="block truncate text-xs text-gray-400 dark:text-gray-400">${esc(b.sub)}</span>` : ''}
                     </span>
                     ${b.status ? `<span class="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300">${esc(b.status)}</span>` : ''}
                 </button>`).join('')
-            : '<p class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">Tidak ada yang cocok.</p>';
+            : '<p class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-400">Tidak ada yang cocok.</p>';
 
         hasil.querySelectorAll('.qp-item').forEach(el => {
             el.addEventListener('click', () => buka(baris[+el.dataset.i]));

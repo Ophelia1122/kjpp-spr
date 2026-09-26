@@ -12,7 +12,7 @@
         'due-soon' => 'text-amber-600 dark:text-amber-400',
         'on-track' => 'text-emerald-600 dark:text-emerald-400',
         'done'     => 'text-gray-500 dark:text-gray-400',
-        'none'     => 'text-gray-400 dark:text-gray-500',
+        'none'     => 'text-gray-400 dark:text-gray-400',
     ];
     $clientOf = fn ($p) => $p->effective_client_name ?: '-';
     // "menunggu N hari" dihitung dari tanggal kalender.

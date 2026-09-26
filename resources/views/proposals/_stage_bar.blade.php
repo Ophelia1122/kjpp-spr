@@ -39,7 +39,7 @@
                                 ? 'bg-blue-600 text-white'
                                 : ($lewat
                                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                                    : 'text-gray-400 dark:text-gray-500') }}">
+                                    : 'text-gray-400 dark:text-gray-400') }}">
                     @if ($lewat)
                         <svg aria-hidden="true" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>

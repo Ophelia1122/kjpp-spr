@@ -54,11 +54,11 @@
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
         <div class="px-5 pt-5 pb-3">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Proyek terkait ({{ $projects->count() }})</h2>
-            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Semua proyek yang mencantumkan klien ini, beserta perannya.</p>
+            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">Semua proyek yang mencantumkan klien ini, beserta perannya.</p>
         </div>
 
         @if ($projects->isEmpty())
-            <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">Klien ini belum dipakai di proyek mana pun.</div>
+            <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-400">Klien ini belum dipakai di proyek mana pun.</div>
         @else
             {{-- Desktop: tabel --}}
             <div class="hidden md:block">

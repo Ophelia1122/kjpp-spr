@@ -20,11 +20,11 @@
 <div class="{{ $panel }}">
     <div class="px-5 pt-5 pb-3">
         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Proyek aktif saya</h2>
-        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Urut dari tenggat SLA terdekat. Klik untuk membuka proyek.</p>
+        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">Urut dari tenggat SLA terdekat. Klik untuk membuka proyek.</p>
     </div>
 
     @if ($d['active']->isEmpty())
-        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">
+        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-400">
             Belum ada proyek aktif yang ditugaskan kepada Anda.
         </div>
     @else

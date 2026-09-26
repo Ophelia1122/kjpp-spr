@@ -55,7 +55,7 @@
 
                 <div class="flex items-start justify-between gap-3">
                     <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        <span class="text-gray-400 font-normal dark:text-gray-500">{{ $i + 1 }}.</span>
+                        <span class="text-gray-400 font-normal dark:text-gray-400">{{ $i + 1 }}.</span>
                         {{ $section['title'] }}
                     </h2>
                     @if (! $section['editable'])
@@ -80,7 +80,7 @@
                 @endif
 
                 @if (! $section['editable'])
-                    <p class="mt-3 text-sm text-gray-400 italic dark:text-gray-500">Bab ini dibuat otomatis dari data proyek — tidak ada teks untuk diedit.</p>
+                    <p class="mt-3 text-sm text-gray-400 italic dark:text-gray-400">Bab ini dibuat otomatis dari data proyek — tidak ada teks untuk diedit.</p>
                 @else
                     @php $rows = max(4, min(26, substr_count($section['text'], "\n") + 2)); @endphp
                     <form action="{{ route('proposals.texts.update', [$project, $section['key']]) }}" method="POST" class="mt-3">

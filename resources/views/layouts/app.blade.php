@@ -6,18 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Internal Web-App KJPP')</title>
     @include('partials.favicon')
-    {{-- C. Crossfade dari halaman login ke aplikasi (View Transitions, 2026-09-15).
-         Hanya dipakai bila datang dari /login — navigasi antarhalaman aplikasi
-         dilewati supaya tidak terasa lambat. --}}
     <style>
-        @view-transition { navigation: auto; }
-        /* Opsi 1: lewat gelap dulu (#020617) supaya perpindahan gelap <-> terang tidak silau. */
-        ::view-transition { background: #020617; }
-        ::view-transition-old(root) { animation: vt-dim-out .25s cubic-bezier(.4, 0, 1, 1) both; }
-        ::view-transition-new(root) { animation: vt-dim-in .35s cubic-bezier(0, 0, .2, 1) .15s both; }
-        @keyframes vt-dim-out { to { opacity: 0; } }
-        @keyframes vt-dim-in { from { opacity: 0; } }
-
         /* Mode terang "kabut indigo" (2026-09-15, feedback user): latar #EEF1F8
            (lihat <body>), garis & latar tabel ikut bernuansa indigo tipis. */
         html:not(.dark) main .border-gray-200 { border-color: #DFE4F0; }
@@ -40,13 +29,6 @@
         .theme-switch .icon-moon, .theme-switch[aria-checked="true"] .icon-sun { display: none; }
         .theme-switch[aria-checked="true"] .icon-moon { display: block; }
     </style>
-    <script>
-        window.addEventListener('pagereveal', function (e) {
-            if (e.viewTransition && !/\/login(\?|$)/.test(document.referrer ? new URL(document.referrer).pathname : '')) {
-                e.viewTransition.skipTransition();
-            }
-        });
-    </script>
     {{-- Tailwind browser v4.3.3 disimpan lokal (2026-09-14): jsdelivr sering lambat/diblokir operator seluler. --}}
     <script src="{{ asset('js/tailwindcss-browser.js') }}?v=4.3.3"></script>
     <style type="text/tailwindcss">

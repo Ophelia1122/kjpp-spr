@@ -1,11 +1,15 @@
 {{-- Beranda Reviewer: antrean review nilai & draft laporan. --}}
 @php
     $d = $reviewer;
-    $kindBadge = fn ($p) => match ($p->review_status) {
+    // Label per proyek ikut istilah Non-Penilaian (2026-09-26).
+    $kindBadge = fn ($p) => array_map(
+        fn ($v) => is_string($v) ? $p->istilahAlur($v) : $v,
+        match ($p->review_status) {
         \App\Models\Project::REVIEW_SUBMITTED => ['Nilai', 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'],
         \App\Models\Project::REVIEW_RELEASED  => ['Draft Resume', 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'],
         default                                 => ['Draft Laporan', 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'],
-    };
+        },
+    );
 @endphp
 
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -17,11 +21,11 @@
 <div class="{{ $panel }}">
     <div class="px-5 pt-5 pb-3">
         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Antrean review</h2>
-        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Urut dari yang paling lama menunggu. Reviewer mana pun boleh mengambil antrean.</p>
+        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">Urut dari yang paling lama menunggu. Reviewer mana pun boleh mengambil antrean.</p>
     </div>
 
     @if ($d['queue']->isEmpty())
-        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-500">
+        <div class="border-t border-gray-100 px-5 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:text-gray-400">
             🎉 Tidak ada antrean review saat ini.
         </div>
     @else

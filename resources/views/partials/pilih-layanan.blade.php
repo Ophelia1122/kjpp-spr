@@ -39,7 +39,7 @@
                 <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Pilih jenis pekerjaannya dulu — isian formnya menyesuaikan.</p>
             </div>
             <button type="button" onclick="tutupPilihLayanan()" aria-label="Tutup"
-                    class="text-2xl leading-none text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200">&times;</button>
+                    class="text-2xl leading-none text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
         </div>
 
         {{-- Dua pilihan saja, tanpa judul kelompok — judulnya sudah mewakili. --}}
