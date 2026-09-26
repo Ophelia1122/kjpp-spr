@@ -699,9 +699,16 @@
                     if (cari) { e.preventDefault(); cari.focus(); cari.select(); }
                     return;
                 }
-                if (e.key === 'n' && urlProposalBaru) {
+                if (e.key === 'n' && bisaBuatProposal) {
                     e.preventDefault();
-                    window.location.href = urlProposalBaru;
+                    // Jenis layanan dipilih dulu lewat modal (2026-09-26);
+                    // tanpa modal, pintasan ini diam-diam membuat proposal
+                    // penilaian. Tanpa modal di halaman itu, jatuh ke URL biasa.
+                    if (typeof window.bukaPilihLayanan === 'function') {
+                        window.bukaPilihLayanan();
+                    } else if (urlProposalBaru) {
+                        window.location.href = urlProposalBaru;
+                    }
                     return;
                 }
                 if (e.key === '?') {
