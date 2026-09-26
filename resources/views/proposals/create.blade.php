@@ -353,6 +353,16 @@
                             </p>
                             <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Jasa Konsultasi (SPI 350). Ganti jenisnya lewat tombol Proposal Baru.</p>
                         </div>
+                    <div>
+                        <label for="letter_attn" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Up. <span class="font-normal text-gray-400">(opsional)</span>
+                        </label>
+                        <input type="text" name="letter_attn" id="letter_attn" maxlength="150"
+                               value="{{ old('letter_attn') }}" placeholder="Contoh: Bapak Sinyo, Kepala Divisi Kredit"
+                               class="mt-1 w-full rounded-md text-sm shadow-sm {{ $errCls('letter_attn') }}">
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Tercetak di kop surat, di bawah alamat klien.</p>
+                        @error('letter_attn')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
                         <input type="hidden" name="report_style" value="{{ \App\Models\Project::REPORT_LONG }}">
                     @endunless
                 </div>

@@ -94,4 +94,24 @@ class Terbilang
 
         return self::convert(intdiv($number, 1_000_000_000_000)) . ' Triliun ' . self::convert($number % 1_000_000_000_000);
     }
+
+    /**
+     * Angka jadi angka Romawi kapital: 1 -> I, 4 -> IV, 9 -> IX.
+     * Dipakai penomoran "Tahap I / Tahap II" pada termin proposal konsultasi.
+     */
+    public static function romawi(int $angka): string
+    {
+        $peta = ['M' => 1000, 'CM' => 900, 'D' => 500, 'CD' => 400, 'C' => 100, 'XC' => 90,
+                 'L' => 50, 'XL' => 40, 'X' => 10, 'IX' => 9, 'V' => 5, 'IV' => 4, 'I' => 1];
+
+        $hasil = '';
+        foreach ($peta as $huruf => $nilai) {
+            while ($angka >= $nilai) {
+                $hasil .= $huruf;
+                $angka -= $nilai;
+            }
+        }
+
+        return $hasil;
+    }
 }

@@ -25,7 +25,9 @@
             <div class="min-w-0">
             <span class="font-medium text-gray-900 dark:text-gray-100">{{ $staff->user->name ?? '(pengguna terhapus)' }}</span>
             <span class="text-gray-400 dark:text-gray-500">
-                — {{ $staff->user->jabatan ?? '(jabatan belum diisi)' }}
+                {{-- Posisi manual menang atas Jabatan biodata (2026-09-26). --}}
+                — {{ $staff->position ?: ($staff->user->jabatan ?? '(jabatan belum diisi)') }}
+                @if ($staff->qualification) &middot; {{ $staff->qualification }} @endif
                 @if ($staff->user?->mappi_no) &middot; MAPPI {{ $staff->user->mappi_no }} @endif
             </span>
             </div>
@@ -131,6 +133,13 @@
                     <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->jabatan ?: 'jabatan belum diisi' }})</option>
                 @endforeach
             </select>
+            {{-- Posisi & Kualifikasi diketik manual (2026-09-26, permintaan user):
+                 dipakai tabel Tim Pelaksana pada proposal konsultasi dan baris
+                 Jabatan di Surat Tugas. Boleh dikosongkan. --}}
+            <input type="text" name="position" maxlength="100" placeholder="Posisi (mis. Ketua Tim)"
+                   class="min-w-0 flex-1 basis-40 h-[38px] rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600 dark:bg-gray-900">
+            <input type="text" name="qualification" maxlength="120" placeholder="Kualifikasi (mis. Penilai Properti)"
+                   class="min-w-0 flex-1 basis-40 h-[38px] rounded-md border-gray-300 shadow-sm text-sm dark:border-gray-600 dark:bg-gray-900">
             <button type="submit" class="inline-flex h-[38px] items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 whitespace-nowrap">
                 + Tambah
             </button>

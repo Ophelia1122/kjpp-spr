@@ -16,6 +16,10 @@ class ProjectAssignmentStaff extends Model
         'project_id',
         'user_id',
         'sort_order',
+        // Dipakai tabel Tim Pelaksana pada proposal Jasa Konsultasi dan baris
+        // Jabatan pada Surat Tugas (2026-09-26).
+        'position',
+        'qualification',
     ];
 
     public function project()

@@ -354,6 +354,7 @@ class Project extends Model
         'service_type',
         'consulting_type',
         'work_object_description',
+        'letter_attn',
         'request_basis',
         'instructing_client_id',
         'asset_type',
@@ -543,6 +544,33 @@ class Project extends Model
     public function canChangeServiceType(): bool
     {
         return $this->status === self::STATUS_DRAFT;
+    }
+
+    /**
+     * Kalimat pekerjaan pada Surat Tugas proposal konsultasi, mengikuti master
+     * kantor (2026-09-26). Bisa diubah lewat config/proposal_clauses_konsultasi.
+     */
+    public function kalimatTugasKonsultasi(): string
+    {
+        $kunci = [
+            self::CONSULTING_RAB        => 'rab',
+            self::CONSULTING_FS         => 'fs',
+            self::CONSULTING_PENGAWASAN => 'pengawasan',
+        ][$this->consulting_type] ?? null;
+
+        $bawaan = [
+            'rab'        => 'melakukan inspeksi lokasi dan analisis kewajaran Rencana Anggaran Biaya (RAB) atas nama :klien.',
+            'fs'         => 'melakukan Jasa Penyusunan Laporan Studi Kelayakan atas nama :klien.',
+            'pengawasan' => 'melakukan Jasa Pengawasan Proyek Pembangunan atas nama :klien.',
+        ];
+
+        $teks = $kunci
+            ? (config('proposal_clauses_konsultasi')[$kunci]['kalimat_surat_tugas'] ?? $bawaan[$kunci])
+            : 'melaksanakan pekerjaan jasa konsultasi atas nama :klien.';
+
+        return strtr($teks, [
+            ':klien' => $this->assignment_letter_on_behalf_name ?: $this->effective_client_name,
+        ]);
     }
 
     public function isWorkActive(): bool
@@ -1203,10 +1231,22 @@ class Project extends Model
             return [];
         }
 
-        return array_filter(
+        $tersedia = array_filter(
             self::WORKFLOW_STEPS,
             fn ($step) => $step['from'] === $this->review_status && self::userCanActAs($user, $step['actor'])
         );
+
+        // Proyek konsultasi memakai istilah "Summary" (2026-09-26). Diterapkan
+        // di sini supaya semua pemakai — bilah aksi, modal, catatan — ikut.
+        return array_map(function (array $step) {
+            foreach (['title', 'button', 'tip', 'desc', 'flash'] as $bagian) {
+                if (isset($step[$bagian])) {
+                    $step[$bagian] = $this->istilahAlur($step[$bagian]);
+                }
+            }
+
+            return $step;
+        }, $tersedia);
     }
 
     /** Tahap pekerjaan saat ini + siapa yang memegang giliran (Beranda, detail proyek). */

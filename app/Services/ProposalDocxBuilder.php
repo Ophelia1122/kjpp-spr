@@ -59,6 +59,30 @@ class ProposalDocxBuilder
     /** true = builder dipakai untuk pratinjau teks config, abaikan $defaults. */
     private bool $abaikanDefault = false;
 
+    /**
+     * Klausul Jasa Konsultasi (config/proposal_clauses_konsultasi.php) untuk
+     * jenis pekerjaan proyek ini, atau [] bila proyeknya penilaian.
+     */
+    private array $klKonsultasi = [];
+
+    /** Jenis konsultasi -> kunci di config. */
+    private const KUNCI_KONSULTASI = [
+        Project::CONSULTING_RAB        => 'rab',
+        Project::CONSULTING_FS         => 'fs',
+        Project::CONSULTING_PENGAWASAN => 'pengawasan',
+    ];
+
+    /**
+     * Judul bab proposal konsultasi diberi nomor atau tidak, mengikuti master
+     * masing-masing: Kajian Kewajaran RAB tanpa nomor, Studi Kelayakan dan
+     * Pengawasan memakai penomoran.
+     */
+    private const NOMOR_BAB_KONSULTASI = [
+        'rab'        => false,
+        'fs'         => true,
+        'pengawasan' => true,
+    ];
+
     // true tepat setelah sebuah heading di-emit: paragraf isi PERTAMA
     // sesudahnya dibuat "keepLines" supaya heading tidak menggantung
     // sendirian di dasar halaman (isi ikut pindah ke halaman berikutnya).
@@ -248,6 +272,11 @@ class ProposalDocxBuilder
         $this->overrides = $this->project->sectionTexts->pluck('body', 'section_key')->all();
         $this->defaults  = ProposalSectionDefault::untukTujuan($this->project->proposal_purpose);
 
+        if ($this->project->isKonsultasi()) {
+            $kunci = self::KUNCI_KONSULTASI[$this->project->consulting_type] ?? null;
+            $this->klKonsultasi = $kunci ? (config('proposal_clauses_konsultasi')[$kunci] ?? []) : [];
+        }
+
         // Delimiter '/' ikut di-escape (istilah bisa memuat "/", mis. "ketentuan/biaya").
         $it = array_map(fn ($x) => preg_quote($x, '/'), $this->cl['text_style']['italic'] ?? []);
         $bd = array_map(fn ($x) => preg_quote($x, '/'), $this->cl['text_style']['bold'] ?? []);
@@ -334,6 +363,13 @@ class ProposalDocxBuilder
 
         $this->buildHeaders();
         $this->buildFooters();
+
+        // Jasa Konsultasi (SPI 350) memakai susunan bab sendiri — lihat
+        // buildKonsultasi(). Proposal penilaian di bawahnya tidak berubah.
+        if ($this->project->isKonsultasi()) {
+            $this->buildKonsultasi();
+            return;
+        }
 
         $this->buildLetterHead();
         $this->sectionStatusPenilai();
@@ -428,6 +464,219 @@ class ProposalDocxBuilder
         }
         $rest->addPreserveText('{PAGE}', ['name' => $this->fName, 'size' => 12],
             ['alignment' => Jc::CENTER, 'spaceBefore' => 40, 'spaceAfter' => 0]);
+    }
+
+    /**
+     * =========================================================================
+     * PROPOSAL JASA KONSULTASI (2026-09-26, permintaan user)
+     *
+     * Susunan bab & seluruh kalimatnya berasal dari master kantor, disimpan
+     * sebagai teks di config/proposal_clauses_konsultasi.php dan bisa
+     * disunting lewat Pengaturan Sistem > Teks Baku Proposal.
+     *
+     * Blok yang dibuat otomatis tetap dipakai bersama proposal penilaian:
+     * kop surat, biaya + termin + rekening, dan blok tanda tangan.
+     * =========================================================================
+     */
+    private function buildKonsultasi(): void
+    {
+        $this->letterHeadKonsultasi();
+
+        foreach ($this->klKonsultasi['bab'] ?? [] as $key => $bab) {
+            $this->sectionTitleKonsultasi($bab['judul']);
+            $this->bodyOr($key, fn () => $this->renderTeks($this->teksKonsultasi($key)));
+
+            // Tabel Posisi/Nama/Kualifikasi dibuat dari daftar Petugas proyek.
+            if (str_contains($key, 'tim_pelaksana')) {
+                $this->tabelTimPelaksana();
+            }
+        }
+
+        $this->sectionBiaya();
+        $this->sectionTandaTangan();
+        $this->torKonsultasi();
+    }
+
+    /** Teks baku satu bab konsultasi, placeholder sudah diganti data proyek. */
+    private function teksKonsultasi(string $key): string
+    {
+        $teks = $this->klKonsultasi['bab'][$key]['teks']
+            ?? $this->klKonsultasi['tor'][$key]['teks']
+            ?? $this->klKonsultasi['lampiran2'][$key]['teks']
+            ?? '';
+
+        return strtr($teks, $this->placeholderProyek());
+    }
+
+    /**
+     * Judul bab konsultasi: tebal, huruf biasa, tanpa garis bawah — persis
+     * master. Bernomor untuk Studi Kelayakan & Pengawasan, tanpa nomor untuk
+     * Kajian Kewajaran RAB.
+     */
+    private function sectionTitleKonsultasi(string $judul): void
+    {
+        $this->closeList();
+        $this->listJustClosed = false;
+        $this->secNo++;
+        $this->listNo = 0;
+        $this->bodyIndent = 0;
+
+        $kunci    = self::KUNCI_KONSULTASI[$this->project->consulting_type] ?? 'rab';
+        $bernomor = self::NOMOR_BAB_KONSULTASI[$kunci] ?? false;
+
+        $teks = $bernomor ? $this->secNo . '. ' . $judul : $judul;
+
+        $this->s->addText($teks, $this->fBold, [
+            'spaceBefore' => 200, 'spaceAfter' => 60, 'keepNext' => true, 'keepLines' => true,
+        ]);
+
+        $this->keepWithHeading = true;
+    }
+
+    /** Kop surat proposal konsultasi: perihalnya menyebut jenis pekerjaan. */
+    private function letterHeadKonsultasi(): void
+    {
+        $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        $t->addRow();
+        $t->addCell(Converter::cmToTwip(10))->addText('No. ' . $this->project->proposal_number, $this->fBold, ['spaceAfter' => 0]);
+        $t->addCell(Converter::cmToTwip(6.5))->addText('Jakarta, ' . $this->idDate($this->project->effective_proposal_date), $this->fBold, ['alignment' => Jc::RIGHT, 'spaceAfter' => 0]);
+
+        $this->s->addTextBreak(1);
+        $pt = $this->project->instructingClient;
+        $this->s->addText('Kepada Yth,', $this->fBold, ['spaceAfter' => 0]);
+        $this->s->addText($pt->client_name, $this->fBold, ['spaceAfter' => 0]);
+        foreach ($this->addressLines($pt->address) as $ln) {
+            $this->s->addText($ln, $this->fBody, ['spaceAfter' => 0]);
+        }
+
+        // Baris "Up." hanya dicetak bila diisi (mengikuti master kantor).
+        if (trim((string) $this->project->letter_attn) !== '') {
+            $this->s->addText('Up. : ' . trim($this->project->letter_attn), $this->fBold, ['spaceAfter' => 0]);
+        }
+
+        $this->s->addTextBreak(1);
+        $this->s->addText(
+            'Perihal : ' . ($this->klKonsultasi['perihal'] ?? ('Proposal ' . $this->project->consulting_type)),
+            $this->fBold,
+            ['spaceAfter' => 120]
+        );
+        $this->s->addText('Dengan hormat,', $this->fBody, ['spaceAfter' => 120]);
+
+        $this->bodyOr('pembuka_konsultasi', fn () => $this->para(
+            strtr((string) ($this->klKonsultasi['pembuka'] ?? ''), $this->placeholderProyek())
+        ));
+    }
+
+    /**
+     * Tabel Tim Pelaksana: Posisi / Nama / Kualifikasi, diambil dari daftar
+     * Petugas proyek. Posisi & Kualifikasi diketik manual per petugas
+     * (2026-09-26, permintaan user); tanpa petugas, tabelnya dilewati.
+     */
+    private function tabelTimPelaksana(): void
+    {
+        $petugas = $this->project->assignmentStaff()->with('user')->orderBy('sort_order')->get();
+
+        if ($petugas->isEmpty()) {
+            return;
+        }
+
+        $this->closeList();
+
+        $colW = $this->indentedColWidths([4.4, 6.6, 4.9]);
+        $tbl  = $this->s->addTable($this->indentedTableStyle(array_sum($colW)) + [
+            'borderSize' => 6, 'borderColor' => '000000',
+        ]);
+
+        $tbl->addRow(null, ['cantSplit' => true, 'tblHeader' => true]);
+        foreach (['Posisi', 'Nama', 'Kualifikasi'] as $i => $judul) {
+            $tbl->addCell($colW[$i], ['valign' => 'center'])
+                ->addText($judul, $this->fBold, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+        }
+
+        foreach ($petugas as $baris) {
+            $tbl->addRow(null, ['cantSplit' => true]);
+            $tbl->addCell($colW[0], ['valign' => 'center'])
+                ->addText($baris->position ?: (string) ($baris->user->jabatan ?? '-'), $this->fBody, ['spaceAfter' => 0]);
+            $tbl->addCell($colW[1], ['valign' => 'center'])
+                ->addText((string) ($baris->user->name ?? '-'), $this->fBody, ['spaceAfter' => 0]);
+            $tbl->addCell($colW[2], ['valign' => 'center'])
+                ->addText($baris->qualification ?: '-', $this->fBody, ['spaceAfter' => 0]);
+        }
+
+        $this->s->addText('', $this->fBody, ['spaceBefore' => 0, 'spaceAfter' => 60]);
+    }
+
+    /**
+     * Lampiran Kerangka Acuan Kerja (Term of Reference) — hanya Studi
+     * Kelayakan & Pengawasan. Tiap BAB jadi bab tersendiri supaya bisa
+     * disunting terpisah lewat Teks Baku Proposal.
+     */
+    private function torKonsultasi(): void
+    {
+        $tor = $this->klKonsultasi['tor'] ?? [];
+
+        if (! $tor) {
+            return;
+        }
+
+        $this->closeList();
+        $this->s->addPageBreak();
+
+        foreach ([
+            'LAMPIRAN - 1',
+            'KERANGKA ACUAN KERJA',
+            '(TERM OF REFERENCE)',
+            mb_strtoupper((string) $this->klKonsultasi['judul_tor'] ?? ''),
+            mb_strtoupper((string) $this->project->effective_client_name),
+        ] as $baris) {
+            if (trim($baris) === '') {
+                continue;
+            }
+            $this->s->addText($baris, $this->fBold, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+        }
+
+        $this->s->addTextBreak(1);
+        $this->secNo = 0;
+
+        foreach ($tor as $key => $bab) {
+            $this->sectionTitleKonsultasi($bab['judul']);
+            $this->bodyOr($key, fn () => $this->renderTeks($this->teksKonsultasi($key)));
+        }
+
+        $this->lampiranDataKonsultasi();
+    }
+
+    /** Lampiran-2: daftar data yang dibutuhkan, per aspek. */
+    private function lampiranDataKonsultasi(): void
+    {
+        $lampiran = $this->klKonsultasi['lampiran2'] ?? [];
+
+        if (! $lampiran) {
+            return;
+        }
+
+        $this->closeList();
+        $this->s->addPageBreak();
+
+        foreach ([
+            'LAMPIRAN - 2',
+            'DATA-DATA YANG DIBUTUHKAN',
+            mb_strtoupper((string) ($this->klKonsultasi['judul_tor'] ?? '')),
+            mb_strtoupper((string) $this->project->effective_client_name),
+        ] as $baris) {
+            if (trim($baris) === '') {
+                continue;
+            }
+            $this->s->addText($baris, $this->fBold, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+        }
+
+        $this->s->addTextBreak(1);
+        $this->secNo = 0;
+
+        foreach ($lampiran as $key => $bab) {
+            $this->sectionTitleKonsultasi($bab['judul']);
+            $this->bodyOr($key, fn () => $this->renderTeks($this->teksKonsultasi($key)));
+        }
     }
 
     private function buildLetterHead(): void
@@ -1149,7 +1398,12 @@ class ProposalDocxBuilder
         // harus berada pada satu halaman yang sama dan tidak boleh terpisah.
         // Dengan memulai halaman baru, ketiganya mendapat satu halaman penuh;
         // bab 25 dan blok tanda tangan sendiri sudah diikat dengan keepNext.
-        $this->sectionTitle('Biaya Jasa Penilaian', ['pageBreakBefore' => true]);
+        if ($this->project->isKonsultasi()) {
+            $this->s->addPageBreak();
+            $this->sectionTitleKonsultasi((string) ($this->klKonsultasi['judul_biaya'] ?? 'Biaya Jasa'));
+        } else {
+            $this->sectionTitle('Biaya Jasa Penilaian', ['pageBreakBefore' => true]);
+        }
         $p      = $this->project;
         $total  = round($p->total_fee);          // angka final (gross), rupiah bulat
         $pct    = $this->ppnPct();
@@ -1158,7 +1412,7 @@ class ProposalDocxBuilder
 
         $ovBiaya = $this->hasOverride('biaya');
 
-        $this->bodyOr('biaya', fn () => $this->para($this->cl['biaya_intro']));
+        $this->bodyOr('biaya', fn () => $this->para($this->biayaIntro()));
 
         // Nominal biaya (+ terbilang) rata tengah.
         $this->s->addText($rp($total), $this->fBold, ['alignment' => Jc::CENTER, 'spaceAfter' => 20]);
@@ -1235,8 +1489,10 @@ class ProposalDocxBuilder
                 // menyeret blok Rekening Bank sesudahnya.
                 $this->listKeepNext = $i !== $last;
 
-                $key = $last === 0 ? 'termin_item_last' : ($i === 0 ? 'termin_item_first' : ($i === $last ? 'termin_item_last' : 'termin_item_mid'));
-                $this->listNum(strtr($this->cl[$key], [
+                $posisi = $last === 0 ? 'last' : ($i === 0 ? 'first' : ($i === $last ? 'last' : 'mid'));
+
+                $this->listNum(strtr($this->polaTermin($posisi), [
+                    ':tahap'      => Terbilang::romawi($i + 1),
                     ':pct'        => rtrim(rtrim(number_format($pctTerm, 2, ',', '.'), '0'), ','),
                     ':pct_words'  => Terbilang::words((int) round($pctTerm)),
                     ':rp'         => $rp($nominal),
@@ -1276,6 +1532,33 @@ class ProposalDocxBuilder
         // Kalimat pembatalan tebal + miring (contoh proposal resmi 02309).
         // Jaraknya lewat spaceBefore, bukan paragraf kosong (2026-09-25).
         $this->para($this->cl['biaya_pembatalan'], ['bold' => true, 'italic' => true] + $this->fBody, ['spaceBefore' => 120]);
+    }
+
+    /**
+     * Kalimat pengantar Biaya Jasa. Proposal konsultasi memakai kalimat
+     * masternya sendiri (2026-09-26); penilaian tetap memakai config lama.
+     */
+    private function biayaIntro(): string
+    {
+        return (string) ($this->project->isKonsultasi()
+            ? ($this->klKonsultasi['biaya_intro'] ?? $this->cl['biaya_intro'])
+            : $this->cl['biaya_intro']);
+    }
+
+    /**
+     * Pola kalimat satu termin. Master konsultasi memakai bentuk
+     * "Tahap I : 50% dari biaya jasa sebesar ...", berbeda dari proposal
+     * penilaian yang memakai "50% (lima puluh persen) sebesar ...".
+     *
+     * @param  string  $posisi  first | mid | last
+     */
+    private function polaTermin(string $posisi): string
+    {
+        if ($this->project->isKonsultasi() && isset($this->klKonsultasi['termin_' . $posisi])) {
+            return (string) $this->klKonsultasi['termin_' . $posisi];
+        }
+
+        return (string) $this->cl['termin_item_' . $posisi];
     }
 
     /** Persentase PPN diformat "11" / "11,5" (tanpa nol berlebih). */
@@ -1508,6 +1791,8 @@ class ProposalDocxBuilder
         ':tanggal_proposal' => 'Tanggal proposal',
         ':tujuan'           => 'Tujuan penilaian',
         ':dasar_nilai'      => 'Dasar nilai (Nilai Pasar/Nilai Wajar/...)',
+        ':objek_pekerjaan'  => 'Uraian Objek Pekerjaan (proposal konsultasi)',
+        ':lokasi'           => 'Lokasi objek pertama',
     ];
 
     private function placeholderProyek(): array
@@ -1521,6 +1806,8 @@ class ProposalDocxBuilder
             ':tanggal_proposal' => $this->project->effective_proposal_date?->translatedFormat('d F Y') ?? '',
             ':tujuan'           => (string) $this->project->proposal_purpose,
             ':dasar_nilai'      => (string) $this->project->value_basis_label,
+            ':objek_pekerjaan'  => trim((string) $this->project->work_object_description),
+            ':lokasi'           => (string) ($this->project->valuationObjects->first()->location ?? ''),
         ];
     }
 
@@ -1554,7 +1841,19 @@ class ProposalDocxBuilder
         $this->closeList();
         $this->listJustClosed = false;
 
-        $text   = str_replace(["\r\n", "\r"], "\n", trim((string) $this->teksManual($key)));
+        $this->renderTeks((string) $this->teksManual($key), $firstPs, $everyPs);
+    }
+
+    /**
+     * Render teks bermarkup aplikasi menjadi paragraf & daftar rapi.
+     *
+     * Dipakai dua tempat: teks override/baku per bab (bodyOr) dan teks baku
+     * proposal Jasa Konsultasi yang seluruhnya disimpan sebagai teks
+     * (config/proposal_clauses_konsultasi.php, 2026-09-26).
+     */
+    private function renderTeks(string $teks, ?array $firstPs = null, ?array $everyPs = null): void
+    {
+        $text   = str_replace(["\r\n", "\r"], "\n", trim($teks));
         $blocks = preg_split('/\n{2,}/', $text) ?: [$text];
 
         $first    = true;
@@ -1605,12 +1904,50 @@ class ProposalDocxBuilder
      *   key, title, editable, note, overridden (bool), baku (teks baku
      *   ter-render), text (teks efektif = override kalau ada, else baku).
      */
+    /**
+     * Katalog bab yang berlaku untuk proyek ini. Proposal penilaian memakai
+     * SECTION_META; proposal konsultasi memakai daftar bab dari
+     * config/proposal_clauses_konsultasi.php (2026-09-26).
+     */
+    private function metaBab(): array
+    {
+        if (! $this->project->isKonsultasi()) {
+            return self::SECTION_META;
+        }
+
+        $meta = [
+            'pembuka_konsultasi' => [
+                'title'    => 'Kalimat Pembuka Surat',
+                'editable' => true,
+                'note'     => 'Paragraf pembuka sebelum bab 1.',
+            ],
+        ];
+
+        foreach (['bab' => '', 'tor' => 'Lampiran 1 — KAK: ', 'lampiran2' => 'Lampiran 2 — Data: '] as $grup => $awalan) {
+            foreach ($this->klKonsultasi[$grup] ?? [] as $key => $bab) {
+                $meta[$key] = [
+                    'title'    => $awalan . $bab['judul'],
+                    'editable' => true,
+                    'note'     => '',
+                ];
+            }
+        }
+
+        $meta['biaya'] = [
+            'title'    => (string) ($this->klKonsultasi['judul_biaya'] ?? 'Biaya Jasa'),
+            'editable' => true,
+            'note'     => 'Nominal, terbilang, termin, dan rekening bank dibuat otomatis.',
+        ];
+
+        return $meta;
+    }
+
     public function sectionsForEditor(): array
     {
         $purpose = $this->project->proposal_purpose;
         $out = [];
 
-        foreach (self::SECTION_META as $key => $meta) {
+        foreach ($this->metaBab() as $key => $meta) {
             if (isset($meta['only']) && $meta['only'] !== $purpose) {
                 continue;
             }
@@ -1680,9 +2017,16 @@ class ProposalDocxBuilder
             'address'     => 'Jl. Contoh No. 1, Bandung',
         ]);
 
+        $konsultasi = in_array($purpose, Project::CONSULTING_TYPES, true);
+
         $proyek = new Project([
             'proposal_number'  => '000/SPR-PROP/X/2026',
             'proposal_date'    => now()->toDateString(),
+            'service_type'     => $konsultasi ? Project::SERVICE_KONSULTASI : Project::SERVICE_PENILAIAN,
+            'consulting_type'  => $konsultasi ? $purpose : null,
+            'work_object_description' => $konsultasi
+                ? 'Pekerjaan pembangunan yang diprakarsai oleh PT Contoh Pemberi Tugas di Bandung.'
+                : null,
             'proposal_purpose' => $purpose !== '' ? $purpose : Project::PURPOSE_JUAL_BELI,
             'report_style'     => Project::REPORT_LONG,
             'sla_draft_days'   => 5,
@@ -1722,6 +2066,18 @@ class ProposalDocxBuilder
      */
     public static function defaultSectionKeys(string $purpose): array
     {
+        // Tujuan berupa jenis konsultasi memakai katalog babnya sendiri.
+        if (in_array($purpose, Project::CONSULTING_TYPES, true)) {
+            $contoh = self::proyekContoh($purpose);
+            $contoh->service_type    = Project::SERVICE_KONSULTASI;
+            $contoh->consulting_type = $purpose;
+
+            return array_keys(array_filter(
+                (new self($contoh))->metaBab(),
+                fn ($m) => $m['editable']
+            ));
+        }
+
         return array_keys(array_filter(
             self::SECTION_META,
             fn ($m) => $m['editable'] && (! isset($m['only']) || $m['only'] === $purpose)
@@ -1739,6 +2095,17 @@ class ProposalDocxBuilder
      */
     private function bakuText(string $key): string
     {
+        if ($this->project->isKonsultasi()) {
+            if ($key === 'pembuka_konsultasi') {
+                return strtr((string) ($this->klKonsultasi['pembuka'] ?? ''), $this->placeholderProyek());
+            }
+            if ($key === 'biaya') {
+                return $this->biayaPlain();
+            }
+
+            return $this->teksKonsultasi($key);
+        }
+
         return match ($key) {
             'pembuka'        => $this->pembukaBaku(),
             'status_penilai' => $this->stripMd(implode("\n\n", array_map(
@@ -2010,8 +2377,21 @@ class ProposalDocxBuilder
                 continue;
             }
             $baseBold = $forceBold || (bool) ($i % 2);
-            foreach ($this->scanTerms($seg, $baseBold) as $r) {
-                $out[] = $r;
+
+            // Miring eksplisit dengan satu bintang: *teks* (2026-09-26).
+            // Master proposal konsultasi memakainya cukup sering, mis.
+            // *(Feasibility Study)* dan *breakdown*.
+            foreach (explode('*', $seg) as $j => $bagian) {
+                if ($bagian === '') {
+                    continue;
+                }
+                $baseItalic = (bool) ($j % 2);
+                foreach ($this->scanTerms($bagian, $baseBold) as $r) {
+                    if ($baseItalic) {
+                        $r[2] = true;
+                    }
+                    $out[] = $r;
+                }
             }
         }
         return $out ?: [[$text, $forceBold, false]];

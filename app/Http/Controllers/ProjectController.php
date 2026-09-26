@@ -225,13 +225,18 @@ class ProjectController extends Controller
 
         $project->update($changes);
 
-        \App\Helpers\AuditLogger::record($def['action'], "{$def['desc']} — proyek {$project->proposal_number}", $project, $note);
+        \App\Helpers\AuditLogger::record(
+            $def['action'],
+            $project->istilahAlur($def['desc']) . " — proyek {$project->proposal_number}",
+            $project,
+            $note
+        );
 
         // Notifikasi WhatsApp dikirim setelah respons — tidak memperlambat tombol.
         $actor = auth()->user();
         dispatch(fn () => \App\Services\WhatsAppNotifier::workflowStep($project->fresh(), $step, $actor, $note))->afterResponse();
 
-        $redirect = back()->with($isReturn ? 'warning' : ($stays ? 'info' : 'success'), $def['flash']);
+        $redirect = back()->with($isReturn ? 'warning' : ($stays ? 'info' : 'success'), $project->istilahAlur($def['flash']));
 
         // Proyek ditutup = satu-satunya momen konfeti (2026-09-25, permintaan
         // user). Dipasang sebagai flash supaya hanya muncul sekali.
@@ -418,13 +423,18 @@ class ProjectController extends Controller
                 'exists:users,id',
                 \Illuminate\Validation\Rule::unique('project_assignment_staff')->where('project_id', $project->id),
             ],
+            // Posisi & Kualifikasi diketik manual, boleh kosong (2026-09-26).
+            'position'      => 'nullable|string|max:100',
+            'qualification' => 'nullable|string|max:120',
         ], [
             'user_id.unique' => 'Orang ini sudah ada di daftar petugas.',
         ]);
 
         $project->assignmentStaff()->create([
-            'user_id'    => $validated['user_id'],
-            'sort_order' => $project->assignmentStaff()->max('sort_order') + 1,
+            'user_id'       => $validated['user_id'],
+            'position'      => $validated['position'] ?? null,
+            'qualification' => $validated['qualification'] ?? null,
+            'sort_order'    => $project->assignmentStaff()->max('sort_order') + 1,
         ]);
 
         $user = User::find($validated['user_id']);

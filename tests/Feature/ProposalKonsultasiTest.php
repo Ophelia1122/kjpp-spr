@@ -134,6 +134,57 @@ class ProposalKonsultasiTest extends TestCase
             ->assertDontSee('Tujuan Penilaian');
     }
 
+    /** Dokumen .docx konsultasi memakai susunan bab masternya sendiri. */
+    public function test_docx_konsultasi_memakai_bab_master(): void
+    {
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->data([
+            'consulting_type' => Project::CONSULTING_RAB,
+            'letter_attn'     => 'Bapak Direktur Utama',
+        ]));
+
+        $proyek = Project::where('proposal_number', 'KONS/2026/001')->firstOrFail();
+        $path   = \App\Services\ProposalDocxBuilder::for($proyek)->save();
+
+        $zip = new \ZipArchive();
+        $this->assertTrue($zip->open($path) === true);
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($path);
+
+        $polos = strip_tags(str_replace('<', ' <', $xml));
+
+        // Bab khas Kajian Kewajaran RAB hadir, bab khas penilaian tidak.
+        foreach (['Pendahuluan', 'Bentuk Kepemilikan', 'Ruang Lingkup Laporan', 'Benturan Kepentingan'] as $bab) {
+            $this->assertStringContainsString($bab, $polos, "Bab \"{$bab}\" tidak ada di dokumen.");
+        }
+        foreach (['Dasar Nilai', 'Tingkat Kedalaman Investigasi', 'Waktu Ekspos'] as $bab) {
+            $this->assertStringNotContainsString($bab, $polos, "Bab penilaian \"{$bab}\" seharusnya tidak ikut.");
+        }
+
+        $this->assertStringContainsString('Up. : Bapak Direktur Utama', $polos);
+        $this->assertStringContainsString('Biaya Jasa Konsultasi Analisis Kewajaran', $polos);
+    }
+
+    /** Studi Kelayakan membawa lampiran Kerangka Acuan Kerja. */
+    public function test_studi_kelayakan_membawa_lampiran_kak(): void
+    {
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->data());
+        $proyek = Project::where('proposal_number', 'KONS/2026/001')->firstOrFail();
+
+        $path = \App\Services\ProposalDocxBuilder::for($proyek)->save();
+        $zip  = new \ZipArchive();
+        $zip->open($path);
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($path);
+
+        $polos = strip_tags(str_replace('<', ' <', $xml));
+
+        $this->assertStringContainsString('KERANGKA ACUAN KERJA', $polos);
+        $this->assertStringContainsString('TERM OF REFERENCE', $polos);
+        $this->assertStringContainsString('LAMPIRAN - 2', $polos);
+    }
+
     public function test_istilah_alur_konsultasi_memakai_kata_summary(): void
     {
         $this->actingAs($this->admin)->post(route('proposals.store'), $this->data());

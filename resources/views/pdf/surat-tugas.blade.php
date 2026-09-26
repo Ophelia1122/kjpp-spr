@@ -88,6 +88,23 @@
 
     <p>Dengan Hormat,</p>
 
+    {{-- Kalimat pekerjaan berbeda untuk Jasa Konsultasi (2026-09-26): mengikuti
+         Surat Tugas master kantor, mis. "melakukan Jasa Penyusunan Laporan Studi
+         Kelayakan". Kalimatnya bisa disunting di Teks Baku Proposal. --}}
+    @if ($project->isKonsultasi())
+        <p class="justify">
+            Bersama ini kami menugaskan staff kami sebagai perwakilan {{ config('kjpp.company_name') }} untuk
+            {{ $project->kalimatTugasKonsultasi() }}
+            @if ($project->assignment_letter_request_basis_text !== '')
+                {{ $project->assignment_letter_request_basis_text }}
+            @endif
+            Berdasarkan Surat Penawaran <span class="bold">No. {{ $project->proposal_number }} tanggal {{ $project->proposal_date?->translatedFormat('d F Y') }}</span>.
+        </p>
+
+        @if (trim((string) $project->work_object_description) !== '')
+            <p class="justify" style="margin: 0 0 5px 16px;">{{ $project->work_object_description }}</p>
+        @endif
+    @else
     <p class="justify">
         Bersama ini kami menugaskan staff kami sebagai perwakilan {{ config('kjpp.company_name') }} untuk
         {{-- "atas nama" dipilih di kartu Surat Tugas; Dasar Permintaan dicetak tepat
@@ -121,9 +138,10 @@
             </tr>
         @endforeach
     </table>
+    @endif
 
     <p style="margin-bottom: 2px;">
-        dilaksanakan pada tanggal, {{ $project->survey_date ? \Carbon\Carbon::parse($project->survey_date)->translatedFormat('d F Y') : '' }}
+        {{ $project->isKonsultasi() ? 'Inspeksi akan dilaksanakan pada tanggal :' : 'dilaksanakan pada tanggal,' }} {{ $project->survey_date ? \Carbon\Carbon::parse($project->survey_date)->translatedFormat('d F Y') : '' }}
     </p>
     <p style="margin-bottom: 3px;">Adapun petugas kami adalah :</p>
 
@@ -143,7 +161,8 @@
                 <td class="staff-no"></td>
                 <td class="staff-label">Jabatan</td>
                 <td class="staff-colon">:</td>
-                <td>{{ $staff->user->jabatan ?? '-' }}</td>
+                {{-- Posisi manual menang atas Jabatan biodata (2026-09-26). --}}
+                <td>{{ $staff->position ?: ($staff->user->jabatan ?? '-') }}</td>
             </tr>
             <tr>
                 <td class="staff-no"></td>

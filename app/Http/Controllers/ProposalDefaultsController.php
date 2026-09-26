@@ -31,6 +31,12 @@ class ProposalDefaultsController extends Controller
         Project::PURPOSE_PENJAMINAN_UTANG    => Project::PURPOSE_PENJAMINAN_UTANG,
         Project::PURPOSE_LELANG              => Project::PURPOSE_LELANG,
         Project::PURPOSE_LK_PROPERTI         => Project::PURPOSE_LK_PROPERTI,
+
+        // Jasa Konsultasi (2026-09-26): babnya berbeda dari proposal
+        // penilaian, jadi tiap jenis punya tabnya sendiri.
+        Project::CONSULTING_RAB              => Project::CONSULTING_RAB,
+        Project::CONSULTING_FS               => Project::CONSULTING_FS,
+        Project::CONSULTING_PENGAWASAN       => Project::CONSULTING_PENGAWASAN,
     ];
 
     public function index(Request $request)

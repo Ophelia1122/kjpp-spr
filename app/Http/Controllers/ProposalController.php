@@ -236,6 +236,7 @@ class ProposalController extends Controller
             'service_type'             => $validated['service_type'] ?? Project::SERVICE_PENILAIAN,
             'consulting_type'          => $validated['consulting_type'] ?? null,
             'work_object_description'  => $validated['work_object_description'] ?? null,
+            'letter_attn'              => $validated['letter_attn'] ?? null,
             'proposal_purpose'         => $this->jenisPekerjaan($validated),
             'payment_scheme'           => $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP,
             'payment_terms'            => $this->parsePaymentTerms($validated['payment_terms'] ?? null),
@@ -335,6 +336,7 @@ class ProposalController extends Controller
             'service_type'             => $validated['service_type'] ?? Project::SERVICE_PENILAIAN,
             'consulting_type'          => $validated['consulting_type'] ?? null,
             'work_object_description'  => $validated['work_object_description'] ?? null,
+            'letter_attn'              => $validated['letter_attn'] ?? null,
             'proposal_purpose'         => $this->jenisPekerjaan($validated),
             'psak_classification'      => $validated['psak_classification'] ?? null,
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
@@ -827,6 +829,8 @@ class ProposalController extends Controller
             // Uraian objek pekerjaan: satu paragraf yang dicetak di bab Objek
             // Pekerjaan dan di Surat Tugas proposal konsultasi.
             'work_object_description'  => [$konsultasi ? 'required' : 'nullable', 'string', 'max:2000'],
+            // Baris "Up." pada kop surat proposal konsultasi.
+            'letter_attn'              => 'nullable|string|max:150',
             'request_basis'            => 'nullable|string|max:1000',
             'instructing_client_id'    => 'required|exists:clients,id',
             // Nama Klien (debitur/pemilik aset) — opsional, kosong = nama
