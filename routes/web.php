@@ -91,6 +91,11 @@ Route::middleware('auth')->group(function () {
     // Unduh SPJ sesuai filter aktif (2026-09-25).
     Route::middleware('permission:survey.view')->get('/spj-surveyor/export', [SurveyReportController::class, 'export'])->name('spj.export');
 
+    // Estimasi Nilai Tanah dari titik koordinat (2026-09-26, permintaan user).
+    // Memakai izin proposals.view: halaman baca-saja dari data internal.
+    Route::middleware('permission:proposals.view')
+        ->get('/estimasi-tanah', [\App\Http\Controllers\EstimasiTanahController::class, 'index'])->name('estimasi.index');
+
     Route::middleware('permission:clients.view')->get('/clients', [ClientController::class, 'index'])->name('clients.index');
     // Detail klien + proyek yang melibatkannya (2026-09-15).
     Route::middleware('permission:clients.view')->get('/clients/{client}', [ClientController::class, 'show'])
