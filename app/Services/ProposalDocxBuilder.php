@@ -1825,7 +1825,8 @@ class ProposalDocxBuilder
                 'alignment' => Jc::START,
             ]);
         }
-        $l->addText($sig['name'], $this->fBold, ['spaceAfter' => 0]);
+        // Nama penanggung jawab digarisbawahi (2026-09-26, permintaan user).
+        $l->addText($sig['name'], ['underline' => 'single'] + $this->fBold, ['spaceAfter' => 0]);
         $l->addText($sig['title'], ['italic' => true] + $this->fBody, ['spaceAfter' => 0]);
         $l->addText('Penilai Properti Izin Menkeu No. : ' . $sig['izin_pp_no'], $this->fBody, ['spaceAfter' => 0]);
         $l->addText('MAPPI No. ' . $sig['mappi_no'], $this->fBody, ['spaceAfter' => 0]);
