@@ -4,6 +4,12 @@
      ada di proposals/show.blade.php supaya elemen itu sendiri tidak pernah
      diganti, sehingga event listener AJAX yang nempel di situ tidak lepas
      tiap kali tambah/hapus petugas). --}}
+@php
+    // Hak sunting daftar Petugas = izin + kartunya tidak terkunci. Dihitung di
+    // sini supaya tampilan sama dengan guard ensurePetugasOpen() di controller
+    // (2026-09-26): dulu formnya tampil di Draft tapi kiriman ditolak 403.
+    $petugasBoleh = auth()->user()->can('assignment_letter.manage') && $project->bolehIsiPetugas();
+@endphp
 <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 dark:text-gray-400">
     Petugas <span class="font-normal normal-case text-gray-400">(tabel &quot;Adapun petugas kami&quot;)</span>
 </h3>
@@ -13,26 +19,31 @@
 <div id="staffList" data-reorder-url="{{ route('projects.assignmentStaff.reorder', $project) }}">
 @forelse ($project->assignmentStaff as $staff)
     <div class="staff-row flex items-center justify-between gap-2 py-1.5 text-sm border-b border-gray-50 last:border-b-0 dark:border-gray-700/60"
-         data-id="{{ $staff->id }}" @can('assignment_letter.manage') draggable="true" @endcan>
+         data-id="{{ $staff->id }}" @if ($petugasBoleh) draggable="true" @endif>
         <div class="flex min-w-0 items-center gap-2">
-            @can('assignment_letter.manage')
+            @if ($petugasBoleh)
                 <span class="staff-grip cursor-grab text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400" title="Geser untuk mengubah urutan" aria-hidden="true">
                     <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5"/>
                     </svg>
                 </span>
-            @endcan
+            @endif
             <div class="min-w-0">
             <span class="font-medium text-gray-900 dark:text-gray-100">{{ $staff->user->name ?? '(pengguna terhapus)' }}</span>
             <span class="text-gray-400 dark:text-gray-500">
                 {{-- Posisi manual menang atas Jabatan biodata (2026-09-26). --}}
                 — {{ $staff->position ?: ($staff->user->jabatan ?? '(jabatan belum diisi)') }}
-                @if ($staff->qualification) &middot; {{ $staff->qualification }} @endif
+                @if ($staff->qualification)
+                    &middot; {{ $staff->qualification }}
+                @elseif ($project->butuhTimPelaksana())
+                    {{-- Kolom Kualifikasi ada di tabel proposal, jadi kosongnya kelihatan. --}}
+                    &middot; <span class="text-amber-600 dark:text-amber-400">kualifikasi belum diisi</span>
+                @endif
                 @if ($staff->user?->mappi_no) &middot; MAPPI {{ $staff->user->mappi_no }} @endif
             </span>
             </div>
         </div>
-        @can('assignment_letter.manage')
+        @if ($petugasBoleh)
             {{-- Tanpa konfirmasi: notifikasinya membawa "Urungkan" (2026-09-25). --}}
             <form action="{{ route('projects.assignmentStaff.destroy', [$project, $staff]) }}" method="POST"
                   class="assignment-staff-remove-form">
@@ -40,14 +51,29 @@
                 @method('DELETE')
                 <button type="submit" class="text-xs text-red-500 hover:text-red-700">Hapus</button>
             </form>
-        @endcan
+        @endif
     </div>
 @empty
-    <p class="text-xs text-gray-400 dark:text-gray-500">Belum ada petugas ditambahkan.</p>
+    @if ($project->butuhTimPelaksana())
+        {{-- Non-Penilaian: daftar ini dicetak sebagai tabel "Tim Pelaksana" di
+             proposal, jadi kalau kosong proposalnya terbit tanpa tabel itu.
+             Peringatannya dibuat mencolok (2026-09-26, permintaan user). --}}
+        <div class="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            <svg class="mt-px h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-2.994-1.5-3.86 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+            </svg>
+            <div>
+                <p class="font-semibold">Petugas belum diisi — tabel &quot;Tim Pelaksana&quot; tidak akan tercetak di proposal.</p>
+                <p class="mt-0.5">Tambahkan petugas di bawah ini dulu, lengkap dengan <span class="font-medium">Posisi</span> dan <span class="font-medium">Kualifikasi</span>, baru unduh proposalnya.</p>
+            </div>
+        </div>
+    @else
+        <p class="text-xs text-gray-400 dark:text-gray-500">Belum ada petugas ditambahkan.</p>
+    @endif
 @endforelse
 </div>
 
-@can('assignment_letter.manage')
+@if ($petugasBoleh)
     @if ($project->assignmentStaff->count() > 1)
         <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Geser baris untuk mengubah urutan cetak di Surat Tugas.</p>
     @endif
@@ -107,9 +133,9 @@
         }
     })();
     </script>
-@endcan
+@endif
 
-@can('assignment_letter.manage')
+@if ($petugasBoleh)
     {{-- Petugas Surat Tugas berisi penilai/pelaksana/reviewer; jabatan Admin
          tidak ditawarkan (2026-09-25, feedback user). --}}
     @php
@@ -145,4 +171,4 @@
             </button>
         </form>
     @endif
-@endcan
+@endif

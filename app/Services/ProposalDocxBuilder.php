@@ -83,6 +83,23 @@ class ProposalDocxBuilder
         'pengawasan' => true,
     ];
 
+    /**
+     * Indentasi isi bab (twip) diukur dari master masing-masing (2026-09-26,
+     * feedback user): isi bab dan daftar a./b./c. menjorok ke dalam, tidak
+     * sejajar dengan nomor bab.
+     *   RAB        : judul tanpa nomor, isi rata kiri, daftar menjorok 284.
+     *   FS         : judul 284 hanging 284, isi 284, daftar 567.
+     *   Pengawasan : judul 425 hanging 425, isi 425, daftar 709.
+     */
+    private const INDENT_BAB_KONSULTASI = [
+        'rab'        => 0,
+        'fs'         => 284,
+        'pengawasan' => 425,
+    ];
+
+    /** Jarak penanda daftar ke teksnya pada master konsultasi (twip). */
+    private const LIST_MARKER_COL_KONSULTASI = 284;
+
     // true tepat setelah sebuah heading di-emit: paragraf isi PERTAMA
     // sesudahnya dibuat "keepLines" supaya heading tidak menggantung
     // sendirian di dasar halaman (isi ikut pindah ke halaman berikutnya).
@@ -509,6 +526,45 @@ class ProposalDocxBuilder
     }
 
     /**
+     * Judul bab dari master ditulis tidak konsisten — ada yang huruf kecil
+     * semua ("batas wewenang dan tanggung jawab"), ada yang kapital semua
+     * ("ASPEK pasar dan PEMASARAN"). Disamakan jadi Huruf Kapital Tiap Kata
+     * (2026-09-26, permintaan user), kecuali kata sambung dan singkatan.
+     */
+    private const JUDUL_TETAP = [
+        'BAB', 'RAB', 'TOR', 'KAK', 'ESG', 'SPI', 'SPK', 'PT', 'CV', 'KJPP',
+        'MAPPI', 'PPN', 'DP', 'SDM', 'RKS',
+        'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII',
+    ];
+
+    private const JUDUL_KECIL = [
+        'dan', 'atau', 'yang', 'di', 'ke', 'dari', 'untuk', 'pada', 'dengan',
+        'dalam', 'oleh', 'serta', 'antara', 'terhadap', 'para',
+    ];
+
+    private function judulKapital(string $judul): string
+    {
+        $urut = 0;
+
+        return (string) preg_replace_callback('/[\p{L}\p{N}]+/u', function (array $m) use (&$urut) {
+            $urut++;
+            $kata = $m[0];
+
+            if (in_array(mb_strtoupper($kata), self::JUDUL_TETAP, true)) {
+                return mb_strtoupper($kata);
+            }
+
+            $kecil = mb_strtolower($kata);
+
+            if ($urut > 1 && in_array($kecil, self::JUDUL_KECIL, true)) {
+                return $kecil;
+            }
+
+            return mb_strtoupper(mb_substr($kecil, 0, 1)) . mb_substr($kecil, 1);
+        }, $judul);
+    }
+
+    /**
      * Judul bab konsultasi: tebal, huruf biasa, tanpa garis bawah — persis
      * master. Bernomor untuk Studi Kelayakan & Pengawasan, tanpa nomor untuk
      * Kajian Kewajaran RAB.
@@ -519,14 +575,29 @@ class ProposalDocxBuilder
         $this->listJustClosed = false;
         $this->secNo++;
         $this->listNo = 0;
-        $this->bodyIndent = 0;
 
         $kunci    = self::KUNCI_KONSULTASI[$this->project->consulting_type] ?? 'rab';
         $bernomor = self::NOMOR_BAB_KONSULTASI[$kunci] ?? false;
 
-        $teks = $bernomor ? $this->secNo . '. ' . $judul : $judul;
+        $this->bodyIndent = self::INDENT_BAB_KONSULTASI[$kunci] ?? 0;
 
-        $this->s->addText($teks, $this->fBold, [
+        $teks = $this->judulKapital($judul);
+        $teks = $bernomor ? $this->secNo . '. ' . $teks : $teks;
+
+        // Judul bernomor memakai indent gantung seperti master: baris lanjutan
+        // judul sejajar dengan isi bab, bukan kembali ke tepi kiri.
+        // firstLine WAJIB null: PhpWord selalu menulis w:firstLine="0" bila
+        // dibiarkan, dan atribut itu membatalkan w:hanging sehingga nomor bab
+        // ikut menjorok sejajar daftar a./b./c. (2026-09-26, feedback user).
+        $pJudul = $this->bodyIndent > 0
+            ? ['indentation' => [
+                'left'      => $this->bodyIndent,
+                'hanging'   => $this->bodyIndent,
+                'firstLine' => null,
+            ]]
+            : [];
+
+        $this->s->addText($teks, $this->fBold, $pJudul + [
             'spaceBefore' => 200, 'spaceAfter' => 60, 'keepNext' => true, 'keepLines' => true,
         ]);
 
@@ -555,14 +626,18 @@ class ProposalDocxBuilder
         }
 
         $this->s->addTextBreak(1);
-        $this->s->addText(
-            'Perihal : ' . strtr(
-                (string) ($this->klKonsultasi['perihal'] ?? ('Proposal ' . $this->project->consulting_type)),
-                $this->placeholderProyek()
-            ),
-            $this->fBold,
-            ['spaceAfter' => 120]
+        // Perihal ditulis lewat styleRuns supaya markup *miring* pada nama
+        // Inggris ikut jadi huruf miring, bukan tercetak apa adanya
+        // (2026-09-26): sebelumnya muncul "*(Feasibility Study)*".
+        $perihal = strtr(
+            (string) ($this->klKonsultasi['perihal'] ?? ('Proposal ' . $this->project->consulting_type)),
+            $this->placeholderProyek()
         );
+        $trPerihal = $this->s->addTextRun(['spaceAfter' => 120]);
+        $trPerihal->addText('Perihal : ', $this->fBold);
+        foreach ($this->styleRuns($perihal, true) as [$t, $b, $it]) {
+            $trPerihal->addText($t, $this->runFont(true, $it));
+        }
         $this->s->addText('Dengan hormat,', $this->fBody, ['spaceAfter' => 120]);
 
         $this->bodyOr('pembuka_konsultasi', fn () => $this->para(
@@ -573,15 +648,12 @@ class ProposalDocxBuilder
     /**
      * Tabel Tim Pelaksana: Posisi / Nama / Kualifikasi, diambil dari daftar
      * Petugas proyek. Posisi & Kualifikasi diketik manual per petugas
-     * (2026-09-26, permintaan user); tanpa petugas, tabelnya dilewati.
+     * (2026-09-26, permintaan user); tanpa petugas, tabelnya tetap dicetak
+     * dengan baris penanda merah supaya kelihatan waktu diperiksa.
      */
     private function tabelTimPelaksana(): void
     {
         $petugas = $this->project->assignmentStaff()->with('user')->orderBy('sort_order')->get();
-
-        if ($petugas->isEmpty()) {
-            return;
-        }
 
         $this->closeList();
 
@@ -594,6 +666,19 @@ class ProposalDocxBuilder
         foreach (['Posisi', 'Nama', 'Kualifikasi'] as $i => $judul) {
             $tbl->addCell($colW[$i], ['valign' => 'center'])
                 ->addText($judul, $this->fBold, ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+        }
+
+        // Daftar Petugas kosong tidak lagi membuat tabelnya hilang diam-diam
+        // (2026-09-26, permintaan user): barisnya diisi penanda mencolok
+        // supaya ketahuan waktu proposal diperiksa sebelum dikirim.
+        if ($petugas->isEmpty()) {
+            $tbl->addRow(null, ['cantSplit' => true]);
+            $tbl->addCell(array_sum($colW), ['gridSpan' => 3, 'valign' => 'center'])
+                ->addText(
+                    '(Daftar Petugas belum diisi di halaman proyek)',
+                    $this->fBody + ['italic' => true, 'color' => 'C00000'],
+                    ['alignment' => Jc::CENTER, 'spaceAfter' => 0]
+                );
         }
 
         foreach ($petugas as $baris) {
@@ -1890,11 +1975,11 @@ class ProposalDocxBuilder
         };
 
         foreach ($blocks as $block) {
-            foreach (explode("\n", $block) as $line) {
-                $line = trim($line);
-                if ($line === '') {
-                    continue;
-                }
+            $baris = array_values(array_filter(array_map('trim', explode("\n", $block)), fn ($l) => $l !== ''));
+
+            for ($i = 0; $i < count($baris); $i++) {
+                $line = $baris[$i];
+
                 if (preg_match('/^(?:[a-z]{1,2}|\d{1,3})[.)]\s+(.+)$/su', $line, $m)) {
                     $flush();
                     if (! $prevList) {
@@ -1906,7 +1991,19 @@ class ProposalDocxBuilder
                 } elseif (preg_match('/^[-\x{2013}\x{2014}\x{2022}*]\s+(.+)$/su', $line, $m)) {
                     // Penanda "–"/"-"/"•"/"*" -> item dash, tetap 1 baris.
                     $flush();
-                    $this->dashItem($m[1]);
+
+                    // Deretan "– Label : Nilai" dicetak berkolom seperti master
+                    // (2026-09-26, feedback user): dulu titik duanya mengikuti
+                    // panjang label sehingga tidak sejajar.
+                    $pasangan = $this->pasanganLabel($baris, $i);
+
+                    if ($pasangan !== null) {
+                        $this->dashLabelRows($pasangan);
+                        $i += count($pasangan) - 1;
+                    } else {
+                        $this->dashItem($m[1]);
+                    }
+
                     $first = false;
                     $prevList = false;
                 } else {
@@ -1914,6 +2011,49 @@ class ProposalDocxBuilder
                 }
             }
             $flush();
+        }
+    }
+
+    /**
+     * Ambil deretan baris "– Label : Nilai" yang berurutan mulai dari $i.
+     * Mengembalikan null bila bukan deretan seperti itu (minimal dua baris,
+     * label & nilai pendek) supaya daftar dash biasa tidak ikut berubah.
+     */
+    private function pasanganLabel(array $baris, int $i): ?array
+    {
+        $pasangan = [];
+
+        for ($j = $i; $j < count($baris); $j++) {
+            if (! preg_match('/^[-\x{2013}\x{2014}\x{2022}*]\s+(.+)$/su', $baris[$j], $m)) {
+                break;
+            }
+            if (! preg_match('/^(.{1,40}?)\s*:\s*(.{1,40})$/su', $m[1], $lv)) {
+                return null;   // satu baris tidak berpola -> batalkan semua
+            }
+            $pasangan[] = [trim($lv[1]), trim($lv[2])];
+        }
+
+        return count($pasangan) >= 2 ? $pasangan : null;
+    }
+
+    /** Baris "– Label : Nilai" dengan kolom titik dua sejajar. */
+    private function dashLabelRows(array $pasangan): void
+    {
+        $markerW = $this->bodyIndent + $this->listMarkerCol();
+        // Titik dua mengikuti master (2268 twip pada lebar halaman penuh),
+        // diskalakan ke lebar tabel daftar yang dipakai builder.
+        $kolonAt = (int) round(2268 * self::LIST_TABLE_W / Converter::cmToTwip(self::PAGE_CONTENT_W_CM));
+        $labelW  = max(600, $kolonAt - $markerW);
+        $kolonW  = 128;
+
+        foreach ($pasangan as [$label, $nilai]) {
+            [$mc] = $this->openListRow(0, false);
+            $mc->addText("\u{2013}", $this->fBody,
+                ['indentation' => ['left' => $this->bodyIndent]] + $this->listCellPara());
+
+            $this->writeStyled($this->listTbl->addCell($labelW), $label, Jc::START);
+            $this->listTbl->addCell($kolonW)->addText(':', $this->fBody, $this->listCellPara());
+            $this->writeStyled($this->listTbl->addCell(self::LIST_TABLE_W - $markerW - $labelW - $kolonW), $nilai, Jc::START);
         }
     }
 
@@ -1944,7 +2084,7 @@ class ProposalDocxBuilder
         foreach (['bab' => '', 'tor' => 'Lampiran 1 — KAK: ', 'lampiran2' => 'Lampiran 2 — Data: '] as $grup => $awalan) {
             foreach ($this->klKonsultasi[$grup] ?? [] as $key => $bab) {
                 $meta[$key] = [
-                    'title'    => $awalan . $bab['judul'],
+                    'title'    => $awalan . $this->judulKapital($bab['judul']),
                     'editable' => true,
                     'note'     => '',
                 ];
@@ -2334,6 +2474,13 @@ class ProposalDocxBuilder
         $this->listJustClosed = false;
 
         $pStyle = $this->pJustify + $this->bodyIndentStyle();
+        // Paragraf proposal konsultasi tidak boleh terbelah dua halaman
+        // (2026-09-26, feedback user): mis. paragraf "Penilai bertindak atas
+        // nama ..." terpotong footer. Kalau tidak muat, seluruh paragraf
+        // pindah ke halaman berikutnya.
+        if ($this->project->isKonsultasi()) {
+            $pStyle['keepLines'] = true;
+        }
         if ($this->keepWithHeading) {
             $pStyle['keepLines'] = true;   // heading + paragraf ini tidak terpisah halaman
             $this->keepWithHeading = false;
@@ -2542,13 +2689,19 @@ class ProposalDocxBuilder
             $this->listJustClosed = false;
         }
         $this->listTbl->addRow(null, ['cantSplit' => true]);
-        $markerW = $this->bodyIndent + $extra + self::LIST_MARKER_COL;
+        $markerW = $this->bodyIndent + $extra + $this->listMarkerCol();
         $mc = $this->listTbl->addCell($markerW);
         if (! $withContent) {
             return [$mc, null];   // pemanggil menambah sel sendiri (numberedSubItem)
         }
         $cc = $this->listTbl->addCell(self::LIST_TABLE_W - $markerW);
         return [$mc, $cc];
+    }
+
+    /** Lebar kolom penanda daftar: master konsultasi lebih lebar dari master penilaian. */
+    private function listMarkerCol(): int
+    {
+        return $this->project->isKonsultasi() ? self::LIST_MARKER_COL_KONSULTASI : self::LIST_MARKER_COL;
     }
 
     private function listCellPara(): array
@@ -2623,7 +2776,7 @@ class ProposalDocxBuilder
         // nomor | teks. Kolom teks sendiri membuat baris lanjutan sejajar.
         [$mc] = $this->openListRow(0, false);
         $mc->addText('', $this->fBody, $this->listCellPara());
-        $markerW = $this->bodyIndent + self::LIST_MARKER_COL;
+        $markerW = $this->bodyIndent + $this->listMarkerCol();
         // Nomor menjorok ~0,35 cm dari awal teks poin, jarak nomor-teks rapat
         // (2026-09-22, feedback user).
         $shift   = 200;

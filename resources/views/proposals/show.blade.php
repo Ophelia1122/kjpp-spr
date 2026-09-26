@@ -174,6 +174,24 @@
     </script>
 
     {{-- ===================== CARD INFORMASI UTAMA ===================== --}}
+    {{-- Pengingat Tim Pelaksana (2026-09-26, permintaan user): proposal
+         Non-Penilaian mencetak tabel "Tim Pelaksana" dari daftar Petugas.
+         Kalau daftarnya kosong, tabel itu hilang tanpa pesan galat, jadi
+         peringatannya dinaikkan ke atas halaman. --}}
+    @if ($project->timPelaksanaBelumDiisi() && auth()->user()->can('assignment_letter.manage'))
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-2.994-1.5-3.86 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+            </svg>
+            <span class="min-w-0 flex-1">
+                <span class="font-semibold">Tim Pelaksana belum diisi.</span>
+                Proposal {{ $project->consulting_type }} akan terbit tanpa tabel Tim Pelaksana sampai daftar Petugas diisi.
+            </span>
+            <a href="#section-surat-tugas"
+               class="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">Isi sekarang</a>
+        </div>
+    @endif
+
     <div id="section-info" class="scroll-mt-24 bg-white rounded-lg border border-gray-200 shadow-sm p-6 dark:bg-gray-800 dark:border-gray-700">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Informasi Proyek</h2>
@@ -271,13 +289,17 @@
             {{-- ===================== RINCIAN OBJEK PENILAIAN ===================== --}}
             @if ($project->valuationObjects && $project->valuationObjects->isNotEmpty())
                 <div class="sm:col-span-2">
-                    <dt class="text-gray-500 dark:text-gray-400">Objek Penilaian ({{ $project->valuationObjects->count() }})</dt>
+                    {{-- Objek Non-Penilaian tidak punya bentuk hak & atas nama
+                         (2026-09-26): barisnya dilewati, bukan dicetak kosong. --}}
+                    <dt class="text-gray-500 dark:text-gray-400">{{ $project->isKonsultasi() ? 'Objek Pekerjaan' : 'Objek Penilaian' }} ({{ $project->valuationObjects->count() }})</dt>
                     <dd class="font-medium text-gray-900 mt-1 space-y-2 dark:text-gray-100">
                         @foreach ($project->valuationObjects as $object)
                             <div class="text-xs bg-gray-50 border border-gray-200 rounded-md p-2 dark:bg-gray-900 dark:border-gray-700">
                                 <div class="font-semibold text-gray-700 dark:text-gray-300">{{ $loop->iteration }}. {{ $object->short_label }}</div>
                                 <div class="text-gray-500 dark:text-gray-400">{{ $object->location }}</div>
-                                <div class="text-gray-500 dark:text-gray-400">Hak: {{ $object->ownership_form }} – a.n. {{ $object->owner_name }}</div>
+                                @if ($object->ownership_form || $object->owner_name)
+                                    <div class="text-gray-500 dark:text-gray-400">Hak: {{ $object->ownership_form ?: '—' }} – a.n. {{ $object->owner_name ?: '—' }}</div>
+                                @endif
                             </div>
                         @endforeach
                     </dd>
@@ -649,6 +671,10 @@
                 $hasSurat = $project->assignment_letter_number || $project->assignment_letter_date;
                 // Dikunci bersama kartu Penilai Lapangan (2026-09-15, feedback user).
                 $suratOpen = $project->canPrepareFieldwork();
+                // Daftar Petugas Non-Penilaian dibuka lebih awal: tabel "Tim
+                // Pelaksana" di proposal dibuat dari daftar ini, dan proposal
+                // dikirim sebelum pekerjaan lapangan (2026-09-26, permintaan user).
+                $petugasOpen = $project->bolehIsiPetugas();
             @endphp
 
             <div class="flex items-center justify-between mb-4">
@@ -854,6 +880,21 @@
                 <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Hanya Administrator &amp; General Admin yang dapat mengisi.</p>
             @endcan
 
+
+            {{-- Tombol cetak dipindah ke menu "Unduh" di bilah mengambang
+                 (2026-09-24, feedback user). --}}
+            @can('survey.view')
+                @if (! $project->assigned_appraiser || ! $project->survey_date)
+                    <p class="mt-4 text-xs text-gray-400 dark:text-gray-500">
+                        Surat Tugas bisa diunduh lewat tombol <b>Unduh</b> setelah penilai lapangan &amp; tanggal survei diisi.
+                    </p>
+                @endif
+            @endcan
+            @endunless
+
+            {{-- Daftar Petugas berada DI LUAR kunci Surat Tugas (2026-09-26):
+                 pada Non-Penilaian daftar ini sudah dibutuhkan sejak Draft. --}}
+            @if ($suratOpen || $petugasOpen)
             <div id="assignmentStaffContainer" class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
                 @include('proposals._assignment_staff')
             </div>
@@ -890,17 +931,7 @@
                     });
                 })();
             </script>
-
-            {{-- Tombol cetak dipindah ke menu "Unduh" di bilah mengambang
-                 (2026-09-24, feedback user). --}}
-            @can('survey.view')
-                @if (! $project->assigned_appraiser || ! $project->survey_date)
-                    <p class="mt-4 text-xs text-gray-400 dark:text-gray-500">
-                        Surat Tugas bisa diunduh lewat tombol <b>Unduh</b> setelah penilai lapangan &amp; tanggal survei diisi.
-                    </p>
-                @endif
-            @endcan
-            @endunless
+            @endif
         </div>
     @endcanany
 

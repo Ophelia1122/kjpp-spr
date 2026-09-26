@@ -238,6 +238,54 @@ class ProposalKonsultasiTest extends TestCase
         $this->assertStringContainsString('LAMPIRAN - 2', $polos);
     }
 
+    /**
+     * Tabel "Tim Pelaksana" proposal dibuat dari daftar Petugas, jadi admin
+     * harus diperingatkan selagi daftarnya kosong (2026-09-26, permintaan user).
+     */
+    public function test_peringatan_tim_pelaksana_muncul_selagi_petugas_kosong(): void
+    {
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->data());
+        $proyek = Project::where('proposal_number', 'KONS/2026/001')->firstOrFail();
+
+        $this->actingAs($this->admin)->get(route('proposals.show', $proyek))
+            ->assertOk()
+            ->assertSee('Tim Pelaksana belum diisi.')
+            ->assertSee('tabelnya tidak akan tercetak', false);
+
+        $proyek->assignmentStaff()->create([
+            'user_id'    => $this->admin->id,
+            'sort_order' => 1,
+            'position'   => 'Ketua Tim',
+        ]);
+
+        $this->actingAs($this->admin)->get(route('proposals.show', $proyek->fresh()))
+            ->assertOk()
+            ->assertDontSee('Tim Pelaksana belum diisi.');
+    }
+
+    /** Petugas Non-Penilaian bisa diisi sejak Draft, sebelum DP dibayar. */
+    public function test_petugas_konsultasi_bisa_diisi_sejak_draft(): void
+    {
+        $this->actingAs($this->admin)->post(route('proposals.store'), $this->data());
+        $proyek = Project::where('proposal_number', 'KONS/2026/001')->firstOrFail();
+
+        $this->assertSame(Project::STATUS_DRAFT, $proyek->status);
+
+        // General Admin (role admin-keuangan) memegang assignment_letter.manage
+        // tetapi BUKAN Administrator, jadi dia yang kena kunci lama.
+        $generalAdmin = User::whereHas('role', fn ($q) => $q->where('slug', Role::ADMIN_KEUANGAN))->firstOrFail();
+
+        $this->actingAs($generalAdmin)
+            ->post(route('projects.assignmentStaff.store', $proyek), [
+                'user_id'       => $this->admin->id,
+                'position'      => 'Ketua Tim',
+                'qualification' => 'Penilai Properti',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(1, $proyek->assignmentStaff()->count());
+    }
+
     public function test_istilah_alur_konsultasi_memakai_kata_summary(): void
     {
         $this->actingAs($this->admin)->post(route('proposals.store'), $this->data());

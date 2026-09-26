@@ -173,6 +173,12 @@ class ProjectValuationObject extends Model
             return $this->custom_category;
         }
 
+        // Objek Non-Penilaian tidak punya kategori aset (2026-09-26): labelnya
+        // diambil dari Nama Singkat Proyek, supaya tidak tercetak nomor saja.
+        if (! $this->asset_category) {
+            return trim((string) $this->notes) ?: 'Objek Pekerjaan';
+        }
+
         return str_replace(['Real Properti - ', 'Personal Properti - '], '', $this->asset_category);
     }
 }

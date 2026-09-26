@@ -81,8 +81,9 @@
             'Penilai Lapangan'    => $project->assigned_appraiser,
             'Tanggal Survei Terakhir' => $project->survey_date ? $tgl($project->survey_date) : null,
             'Tanggal Penilaian'   => $project->valuation_date ? $tgl($project->valuation_date) : null,
-            'Nilai Diajukan'      => $project->review_submitted_at ? $tgl($project->review_submitted_at) : null,
-            'Resume Disetujui'    => $project->review_approved_at ? $tgl($project->review_approved_at) : null,
+            // Istilah Non-Penilaian: "Summary Diajukan/Disetujui" (2026-09-26).
+            $project->istilahAlur('Nilai Diajukan')   => $project->review_submitted_at ? $tgl($project->review_submitted_at) : null,
+            $project->istilahAlur('Resume Disetujui') => $project->review_approved_at ? $tgl($project->review_approved_at) : null,
             'Buku Dicetak'        => $project->printed_at ? $tgl($project->printed_at) : null,
             'Buku Ditandatangani' => $project->signed_at ? $tgl($project->signed_at) : null,
             'Buku Dikirim'        => $project->delivered_at ? $tgl($project->delivered_at) : null,
@@ -103,23 +104,35 @@
 
     {{-- Objek penilaian: seluruh kolom, termasuk tanggal survei per objek. --}}
     <div class="{{ $card }} p-6">
-        <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Objek Penilaian ({{ $project->valuationObjects->count() }})</h2>
+        <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $project->isKonsultasi() ? 'Objek Pekerjaan' : 'Objek Penilaian' }} ({{ $project->valuationObjects->count() }})</h2>
         <div class="space-y-3">
             @forelse ($project->valuationObjects as $obj)
                 <div class="rounded-md border border-gray-200 p-3 text-sm dark:border-gray-700">
                     <p class="font-semibold text-gray-900 dark:text-gray-100">{{ $loop->iteration }}. {{ $obj->short_label }}</p>
                     <dl class="mt-2 grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-                        @foreach ([
-                            'Lokasi'            => $obj->location,
-                            'Bentuk/Jenis Hak'  => $obj->ownership_form,
-                            'Atas Nama'         => $obj->owner_name,
-                            'Luas Tanah'        => $obj->land_area ? $obj->land_area . ' m²' : null,
-                            'Luas Bangunan'     => $obj->building_area ? $obj->building_area . ' m²' : null,
-                            'Jumlah Unit'       => $obj->unit_quantity,
-                            'Survei Mulai'      => $obj->survey_start_date ? $tgl($obj->survey_start_date) : null,
-                            'Survei Selesai'    => $obj->survey_end_date ? $tgl($obj->survey_end_date) : null,
-                            'Catatan'           => $obj->notes,
-                        ] as $label => $value)
+                        @php
+                            // Non-Penilaian: tanpa hak/luas/unit, dan "Catatan"
+                            // di situ adalah Nama Singkat Proyek (2026-09-26).
+                            $kolomObjek = $project->isKonsultasi()
+                                ? [
+                                    'Lokasi'              => $obj->location,
+                                    'Nama Singkat Proyek' => $obj->notes,
+                                    'Survei Mulai'        => $obj->survey_start_date ? $tgl($obj->survey_start_date) : null,
+                                    'Survei Selesai'      => $obj->survey_end_date ? $tgl($obj->survey_end_date) : null,
+                                ]
+                                : [
+                                    'Lokasi'            => $obj->location,
+                                    'Bentuk/Jenis Hak'  => $obj->ownership_form,
+                                    'Atas Nama'         => $obj->owner_name,
+                                    'Luas Tanah'        => $obj->land_area ? $obj->land_area . ' m²' : null,
+                                    'Luas Bangunan'     => $obj->building_area ? $obj->building_area . ' m²' : null,
+                                    'Jumlah Unit'       => $obj->unit_quantity,
+                                    'Survei Mulai'      => $obj->survey_start_date ? $tgl($obj->survey_start_date) : null,
+                                    'Survei Selesai'    => $obj->survey_end_date ? $tgl($obj->survey_end_date) : null,
+                                    'Catatan'           => $obj->notes,
+                                ];
+                        @endphp
+                        @foreach ($kolomObjek as $label => $value)
                             <div>
                                 <dt class="text-gray-500 dark:text-gray-400">{{ $label }}</dt>
                                 <dd class="whitespace-pre-line font-medium text-gray-800 dark:text-gray-200">{{ filled($value) ? $value : '—' }}</dd>
@@ -128,7 +141,7 @@
                     </dl>
                 </div>
             @empty
-                <p class="text-sm text-gray-400 dark:text-gray-500">Belum ada objek penilaian.</p>
+                <p class="text-sm text-gray-400 dark:text-gray-500">Belum ada objek {{ $project->isKonsultasi() ? 'pekerjaan' : 'penilaian' }}.</p>
             @endforelse
         </div>
     </div>

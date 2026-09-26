@@ -21,14 +21,14 @@
 return [
 
     'rab' => [
-        'perihal'     => 'Proposal Pekerjaan Konsultasi Kajian Kewajaran Rencana Anggaran Biaya (RAB) Pembangunan :proyek',
-        'pembuka'     => 'Menindaklanjuti informasi dan komunikasi dengan pihak **:klien** yang disampaikan melalui email pada tanggal **## ### ####**, maka bersama ini kami **Kantor Jasa Penilai Publik(KJPP) SUGIANTO PRASODJO DAN REKAN,** menyampaikan proposal Pekerjaan Konsultasi dalam rangka melakukan Kajian Kewajaran Rencana Anggaran Biaya (RAB) Pembangunan #### yang diprakarsai oleh **:klien.**',
+        'perihal'     => 'Proposal Pekerjaan Konsultasi Kajian :proyek',
+        'pembuka'     => 'Menindaklanjuti informasi dan komunikasi dengan pihak **:klien** yang disampaikan melalui email pada tanggal **## ### ####**, maka bersama ini kami **Kantor Jasa Penilai Publik(KJPP) SUGIANTO PRASODJO DAN REKAN,** menyampaikan proposal Pekerjaan Konsultasi dalam rangka melakukan Kajian **:proyek** yang diprakarsai oleh **:klien.**',
         'biaya_intro' => 'Untuk melaksanakan pekerjaan penilaian ini, kami mengajukan Biaya Profesional Jasa Konsultasi Analisis Kewajaran adalah sebesar :',
         'termin_first' => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum dilakukan inspeksi lapangan.',
         'termin_mid' => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan setelah draft laporan diserahkan.',
         'termin_last' => ':pct% (:pct_words persen) sebesar **:rp (:terbilang),** dibayarkan sebelum laporan final diserahkan.',
         'termin_tahap' => false,
-        'kalimat_surat_tugas' => 'melakukan inspeksi lokasi dan analisis kewajaran Rencana Anggaran Biaya (RAB) atas nama :klien.',
+        'kalimat_surat_tugas' => 'melakukan inspeksi lokasi dan kajian atas :proyek atas nama :klien.',
         'uraian_invoice' => 'Biaya Jasa Pekerjaan Konsultasi beserta Transportasi dan Akomodasi an. :an',
         'judul_biaya' => 'Biaya Jasa Konsultasi Analisis Kewajaran',
         'judul_tor'   => '',
@@ -156,7 +156,7 @@ return [
     ],
 
     'fs' => [
-        'perihal'     => 'Proposal Penawaran Jasa Penyusunan Laporan Studi Kelayakan *(Feasibility Study)* Proyek Pembangunan Pabrik Pengolahan Tembakau :klien',
+        'perihal'     => 'Proposal Penawaran Jasa Penyusunan Laporan Studi Kelayakan *(Feasibility Study)* Proyek Pembangunan :proyek :klien',
         'pembuka'     => 'Menindaklanjuti permintaan melalui telepon untuk penyusunan Studi Kelayakan *(Feasibility Study)* proyek pembangunan Pabrik Pengolahan Tembakau yang diprakarsai oleh **:klien**, bersama ini kami dari KJPP Sugianto Prasodjo dan Rekan menyampaikan proposal penawaran biaya jasa penyusunan Studi Kelayakan dilengkapi dengan Kerangka Acuan Kerja (KAK), sebagai berikut:',
         'biaya_intro' => 'Untuk melaksanakan pekerjaan studi ini, kami mengajukan biaya profesional jasa studi kelayakan adalah sebesar:',
         'termin_first' => 'Tahap :tahap : :pct% dari biaya jasa sebesar **:rp (:terbilang),** dibayarkan pada saat penandatanganan Surat Perjanjian Kerja (SPK)',
@@ -893,7 +893,7 @@ return [
                 'teks'  => "Dengan ditandatanganinya proposal ini dan berlakunya proposal sebagai Surat Perintah Kerja (SPK), Para Pihak sepakat terhadap hak dan kewajiban sebagai berikut:",
             ],
             'tor_hak_dan_kewajiban_pemberi_tugas_pt_abc' => [
-                'judul' => "Hak dan Kewajiban Pemberi Tugas PT ABC",
+                'judul' => "Hak dan Kewajiban Pemberi Tugas",
                 'teks'  => "a. **:klien** berhak menerima laporan pengawasan secara berkala dan/atau laporan akhir sesuai dengan ruang lingkup dan jadwal penugasan.\n"
                           . "b. **:klien** berkewajiban memberikan dukungan, akses, dan bantuan yang diperlukan agar **KJPP Sugianto Prasodjo dan Rekan** dapat melaksanakan pekerjaan pengawasan secara efektif sesuai dengan ruang lingkup penugasan.\n"
                           . "c. **:klien** berkewajiban menyediakan dan menyerahkan data, dokumen, serta informasi yang relevan dan diperlukan untuk penyusunan laporan pengawasan secara tepat waktu dan lengkap.\n"

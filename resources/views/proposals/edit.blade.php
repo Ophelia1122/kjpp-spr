@@ -755,7 +755,8 @@
                         Contoh: <span class="font-medium">Pabrik Pengolahan Tembakau</span> &middot;
                         <span class="font-medium">Resort Tahap II</span> &middot;
                         <span class="font-medium">Ruko/Rukan pada Project Pantai Indah Mutiara</span>.
-                        Dipakai di kalimat Invoice, Kwitansi, dan bab proposal — nama klien &amp; lokasi ditambahkan otomatis.
+                        Dipakai pada baris <span class="font-medium">Perihal</span> surat proposal, kalimat Invoice, Kwitansi,
+                        Surat Tugas, dan beberapa bab proposal — nama klien &amp; lokasi ditambahkan otomatis.
                     </p>
                 @else
                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Catatan Tambahan (opsional)</label>

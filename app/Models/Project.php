@@ -186,7 +186,10 @@ class Project extends Model
     ];
 
     /** Jenis pekerjaan konsultasi. Hanya diisi bila service_type = Konsultasi. */
-    public const CONSULTING_RAB        = 'Kajian Kewajaran RAB';
+    // "Kajian" saja, bukan "Kajian Kewajaran RAB" (2026-09-26, permintaan
+    // user): isi babnya sama untuk kajian proyek, kajian harga sewa, dan
+    // kajian RAB — yang berbeda hanya objek yang dikaji.
+    public const CONSULTING_RAB        = 'Kajian';
     public const CONSULTING_FS         = 'Studi Kelayakan';
     public const CONSULTING_PENGAWASAN = 'Pengawasan Proyek';
 
@@ -198,7 +201,7 @@ class Project extends Model
 
     /** Keterangan singkat tiap jenis, dipakai di modal pemilih. */
     public const CONSULTING_HINTS = [
-        self::CONSULTING_RAB        => 'Analisis kewajaran Rencana Anggaran Biaya pembangunan.',
+        self::CONSULTING_RAB        => 'Kajian kewajaran atas objek yang ditentukan, mis. RAB, harga sewa, atau proyek.',
         self::CONSULTING_FS         => 'Studi kelayakan proyek: pasar, teknis, keuangan, risiko.',
         self::CONSULTING_PENGAWASAN => 'Pemantauan progres fisik & biaya proyek pembangunan.',
     ];
@@ -1257,6 +1260,40 @@ class Project extends Model
         return in_array($this->status, [self::STATUS_IN_PROGRESS, self::STATUS_FINALISASI], true);
     }
 
+    /**
+     * Daftar Petugas boleh diisi? Pada Non-Penilaian daftar ini bukan hanya
+     * isi Surat Tugas: tabel "Tim Pelaksana" di proposal dibuat dari daftar
+     * yang sama, sedangkan proposal dikirim jauh sebelum pekerjaan lapangan
+     * dimulai. Jadi untuk Non-Penilaian kuncinya dilepas sejak Draft
+     * (2026-09-26, permintaan user). Penilaian tetap seperti semula.
+     */
+    public function bolehIsiPetugas(?User $user = null): bool
+    {
+        if ($this->canPrepareFieldwork($user)) {
+            return true;
+        }
+
+        return $this->isKonsultasi() && ! $this->isCancelled() && ! $this->isDone();
+    }
+
+    /** Proposalnya mencetak tabel Tim Pelaksana dari daftar Petugas. */
+    public function butuhTimPelaksana(): bool
+    {
+        return $this->isKonsultasi();
+    }
+
+    /** Tabel Tim Pelaksana akan kosong kalau proposal diunduh sekarang. */
+    public function timPelaksanaBelumDiisi(): bool
+    {
+        if (! $this->butuhTimPelaksana()) {
+            return false;
+        }
+
+        $this->loadMissing('assignmentStaff');
+
+        return $this->assignmentStaff->isEmpty();
+    }
+
     /** Nomor Laporan Final boleh diisi mulai draft laporan telah direview. */
     public function isFinalReportStage(): bool
     {
@@ -1267,6 +1304,36 @@ class Project extends Model
     }
 
     /** Apakah $user boleh bertindak sebagai "actor" langkah alur produksi. */
+    /**
+     * Versi per-proyek dari userCanActAs(). Langkah milik "surveyor" hanya
+     * boleh ditekan PENILAI LAPANGAN proyek itu sendiri (2026-09-26,
+     * permintaan user) — Admin Produksi memang memegang izin survey.manage
+     * untuk MENJADWALKAN survei, tetapi mengajukan review nilai & menyusun
+     * draft narasi adalah tugas penilai. Administrator tetap bisa sebagai
+     * jalan keluar bila penilainya berhalangan, sama seperti aturan Reviewer.
+     */
+    public function canActAs(User $user, string $actor): bool
+    {
+        if ($actor === 'surveyor') {
+            return self::userCanActAs($user, 'surveyor')
+                && ($user->isAdministrator() || $this->isPenilaiLapangan($user));
+        }
+
+        return self::userCanActAs($user, $actor);
+    }
+
+    /** $user termasuk penilai lapangan proyek ini? */
+    public function isPenilaiLapangan(User $user): bool
+    {
+        if ((int) $this->assigned_appraiser_id === (int) $user->id) {
+            return true;
+        }
+
+        $this->loadMissing('appraisers');
+
+        return $this->appraisers->contains('id', $user->id);
+    }
+
     public static function userCanActAs(User $user, string $actor): bool
     {
         $reviewer = $user->canActAsReviewer();
@@ -1292,7 +1359,7 @@ class Project extends Model
 
         $tersedia = array_filter(
             self::WORKFLOW_STEPS,
-            fn ($step) => $step['from'] === $this->review_status && self::userCanActAs($user, $step['actor'])
+            fn ($step) => $step['from'] === $this->review_status && $this->canActAs($user, $step['actor'])
         );
 
         // Proyek konsultasi memakai istilah "Summary" (2026-09-26). Diterapkan
@@ -1311,7 +1378,13 @@ class Project extends Model
     /** Tahap pekerjaan saat ini + siapa yang memegang giliran (Beranda, detail proyek). */
     public function getStageAttribute(): array
     {
-        $stage = fn (string $label, ?string $actor = null) => ['label' => $label, 'actor' => $actor];
+        // Label tahap ikut istilah Non-Penilaian (2026-09-26, feedback user):
+        // dulu bilah aksi memakai "Review Summary" sementara kartu tahap masih
+        // menulis "Review nilai" untuk proyek yang sama.
+        $stage = fn (string $label, ?string $actor = null) => [
+            'label' => $this->istilahAlur($label),
+            'actor' => $actor,
+        ];
 
         return match (true) {
             $this->status === self::STATUS_BATAL   => $stage('Dibatalkan'),

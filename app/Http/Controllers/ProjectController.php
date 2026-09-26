@@ -32,6 +32,20 @@ class ProjectController extends Controller
         );
     }
 
+    /**
+     * Daftar Petugas Non-Penilaian ikut dicetak sebagai tabel "Tim Pelaksana"
+     * di proposal, jadi harus bisa diisi sejak Draft (2026-09-26, permintaan
+     * user) — beda dengan data lapangan lain yang menunggu DP.
+     */
+    private function ensurePetugasOpen(Project $project): void
+    {
+        if ($project->bolehIsiPetugas()) {
+            return;
+        }
+
+        $this->ensureFieldworkOpen($project);
+    }
+
     /** Isi ATAU edit ulang Penilai Lapangan & Tanggal Survei. */
     public function inputSurveyData(Request $request, Project $project)
     {
@@ -172,7 +186,13 @@ class ProjectController extends Controller
             'Alur produksi hanya berjalan untuk proyek In-Progress yang sudah memiliki penilai lapangan & tanggal survei.'
         );
         abort_unless($project->review_status === $def['from'], 403, 'Tahap proyek sudah berubah. Muat ulang halaman.');
-        abort_unless(Project::userCanActAs(auth()->user(), $def['actor']), 403, 'Anda tidak memiliki akses untuk langkah ini.');
+        abort_unless(
+            $project->canActAs(auth()->user(), $def['actor']),
+            403,
+            $def['actor'] === 'surveyor'
+                ? 'Langkah ini hanya bisa ditekan penilai lapangan proyek ini.'
+                : 'Anda tidak memiliki akses untuk langkah ini.'
+        );
 
         // 'stay' (banding Draft Resume): catatan wajib tetapi bukan pengembalian —
         // tahap tidak berubah dan tidak memunculkan peringatan "dikembalikan".
@@ -415,7 +435,7 @@ class ProjectController extends Controller
      */
     public function addAssignmentStaff(Request $request, Project $project)
     {
-        $this->ensureFieldworkOpen($project);
+        $this->ensurePetugasOpen($project);
 
         $validated = $request->validate([
             'user_id' => [
@@ -457,7 +477,7 @@ class ProjectController extends Controller
      */
     public function removeAssignmentStaff(Request $request, Project $project, \App\Models\ProjectAssignmentStaff $staff)
     {
-        $this->ensureFieldworkOpen($project);
+        $this->ensurePetugasOpen($project);
 
         abort_unless($staff->project_id === $project->id, 404);
 
@@ -491,7 +511,7 @@ class ProjectController extends Controller
      */
     public function undoRemoveAssignmentStaff(Project $project, User $user)
     {
-        $this->ensureFieldworkOpen($project);
+        $this->ensurePetugasOpen($project);
 
         $sudahAda = $project->assignmentStaff()->where('user_id', $user->id)->exists();
 

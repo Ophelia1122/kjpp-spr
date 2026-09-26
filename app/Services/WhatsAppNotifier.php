@@ -124,7 +124,9 @@ class WhatsAppNotifier
         }
 
         return trim(strtr(implode("\n", $lines), [
-            '{judul}'          => Project::WORKFLOW_STEPS[$step]['title'] ?? $step,
+            // Judul langkah ikut istilah Non-Penilaian (2026-09-26): pesan WA
+            // untuk proyek konsultasi tidak lagi menulis "Review Nilai".
+            '{judul}'          => $project->istilahAlur(Project::WORKFLOW_STEPS[$step]['title'] ?? $step),
             '{nomor_proposal}' => $project->proposal_number,
             '{klien}'          => $project->effective_client_name ?: '-',
             '{pemberi_tugas}'  => $project->instructingClient?->client_name ?? '-',

@@ -46,12 +46,24 @@
         // Satu tombol "Unduh" berisi seluruh dokumen, menggantikan tiga tombol
         // terpisah (2026-09-24, feedback user) — pola yang sama dengan menu
         // unduh invoice di partials/invoice-download-menu.blade.php.
-        $unduhItems = [
+        $unduhItems = [];
+
+        // Pengingat di mulut menu unduh (2026-09-26, permintaan user): tabel
+        // "Tim Pelaksana" proposal Non-Penilaian dibuat dari daftar Petugas.
+        if ($project->timPelaksanaBelumDiisi() && auth()->user()->can('assignment_letter.manage')) {
+            $unduhItems[] = [
+                'note' => 'Tim Pelaksana belum diisi — tabelnya tidak akan tercetak.',
+                'url'  => route('proposals.show', $project) . '#section-surat-tugas',
+                'cta'  => 'Isi daftar Petugas',
+            ];
+        }
+
+        $unduhItems = array_merge($unduhItems, [
             ['group' => 'Proposal & Representatif'],
             ['label' => 'Proposal', 'format' => 'PDF',  'url' => route('proposals.exportPdf', $project)],
             ['label' => 'Proposal', 'format' => 'Word', 'url' => route('proposals.exportWord', $project)],
             ['label' => 'Surat Representatif', 'format' => 'Word', 'url' => route('proposals.exportRepresentatif', $project)],
-        ];
+        ]);
 
         // Surat Tugas hanya muncul setelah penilai & tanggal survei terisi —
         // syarat yang sama dengan tombol lama di kartu Surat Tugas.
@@ -158,7 +170,7 @@
                 'modal_opts' => match (true) {
                     $isReturn => ['label' => 'Alasan pengembalian', 'button' => 'Kembalikan', 'tone' => 'rose'],
                     $isAppeal => ['label' => 'Catatan banding', 'button' => 'Catat Banding', 'tone' => 'orange',
-                                  'placeholder' => 'Tulis poin banding atas Draft Resume...'],
+                                  'placeholder' => $project->istilahAlur('Tulis poin banding atas Draft Resume...')],
                     default   => ['optional' => true, 'label' => 'Catatan (opsional)', 'button' => $step['button'],
                                   'tone' => $stepUi[$stepKey]['tone'], 'hint' => $hint],
                 },
@@ -251,7 +263,13 @@
                             <div data-dropdown-menu role="menu" style="display: none;"
                                  class="z-50 w-60 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-lg dark:border-gray-700 dark:bg-gray-800">
                                 @foreach ($action['items'] as $item)
-                                    @if (isset($item['group']))
+                                    @if (isset($item['note']))
+                                        <a href="{{ $item['url'] }}" role="menuitem"
+                                           class="block border-b border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/40">
+                                            <span class="font-semibold">{{ $item['note'] }}</span>
+                                            <span class="mt-0.5 block underline">{{ $item['cta'] }}</span>
+                                        </a>
+                                    @elseif (isset($item['group']))
                                         <p class="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ $item['group'] }}</p>
                                     @else
                                         <a href="{{ $item['url'] }}" role="menuitem"
