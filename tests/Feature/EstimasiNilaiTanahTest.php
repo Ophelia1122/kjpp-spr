@@ -121,9 +121,33 @@ class EstimasiNilaiTanahTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('estimasi.index', ['koordinat' => '-6.30, 106.80']))
             ->assertOk()
-            ->assertSee('Rentang indikatif nilai tanah')
+            ->assertSee('Rentang indikatif per m', false)
             ->assertSee('Rp12.500.000')
             ->assertSee('Pembanding terdekat');
+    }
+
+    /** Radius diketik bebas; kosong berarti 5 km. */
+    public function test_radius_bebas_diketik(): void
+    {
+        $service = app(EstimasiNilaiTanah::class);
+
+        $this->assertSame([0.5, 1.0, 2.0, 3.0, 5.0], array_map('floatval', $service->tanggaRadius(null)));
+        $this->assertSame([0.5, 1.0, 2.0, 2.5], array_map('floatval', $service->tanggaRadius(2.5)));
+        $this->assertSame([0.5, 1.0, 2.0, 3.0, 5.0, 12.0], array_map('floatval', $service->tanggaRadius(12)));
+
+        // Titik 7 km dari koordinat: di luar 5 km bawaan, masuk bila radius 8 km.
+        $this->titik(-6.363, 106.80, 4, 4_000_000);
+
+        $this->assertSame('wilayah', $service->hitung(-6.30, 106.80)['status']);
+
+        $lebar = $service->hitung(-6.30, 106.80, null, 8);
+        $this->assertSame('ok', $lebar['status']);
+        $this->assertSame('8 km', $lebar['cakupan']);
+
+        $this->actingAs($this->admin)
+            ->get(route('estimasi.index', ['koordinat' => '-6.30, 106.80', 'radius' => 8]))
+            ->assertOk()
+            ->assertSee('8 km');
     }
 
     /** Peta sebaran ikut tampil beserta titik pembandingnya. */
@@ -139,7 +163,7 @@ class EstimasiNilaiTanahTest extends TestCase
             ->assertSee('js/leaflet/leaflet.js', false)
             // Kotak rincian + pilihan Peta/Satelit (2026-09-26, permintaan user).
             ->assertSee('petaRincian', false)
-            ->assertSee('Klik salah satu titik di peta')
+            ->assertSee('Klik titik di peta')
             ->assertSee('Satelit', false);
 
         // Rincian titik dikirim ke peta, bukan hanya nilai untuk tabel.
@@ -185,7 +209,7 @@ class EstimasiNilaiTanahTest extends TestCase
             ->get(route('estimasi.index', ['koordinat' => '-6.30, 106.80']))
             ->assertOk()
             ->assertSee('Kecenderungan antar tahun')
-            ->assertSee('per tahun');
+            ->assertSee('/tahun', false);
     }
 
     /** Dua tahun dengan titik sedikit: ditandai belum cukup untuk disebut tren. */

@@ -18,7 +18,8 @@ class EstimasiTanahController extends Controller
         $data = $request->validate([
             'koordinat' => 'nullable|string|max:120',
             'kelompok'  => 'nullable|string|in:' . implode(',', array_keys(LandValuePoint::GROUPS)),
-            'radius'    => 'nullable|numeric|in:0.5,1,2,3,5',
+            // Radius diketik bebas (2026-09-26, permintaan user); kosong = 5 km.
+            'radius'    => 'nullable|numeric|min:0.1|max:50',
         ]);
 
         $titik  = EstimasiNilaiTanah::baca((string) ($data['koordinat'] ?? ''));

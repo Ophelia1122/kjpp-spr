@@ -39,11 +39,7 @@ class EstimasiNilaiTanah
     public function hitung(float $lat, float $lon, ?string $kelompok = null, ?float $radiusMaks = null): array
     {
         $tahunIni = (int) now()->year;
-        $radius   = array_values(array_filter(self::RADIUS, fn ($r) => $radiusMaks === null || $r <= $radiusMaks));
-
-        if (! $radius) {
-            $radius = [$radiusMaks ?: self::RADIUS[0]];
-        }
+        $radius   = $this->tanggaRadius($radiusMaks);
 
         $terbesar = (float) end($radius);
         $kandidat = $this->sekitar($lat, $lon, $terbesar, $kelompok);
@@ -52,7 +48,7 @@ class EstimasiNilaiTanah
             $dalam = $kandidat->filter(fn ($p) => $p['jarak'] <= $r)->values();
 
             if ($dalam->count() >= self::MIN_PEMBANDING) {
-                return $this->rangkum($dalam, $r . ' km', $tahunIni, $lat, $lon, $kelompok);
+                return $this->rangkum($dalam, $this->kmTeks($r), $tahunIni, $lat, $lon, $kelompok);
             }
         }
 
@@ -65,6 +61,24 @@ class EstimasiNilaiTanah
                 'pesan'      => 'Belum ada data penilaian di sekitar titik ini.',
                 'pembanding' => collect(),
             ];
+    }
+
+    /**
+     * Tangga radius yang dicoba berurutan, berhenti begitu pembandingnya
+     * cukup. Radius diketik bebas oleh pemakai (2026-09-26, permintaan user),
+     * jadi tangga bawaannya dipotong pada angka itu dan angka itu selalu ikut
+     * sebagai anak tangga terakhir.
+     *
+     * @return list<float>
+     */
+    public function tanggaRadius(?float $maks): array
+    {
+        $maks = $maks !== null && $maks > 0 ? $maks : (float) self::RADIUS[count(self::RADIUS) - 1];
+
+        $tangga = array_values(array_filter(self::RADIUS, fn ($r) => $r < $maks));
+        $tangga[] = $maks;
+
+        return $tangga;
     }
 
     /** Titik dalam radius (km), sudah dihitung jaraknya & diurutkan. */
@@ -271,7 +285,7 @@ class EstimasiNilaiTanah
      */
     private function keyakinan(int $jumlah, string $cakupan): string
     {
-        $km = (float) $cakupan;
+        $km = (float) str_replace(',', '.', $cakupan);
 
         return match (true) {
             $jumlah >= 8 && $km <= 1 => 'tinggi',
@@ -297,6 +311,12 @@ class EstimasiNilaiTanah
         }
 
         return (float) end($pasangan)[0];
+    }
+
+    /** "2.5" -> "2,5 km". */
+    private function kmTeks(float $km): string
+    {
+        return rtrim(rtrim(number_format($km, 2, ',', '.'), '0'), ',') . ' km';
     }
 
     /** Jarak dua koordinat dalam kilometer (haversine). */
