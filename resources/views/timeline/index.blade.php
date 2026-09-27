@@ -84,7 +84,7 @@
                             <div class="w-48 shrink-0 pr-3">
                                 <a href="{{ route('proposals.show', $bar['project']) }}"
                                    class="block text-xs font-medium text-gray-900 truncate hover:text-blue-700 dark:text-gray-100 dark:hover:text-blue-300"
-                                   title="{{ $bar['project']->proposal_number }}" aria-label="{{ $bar['project']->proposal_number }}">
+                                   data-catatan="{{ $bar['project']->proposal_number }}" aria-label="{{ $bar['project']->proposal_number }}">
                                     {{ $bar['project']->proposal_number_short }}
                                 </a>
                                 <span class="block text-[11px] text-gray-500 truncate dark:text-gray-400">
@@ -109,12 +109,12 @@
                                          tak perlu terus mengejar target lagi. --}}
                                     <div class="absolute bottom-0 h-5 rounded-md border border-gray-300 bg-gray-200 dark:border-gray-600 dark:bg-gray-700"
                                          style="left: {{ $bar['left'] }}%; width: {{ $bar['width'] }}%"
-                                         title="Draft: {{ $bar['startText'] }} → {{ $bar['draftEndText'] }} (sudah disubmit)"></div>
+                                         data-catatan="Draft: {{ $bar['startText'] }} → {{ $bar['draftEndText'] }} (sudah disubmit)"></div>
                                 @else
                                     {{-- Draft masih berjalan: dua-tona elapsed/sisa seperti biasa. --}}
                                     <div class="absolute bottom-0 h-5 rounded-md border overflow-hidden {{ $t['track'] }}"
                                          style="left: {{ $bar['left'] }}%; width: {{ $bar['width'] }}%"
-                                         title="{{ $bar['startText'] }} → {{ $bar['draftEndText'] }} ({{ $bar['spanDays'] }} hari) — {{ $bar['label'] }}">
+                                         data-catatan="{{ $bar['startText'] }} → {{ $bar['draftEndText'] }} ({{ $bar['spanDays'] }} hari) — {{ $bar['label'] }}">
                                         <div class="h-full {{ $t['fill'] }}" style="width: {{ $bar['fill'] }}%"></div>
                                     </div>
 
@@ -123,7 +123,7 @@
                                     @if ($bar['overdueWidth'] > 0)
                                         <div class="absolute bottom-0 h-5 rounded-r-md border border-l-0 border-dashed border-rose-400 dark:border-rose-600"
                                              style="left: calc({{ $bar['left'] + $bar['width'] }}% - 1px); width: {{ $bar['overdueWidth'] }}%"
-                                             title="{{ $bar['label'] }} — target semula {{ $bar['draftEndText'] }}"></div>
+                                             data-catatan="{{ $bar['label'] }} — target semula {{ $bar['draftEndText'] }}"></div>
                                         <span class="absolute bottom-0 translate-x-1.5 text-[10px] font-medium text-rose-600 dark:text-rose-400 whitespace-nowrap"
                                               style="left: {{ $bar['left'] + $bar['width'] + $bar['overdueWidth'] }}%">{{ $bar['label'] }}</span>
                                     @endif
@@ -135,7 +135,7 @@
                                 @if ($bar['gap'])
                                     <div class="absolute bottom-0 h-5 border-y border-dashed border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800/60"
                                          style="left: {{ $bar['gap']['left'] }}%; width: {{ $bar['gap']['width'] }}%"
-                                         title="Proses review: {{ $bar['gap']['startText'] }} → {{ $bar['gap']['endText'] }}"></div>
+                                         data-catatan="Proses review: {{ $bar['gap']['startText'] }} → {{ $bar['gap']['endText'] }}"></div>
                                 @endif
 
                                 @if ($bar['final'])
@@ -143,14 +143,14 @@
                                     {{-- Segmen Final: sama persis logikanya dg Draft di atas. --}}
                                     <div class="absolute bottom-0 h-5 rounded-md border overflow-hidden {{ $tf['track'] }}"
                                          style="left: {{ $bar['final']['left'] }}%; width: {{ $bar['final']['width'] }}%"
-                                         title="Final: {{ $bar['final']['startText'] }} → {{ $bar['final']['endText'] }} ({{ $bar['final']['spanDays'] }} hari) — {{ $bar['final']['label'] }}">
+                                         data-catatan="Final: {{ $bar['final']['startText'] }} → {{ $bar['final']['endText'] }} ({{ $bar['final']['spanDays'] }} hari) — {{ $bar['final']['label'] }}">
                                         <div class="h-full {{ $tf['fill'] }}" style="width: {{ $bar['final']['fill'] }}%"></div>
                                     </div>
 
                                     @if ($bar['final']['overdueWidth'] > 0)
                                         <div class="absolute bottom-0 h-5 rounded-r-md border border-l-0 border-dashed border-rose-400 dark:border-rose-600"
                                              style="left: calc({{ $bar['final']['left'] + $bar['final']['width'] }}% - 1px); width: {{ $bar['final']['overdueWidth'] }}%"
-                                             title="{{ $bar['final']['label'] }} — target semula {{ $bar['final']['endText'] }}"></div>
+                                             data-catatan="{{ $bar['final']['label'] }} — target semula {{ $bar['final']['endText'] }}"></div>
                                         <span class="absolute bottom-0 translate-x-1.5 text-[10px] font-medium text-rose-600 dark:text-rose-400 whitespace-nowrap"
                                               style="left: {{ $bar['final']['left'] + $bar['final']['width'] + $bar['final']['overdueWidth'] }}%">{{ $bar['final']['label'] }}</span>
                                     @endif
@@ -192,10 +192,10 @@
                 <a href="{{ route('proposals.show', $p) }}"
                    class="flex items-center justify-between gap-4 px-5 py-3 border-t border-gray-100 hover:bg-blue-50/40 dark:hover:bg-blue-900/20 dark:border-gray-800">
                     <span class="min-w-0">
-                        <span class="block text-sm font-medium text-gray-900 truncate dark:text-gray-100" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</span>
+                        <span class="block text-sm font-medium text-gray-900 truncate dark:text-gray-100" data-catatan="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</span>
                         <span class="block text-xs text-gray-500 truncate dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</span>
                     </span>
-                    <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
+                    <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" data-catatan="{{ $p->status }}">
                         {{ $p->status_short }}
                     </span>
                 </a>

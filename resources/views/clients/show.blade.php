@@ -76,7 +76,7 @@
                         @foreach ($projects as $row)
                             @php $p = $row['project']; @endphp
                             <tr class="cursor-pointer align-top hover:bg-blue-50/40 dark:hover:bg-blue-900/20" onclick="location.href='{{ route('proposals.show', $p) }}'">
-                                <td class="px-5 py-3 font-medium text-gray-900 dark:text-gray-100" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</td>
+                                <td class="px-5 py-3 font-medium text-gray-900 dark:text-gray-100" data-catatan="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</td>
                                 <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $p->effective_client_name ?: '-' }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex flex-wrap gap-1">

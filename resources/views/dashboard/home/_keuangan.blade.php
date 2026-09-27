@@ -42,7 +42,7 @@
                         <tr class="cursor-pointer align-top hover:bg-blue-50/40 dark:hover:bg-blue-900/20" onclick="location.href='{{ route('proposals.show', $inv->project) }}'">
                             <td class="px-5 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-gray-100">{{ $inv->invoice_number }}</td>
                             <td class="px-4 py-3">
-                                <p class="text-gray-900 dark:text-gray-100" title="{{ $inv->project->proposal_number }}">{{ $inv->project->proposal_number_short }}</p>
+                                <p class="text-gray-900 dark:text-gray-100" data-catatan="{{ $inv->project->proposal_number }}">{{ $inv->project->proposal_number_short }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $clientOf($inv->project) }}</p>
                             </td>
                             <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap text-gray-900 dark:text-gray-100">{{ $rp($inv->amount) }}</td>
@@ -101,7 +101,7 @@
                         @php $p = $row['project']; @endphp
                         <tr class="cursor-pointer align-top hover:bg-blue-50/40 dark:hover:bg-blue-900/20" onclick="location.href='{{ route('proposals.show', $p) }}'">
                             <td class="px-5 py-3">
-                                <p class="font-medium text-gray-900 dark:text-gray-100" title="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</p>
+                                <p class="font-medium text-gray-900 dark:text-gray-100" data-catatan="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $clientOf($p) }}</p>
                             </td>
                             <td class="px-4 py-3 text-xs text-gray-700 whitespace-nowrap dark:text-gray-300">{{ $row['doneAt']->translatedFormat('d M Y') }}</td>

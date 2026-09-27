@@ -109,6 +109,38 @@
         .dark input::placeholder, .dark textarea::placeholder {
             color: #6b7280;
         }
+
+        /* ===================== KOTAK PETUNJUK (2026-09-27, permintaan user) ==============
+           Pengganti tooltip bawaan peramban: satu kotak melayang yang dipakai
+           seluruh halaman. Elemen cukup memberi data-catatan="isi",
+           data-catatan-judul="judul" (opsional) dan data-catatan-nada
+           (netral bawaan, peringatan, bahaya, aman). */
+        .petunjuk-catatan {
+            position: fixed; z-index: 1200; display: none; max-width: 280px;
+            border-radius: 6px; border: 1px solid #e5e7eb; background: #ffffff;
+            padding: 8px 10px; font-size: 11px; line-height: 1.45; color: #374151;
+            box-shadow: 0 8px 24px rgb(0 0 0 / .14); pointer-events: none;
+        }
+        .petunjuk-catatan.terlihat { display: block; }
+        .petunjuk-catatan b {
+            display: block; margin-bottom: 2px; font-size: 10px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .04em; color: #6b7280;
+        }
+        .petunjuk-catatan[data-nada="peringatan"] { border-color: #fde68a; background: #fffbeb; color: #78350f; }
+        .petunjuk-catatan[data-nada="peringatan"] b { color: #b45309; }
+        .petunjuk-catatan[data-nada="bahaya"] { border-color: #fecaca; background: #fef2f2; color: #7f1d1d; }
+        .petunjuk-catatan[data-nada="bahaya"] b { color: #b91c1c; }
+        .petunjuk-catatan[data-nada="aman"] { border-color: #bbf7d0; background: #f0fdf4; color: #14532d; }
+        .petunjuk-catatan[data-nada="aman"] b { color: #15803d; }
+
+        .dark .petunjuk-catatan { border-color: #374151; background: #1f2937; color: #e5e7eb; }
+        .dark .petunjuk-catatan b { color: #9ca3af; }
+        .dark .petunjuk-catatan[data-nada="peringatan"] { border-color: #92400e; background: #451a03; color: #fde68a; }
+        .dark .petunjuk-catatan[data-nada="peringatan"] b { color: #fbbf24; }
+        .dark .petunjuk-catatan[data-nada="bahaya"] { border-color: #991b1b; background: #450a0a; color: #fecaca; }
+        .dark .petunjuk-catatan[data-nada="bahaya"] b { color: #f87171; }
+        .dark .petunjuk-catatan[data-nada="aman"] { border-color: #166534; background: #052e16; color: #bbf7d0; }
+        .dark .petunjuk-catatan[data-nada="aman"] b { color: #4ade80; }
     </style>
 </head>
 <body class="bg-[#EEF1F8] dark:bg-gray-950">
@@ -886,6 +918,58 @@
         @endcan
     @endauth
     @stack('scripts')
+
+    <script>
+    // Kotak petunjuk untuk seluruh halaman. Pendengarnya di dokumen, jadi ikut
+    // bekerja pada isi yang ditukar lewat fetch (2026-09-27, permintaan user).
+    (function () {
+        var kotak = document.createElement('div');
+        kotak.className = 'petunjuk-catatan';
+        document.body.appendChild(kotak);
+
+        function buka(el) {
+            var judul = el.getAttribute('data-catatan-judul');
+            kotak.innerHTML = '';
+            kotak.setAttribute('data-nada', el.getAttribute('data-catatan-nada') || 'netral');
+
+            if (judul) {
+                var b = document.createElement('b');
+                b.textContent = judul;
+                kotak.appendChild(b);
+            }
+
+            kotak.appendChild(document.createTextNode(el.getAttribute('data-catatan')));
+            kotak.classList.add('terlihat');
+
+            var acuan = el.getBoundingClientRect();
+            var ukuran = kotak.getBoundingClientRect();
+            var kiri = Math.min(Math.max(8, acuan.left), window.innerWidth - ukuran.width - 8);
+            var atas = acuan.bottom + 6;
+
+            if (atas + ukuran.height > window.innerHeight - 8) {
+                atas = Math.max(8, acuan.top - ukuran.height - 6);
+            }
+
+            kotak.style.left = kiri + 'px';
+            kotak.style.top  = atas + 'px';
+        }
+
+        function tutup() {
+            kotak.classList.remove('terlihat');
+        }
+
+        function tanggapi(e) {
+            var el = e.target.closest ? e.target.closest('[data-catatan]') : null;
+            el ? buka(el) : tutup();
+        }
+
+        document.addEventListener('mouseover', tanggapi);
+        document.addEventListener('focusin', tanggapi);
+        document.addEventListener('mouseout', tutup);
+        document.addEventListener('focusout', tutup);
+        window.addEventListener('scroll', tutup, true);
+    })();
+    </script>
 
     @include('partials.ui-motion')
 </body>

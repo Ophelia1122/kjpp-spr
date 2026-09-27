@@ -68,7 +68,7 @@
                             <div class="text-xs text-gray-500 dark:text-gray-400">{{ $inv->kwitansi_number ? 'Kwt. ' . $inv->kwitansi_number : 'Belum ada kwitansi' }}</div>
                         </td>
                         <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-                            <span class="font-medium text-gray-900 whitespace-nowrap dark:text-gray-100" title="{{ $inv->project->proposal_number }}">
+                            <span class="font-medium text-gray-900 whitespace-nowrap dark:text-gray-100" data-catatan="{{ $inv->project->proposal_number }}">
                                 {{ $inv->project->proposal_number_short }}
                             </span>
                             <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -94,7 +94,7 @@
                             </span>
                             @unless ($isPaid)
                                 <div class="mt-1 text-[11px] {{ $isOverdue ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400' }}"
-                                     title="Dihitung sejak tanggal terbit; tertunggak bila lebih dari {{ $overdueDays }} hari">
+                                     data-catatan="Dihitung sejak tanggal terbit; tertunggak bila lebih dari {{ $overdueDays }} hari">
                                     {{ $isOverdue ? '⚠ ' : '' }}{{ $inv->age_days }} hari
                                 </div>
                             @endunless
@@ -103,7 +103,7 @@
                             <div class="flex justify-center items-center gap-1.5" data-row-actions>
                                 @can('invoices.manage')
                                     @if (!$isPaid && !$isCancelled)
-                                        <button type="button" title="Tandai Dibayar" aria-label="Tandai Dibayar"
+                                        <button type="button" data-catatan="Tandai Dibayar" aria-label="Tandai Dibayar"
                                                 onclick="openMarkPaidModal('{{ route('invoices.markAsPaid', $inv) }}', {{ \Illuminate\Support\Js::from($inv->invoice_number . ' — ' . $rp($inv->amount)) }})"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 dark:text-gray-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
                                             <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
@@ -170,7 +170,7 @@
                         <div class="flex items-center gap-1.5" data-row-actions>
                             @can('invoices.manage')
                                 @if (!$isPaid && !$isCancelled)
-                                    <button type="button" title="Tandai Dibayar" aria-label="Tandai Dibayar"
+                                    <button type="button" data-catatan="Tandai Dibayar" aria-label="Tandai Dibayar"
                                             onclick="openMarkPaidModal('{{ route('invoices.markAsPaid', $inv) }}', {{ \Illuminate\Support\Js::from($inv->invoice_number . ' — ' . $rp($inv->amount)) }})"
                                             class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 dark:text-gray-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
                                         <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>

@@ -48,7 +48,7 @@
         {{-- Unduh mengikuti filter yang sedang aktif (2026-09-25, permintaan user). --}}
         {{-- Ikon saja (2026-09-25, feedback user); keterangannya lewat tooltip. --}}
         <a href="{{ route('spj.export', request()->only(['from', 'to', 'appraiser'])) }}"
-           title="Unduh Excel sesuai filter" aria-label="Unduh Excel sesuai filter"
+           data-catatan="Unduh Excel sesuai filter" aria-label="Unduh Excel sesuai filter"
            class="inline-flex h-[38px] w-[38px] items-center justify-center rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
             <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
@@ -89,7 +89,7 @@
                             <tr class="align-top hover:bg-blue-50/40 dark:hover:bg-blue-900/20">
                                 <td class="whitespace-nowrap px-4 py-2 text-gray-600 dark:text-gray-400">{{ $p->survey_date->translatedFormat('d M Y') }}</td>
                                 <td class="px-4 py-2">
-                                    <a href="{{ route('proposals.show', $p) }}" title="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}"
+                                    <a href="{{ route('proposals.show', $p) }}" data-catatan="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}"
                                        class="font-medium text-blue-600 hover:underline dark:text-blue-400">{{ $p->proposal_number_short }}</a>
                                 </td>
                                 <td class="px-4 py-2 font-semibold text-gray-900 dark:text-gray-100">{{ $p->effective_client_name ?: '-' }}</td>
@@ -115,7 +115,7 @@
                     <div class="p-4">
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
-                                <a href="{{ route('proposals.show', $p) }}" title="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}"
+                                <a href="{{ route('proposals.show', $p) }}" data-catatan="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}"
                                    class="text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">{{ $p->proposal_number_short }}</a>
                                 <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $p->effective_client_name ?: '-' }}</p>
                             </div>

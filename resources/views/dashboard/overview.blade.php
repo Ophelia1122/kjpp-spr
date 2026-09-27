@@ -110,7 +110,7 @@
                 @foreach ($statusCounts as $label => $count)
                     <div class="flex items-center gap-3 text-sm">
                         {{-- Label status singkat, sama dengan List Project (2026-09-14). --}}
-                        <span class="w-32 shrink-0 text-gray-600 truncate dark:text-gray-400" title="{{ $label }}">{{ Project::STATUS_SHORT_LABELS[$label] ?? $label }}</span>
+                        <span class="w-32 shrink-0 text-gray-600 truncate dark:text-gray-400" data-catatan="{{ $label }}">{{ Project::STATUS_SHORT_LABELS[$label] ?? $label }}</span>
                         <span class="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden dark:bg-gray-800">
                             <span class="block h-full rounded-full"
                                   style="width: {{ $count ? max(4, round($count / $maxStatus * 100)) : 0 }}%; background: {{ $statusHex[$label] ?? '#9ca3af' }};"></span>
@@ -125,7 +125,7 @@
              (2026-09-21, feedback user). --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 lift dark:bg-gray-800 dark:border-gray-700">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-400"
-                title="Jumlah proyek per bank (tanpa proyek batal). Nama bank yang sama digabung walau alamatnya beda.">Top 5 Bank Pemberi Tugas</h2>
+                data-catatan="Jumlah proyek per bank (tanpa proyek batal). Nama bank yang sama digabung walau alamatnya beda.">Top 5 Bank Pemberi Tugas</h2>
             @if (empty($topBanks['slices']))
                 <p class="py-10 text-center text-sm text-gray-400 dark:text-gray-400">Belum ada proyek dari klien bank.</p>
             @else
@@ -170,10 +170,10 @@
                     <thead class="border-y border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             <th class="px-6 py-3">Penilai</th>
-                            <th class="px-4 py-3 text-right" title="Tanggal survei di masa depan">Akan Survei</th>
-                            <th class="px-4 py-3 text-right" title="Sudah/sedang survei, nilai belum diajukan">Survei &amp; Penilaian</th>
-                            <th class="px-4 py-3 text-right" title="Nilai diajukan / Draft Resume dirilis">Review Nilai</th>
-                            <th class="px-4 py-3 text-right" title="Draft laporan sampai proses cetak buku">Draft Laporan</th>
+                            <th class="px-4 py-3 text-right" data-catatan="Tanggal survei di masa depan">Akan Survei</th>
+                            <th class="px-4 py-3 text-right" data-catatan="Sudah/sedang survei, nilai belum diajukan">Survei &amp; Penilaian</th>
+                            <th class="px-4 py-3 text-right" data-catatan="Nilai diajukan / Draft Resume dirilis">Review Nilai</th>
+                            <th class="px-4 py-3 text-right" data-catatan="Draft laporan sampai proses cetak buku">Draft Laporan</th>
                             <th class="px-4 py-3 text-right">Total Aktif</th>
                             <th class="px-6 py-3 text-right">Selesai Bulan Ini</th>
                         </tr>
@@ -239,7 +239,7 @@
                         <span class="text-xs font-semibold text-gray-700 tabular-nums mb-1 dark:text-gray-300">{{ $m['count'] }}</span>
                         <div class="w-full max-w-[42px] rounded-t bg-blue-500/90"
                              style="height: {{ $m['count'] ? max(4, round($m['count'] / $maxMonthly * 100)) : 1 }}%;"
-                             title="{{ $m['label'] }}: {{ $m['count'] }} proposal"></div>
+                             data-catatan="{{ $m['label'] }}: {{ $m['count'] }} proposal"></div>
                         <span class="mt-2 text-[11px] text-gray-500 text-center dark:text-gray-400">{{ $m['label'] }}</span>
                     </div>
                 @endforeach
@@ -252,7 +252,7 @@
             <div class="space-y-3">
                 @foreach ($purposeCounts as $label => $count)
                     <div class="flex items-center gap-3 text-sm">
-                        <span class="w-40 shrink-0 text-gray-600 truncate dark:text-gray-400" title="{{ $label }}">{{ $label }}</span>
+                        <span class="w-40 shrink-0 text-gray-600 truncate dark:text-gray-400" data-catatan="{{ $label }}">{{ $label }}</span>
                         <span class="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden dark:bg-gray-800">
                             <span class="block h-full rounded-full bg-indigo-500"
                                   style="width: {{ $count ? max(4, round($count / $maxPurpose * 100)) : 0 }}%;"></span>
@@ -286,12 +286,12 @@
                 @foreach ($recent as $p)
                     <tr class="hover:bg-blue-50/40 dark:hover:bg-blue-900/20 {{ $p->status === Project::STATUS_BATAL ? 'opacity-60' : '' }}">
                         <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">
-                            <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" title="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
+                            <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" data-catatan="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
                         </td>
                         <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</td>
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $p->proposal_purpose }}</td>
                         <td class="px-6 py-3">
-                            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
+                            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" data-catatan="{{ $p->status }}">
                                 {{ $p->status_short }}
                             </span>
                         </td>

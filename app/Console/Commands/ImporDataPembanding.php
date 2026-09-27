@@ -6,59 +6,63 @@ use App\Models\LandValuePoint;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
 
 /**
- * Impor berkas "Data Aset Pusat" (satu .xlsx per bulan, satu folder per
- * tahun) menjadi titik nilai tanah (2026-09-26, permintaan user).
+ * Impor berkas "Data Pembanding" (satu .xlsx per tahun) — data penawaran dan
+ * transaksi pasar hasil survei (2026-09-27, permintaan user). Berbeda dari
+ * `import:data-aset` yang berisi kesimpulan penilaian KJPP sendiri; keduanya
+ * disimpan di tabel yang sama tapi dibedakan lewat kolom data_type.
  *
- * Bisa dijalankan ulang saat berkas tahun baru datang: baris lama dari
- * berkas yang sama dihapus dulu, jadi tidak dobel.
- *
- *   php artisan import:data-aset
- *   php artisan import:data-aset --path="D:\data 2025" --bersihkan
+ *   php artisan import:data-pembanding
+ *   php artisan import:data-pembanding --path="D:\data" --bersihkan
  */
-class ImporDataAset extends Command
+class ImporDataPembanding extends Command
 {
-    protected $signature = 'import:data-aset
-        {--path= : Folder berisi subfolder tahun (bawaan: storage/app/private/data-aset)}
-        {--bersihkan : Kosongkan seluruh tabel dulu, bukan hanya berkas yang diimpor}
+    protected $signature = 'import:data-pembanding
+        {--path= : Folder berisi berkas "Data Pembanding *.xlsx" (bawaan: storage/app/private/data-pembanding)}
+        {--bersihkan : Hapus seluruh data pembanding lama dulu}
         {--uji : Tampilkan hasil bacaan tanpa menyimpan}';
 
-    protected $description = 'Impor data aset pusat (xlsx) menjadi titik nilai tanah';
+    protected $description = 'Impor data pembanding pasar (penawaran/transaksi) dari berkas xlsx';
 
-    /** Kolom yang dipakai; nama persis seperti header berkas pusat. */
     private const KOLOM = [
         'no'        => 'NO',
         'nomor'     => 'Nomor Laporan',
         'tanggal'   => 'Tanggal Penilaian',
-        'alamat'    => 'Alamat Penilaian Aset',
-        'provinsi'  => 'Provinsi Penilaian Aset',
-        'kota'      => 'Kabupaten - Kota Penilaian Aset',
-        'kecamatan' => 'Kecamatan Aset',
-        'kelurahan' => 'Kelurahan - Desa Penilaian Aset',
         'jenis'     => 'Jenis Properti',
         'luas_t'    => 'Luas Tanah',
         'luas_b'    => 'Luas Bangunan',
+        'alamat'    => 'Alamat Data Pembanding',
+        'provinsi'  => 'Provinsi Data Pembanding',
+        'kota'      => 'Kabupaten - Kota Data Pembanding',
         'rate'      => 'Nilai Permeter Tanah',
         'rate_bgn'  => 'Nilai Permeter Bangunan',
-        'tujuan'    => 'Tujuan Penilaian',
-        'total'     => 'Nilai Pasar Total',
-        'tahun'     => 'Tahun Data Penilaian',
+        'total'     => 'Nilai Penawaran Total',
+        'tahun'     => 'Tahun Data',
+        'transaksi' => 'Transaksi/Penawaran',
+        'sumber'    => 'Nama Sumber Data',
+        'telepon'   => 'Nomor Telepon',
+        'status'    => 'Status Sumber Data',
         'lat'       => 'Latitude',
         'lon'       => 'Longitude',
     ];
 
-    /**
-     * Batas nilai yang masih masuk akal. Di luar ini hampir pasti salah ketik
-     * (mis. Rp4.000/m² atau Rp473 juta/m²) dan akan merusak estimasi.
-     */
+    /** Nama kecamatan & kelurahan berbeda antar tahun, jadi dicari longgar. */
+    private const KOLOM_LONGGAR = [
+        'kecamatan' => 'Kecamatan',
+        'kelurahan' => 'Kelurahan',
+    ];
+
     private const RATE_MIN = 50_000;
     private const RATE_MAX = 200_000_000;
 
     public function handle(): int
     {
-        $path = $this->option('path') ?: storage_path('app/private/data-aset');
+        // Satu berkas berisi belasan ribu baris; PhpSpreadsheet memuatnya
+        // sekaligus, jadi batas memori bawaan tidak cukup.
+        ini_set('memory_limit', '2G');
+
+        $path = $this->option('path') ?: storage_path('app/private/data-pembanding');
 
         if (! is_dir($path)) {
             $this->error("Folder tidak ditemukan: {$path}");
@@ -66,17 +70,29 @@ class ImporDataAset extends Command
             return self::FAILURE;
         }
 
-        $berkas = glob(rtrim($path, '\\/') . '/*/*.xlsx') ?: [];
+        $berkas = glob(rtrim($path, '\\/') . '/*.xlsx') ?: [];
+
+        // Berkas "2019" dan "2019.R1" isinya sama persis; yang R1 dilewati
+        // supaya datanya tidak dobel.
+        $berkas = array_values(array_filter($berkas, function ($f) {
+            if (preg_match('/\.R\d+\.xlsx$/i', $f)) {
+                $this->warn('Dilewati (revisi ganda): ' . basename($f));
+
+                return false;
+            }
+
+            return true;
+        }));
 
         if (! $berkas) {
-            $this->error("Tidak ada berkas .xlsx di dalam subfolder tahun pada: {$path}");
+            $this->error("Tidak ada berkas .xlsx di: {$path}");
 
             return self::FAILURE;
         }
 
         if ($this->option('bersihkan') && ! $this->option('uji')) {
-            LandValuePoint::query()->delete();
-            $this->warn('Tabel titik nilai tanah dikosongkan.');
+            $jml = LandValuePoint::where('data_type', LandValuePoint::TIPE_PEMBANDING)->delete();
+            $this->warn("{$jml} data pembanding lama dihapus.");
         }
 
         $ringkas = ['baris' => 0, 'simpan' => 0, 'koordinat' => 0, 'harga' => 0, 'ekstrem' => 0];
@@ -84,9 +100,8 @@ class ImporDataAset extends Command
         $bar->start();
 
         foreach ($berkas as $f) {
-            $hasil = $this->impor($f);
-            foreach ($ringkas as $k => $v) {
-                $ringkas[$k] = $v + $hasil[$k];
+            foreach ($this->impor($f) as $k => $v) {
+                $ringkas[$k] += $v;
             }
             $bar->advance();
         }
@@ -95,7 +110,7 @@ class ImporDataAset extends Command
         $this->newLine(2);
 
         $this->line('Berkas dibaca       : ' . count($berkas));
-        $this->line('Baris aset          : ' . $ringkas['baris']);
+        $this->line('Baris pembanding    : ' . $ringkas['baris']);
         $this->line('Dilewati (koordinat): ' . $ringkas['koordinat']);
         $this->line('Dilewati (tanpa Rp) : ' . $ringkas['harga']);
         $this->line('Dilewati (ekstrem)  : ' . $ringkas['ekstrem']);
@@ -112,19 +127,16 @@ class ImporDataAset extends Command
     private function impor(string $file): array
     {
         $n = ['baris' => 0, 'simpan' => 0, 'koordinat' => 0, 'harga' => 0, 'ekstrem' => 0];
-
-        $label = basename(dirname($file)) . '/' . basename($file);
+        $label = basename($file);
 
         $reader = IOFactory::createReaderForFile($file);
         $reader->setReadDataOnly(true);
         $sheet = $reader->load($file)->getSheet(0);
         $baris = $sheet->toArray(null, true, false, false);
 
-        // Header tidak selalu di baris 1 — berkas pusat diawali judul & baris
-        // kosong. Dicari baris yang kolom pertamanya "NO".
         $iHeader = null;
         foreach (array_slice($baris, 0, 10) as $i => $r) {
-            if (strtoupper(trim((string) ($r[0] ?? ''))) === 'NO') {
+            if ($r && collect($r)->contains(fn ($c) => trim((string) $c) === 'NO')) {
                 $iHeader = $i;
                 break;
             }
@@ -140,17 +152,25 @@ class ImporDataAset extends Command
         $peta = [];
         foreach ($baris[$iHeader] as $kolom => $judul) {
             $judul = trim((string) $judul);
+
             foreach (self::KOLOM as $kunci => $nama) {
                 if (strcasecmp($judul, $nama) === 0) {
                     $peta[$kunci] = $kolom;
                 }
             }
+
+            foreach (self::KOLOM_LONGGAR as $kunci => $awalan) {
+                if (! isset($peta[$kunci]) && stripos($judul, $awalan) === 0) {
+                    $peta[$kunci] = $kolom;
+                }
+            }
         }
 
-        $wajib = array_diff(array_keys(self::KOLOM), array_keys($peta));
-        if ($wajib) {
+        $hilang = array_diff(array_keys(self::KOLOM), array_keys($peta));
+
+        if ($hilang) {
             $this->newLine();
-            $this->warn("Kolom hilang (" . implode(', ', $wajib) . "), dilewati: {$label}");
+            $this->warn("Kolom hilang (" . implode(', ', $hilang) . "), dilewati: {$label}");
 
             return $n;
         }
@@ -162,30 +182,26 @@ class ImporDataAset extends Command
         $simpan = [];
 
         foreach (array_slice($baris, $iHeader + 1) as $r) {
-            $ambil = fn (string $k) => trim((string) ($r[$peta[$k]] ?? ''));
+            $ambil = fn (string $k) => isset($peta[$k]) ? trim((string) ($r[$peta[$k]] ?? '')) : '';
 
-            if ($ambil('no') === '' || $ambil('nomor') === '') {
-                continue;
+            if (! ctype_digit($ambil('no'))) {
+                continue;   // baris nama bulan / pemisah
             }
 
             $n['baris']++;
 
-            $lat = $this->koordinat($ambil('lat'));
-            $lon = $this->koordinat($ambil('lon'));
+            $lat = $this->koordinat($ambil('lat'), true);
+            $lon = $this->koordinat($ambil('lon'), false);
 
-            // Batas kasar wilayah Indonesia — menangkap salah ketik seperti
-            // lintang -10000 yang ada di data 2019-2024.
-            if ($lat === null || $lon === null
-                || $lat < -11.5 || $lat > 6.5 || $lon < 94.5 || $lon > 141.5) {
+            if ($lat === null || $lon === null) {
                 $n['koordinat']++;
                 continue;
             }
 
             // Ruko, unit apartemen, office space & kios dihitung per m²
-            // BANGUNAN (2026-09-27, permintaan user) — dulu barisnya dibuang
-            // karena nilai tanahnya nol, padahal datanya terpakai.
-            $jenis = $ambil('jenis');
-            $kelas = LandValuePoint::kelas($jenis);
+            // BANGUNAN (2026-09-27, permintaan user).
+            $jenis  = $ambil('jenis');
+            $kelas  = LandValuePoint::kelas($jenis);
             $satuan = LandValuePoint::SATUAN[$kelas];
 
             // Satuan mengikuti kelas dan tidak pernah berpindah: kalau
@@ -213,12 +229,12 @@ class ImporDataAset extends Command
             }
 
             $simpan[] = [
-                'data_type'      => LandValuePoint::TIPE_ASET,
-                'purpose'        => LandValuePoint::tujuanBaku($ambil('tujuan')),
+                'data_type'      => LandValuePoint::TIPE_PEMBANDING,
                 'property_class' => $kelas,
                 'rate_basis'     => $satuan,
                 'offer_total'    => (int) $this->rupiah($ambil('total')) ?: null,
-                'report_number'  => mb_substr($ambil('nomor'), 0, 100),
+                'offer_type'     => mb_substr($ambil('transaksi'), 0, 20) ?: null,
+                'report_number'  => mb_substr($ambil('nomor'), 0, 100) ?: null,
                 'valuation_date' => $tanggal?->toDateString(),
                 'valuation_year' => $tahun,
                 'latitude'       => $lat,
@@ -233,6 +249,9 @@ class ImporDataAset extends Command
                 'district'       => mb_substr($ambil('kecamatan'), 0, 80) ?: null,
                 'village'        => mb_substr($ambil('kelurahan'), 0, 80) ?: null,
                 'address'        => mb_substr($ambil('alamat'), 0, 255) ?: null,
+                'source_name'    => mb_substr($ambil('sumber'), 0, 120) ?: null,
+                'source_phone'   => mb_substr($ambil('telepon'), 0, 40) ?: null,
+                'source_status'  => mb_substr($ambil('status'), 0, 40) ?: null,
                 'source_file'    => $label,
                 'created_at'     => now(),
                 'updated_at'     => now(),
@@ -250,22 +269,37 @@ class ImporDataAset extends Command
         return $n;
     }
 
-    /** "-6,304484" / "-6.304484" -> float; kolom pusat kadang pakai koma. */
-    private function koordinat(string $v): ?float
+    /**
+     * Excel menyimpan koordinat dengan koma ribuan: "-6,339,724" berarti
+     * -6.339724 dan "10,686,116" berarti 106.86116. Panjang digitnya tidak
+     * seragam, jadi titik desimalnya dicari dengan membagi 10 sampai angkanya
+     * masuk rentang wilayah Indonesia.
+     */
+    private function koordinat(string $v, bool $lintang): ?float
     {
-        $v = str_replace(',', '.', trim($v));
-        $v = preg_replace('/[^0-9.\-]/', '', $v) ?? '';
+        $negatif = str_starts_with(trim($v), '-');
+        $digit   = preg_replace('/[^0-9]/', '', $v) ?? '';
 
-        // Titik ganda (mis. "-6.304.484") disatukan jadi satu desimal.
-        if (substr_count($v, '.') > 1) {
-            $bagian = explode('.', $v);
-            $v = array_shift($bagian) . '.' . implode('', $bagian);
+        if ($digit === '' || (int) $digit === 0) {
+            return null;
         }
 
-        return is_numeric($v) ? (float) $v : null;
+        [$min, $maks] = $lintang ? [-11.5, 6.5] : [94.5, 141.5];
+        $x = (float) $digit;
+
+        for ($i = 0; $i < 12; $i++) {
+            $nilai = $negatif ? -$x : $x;
+
+            if ($nilai >= $min && $nilai <= $maks) {
+                return $nilai;
+            }
+
+            $x /= 10;
+        }
+
+        return null;
     }
 
-    /** "Rp11.310.000" / "11310000" -> 11310000. */
     private function rupiah(string $v): float
     {
         $angka = preg_replace('/[^0-9]/', '', $v) ?? '';
@@ -273,7 +307,6 @@ class ImporDataAset extends Command
         return $angka === '' ? 0 : (float) $angka;
     }
 
-    /** "18 Januari 2024" -> Carbon. */
     private function tanggal(string $v): ?Carbon
     {
         $v = trim($v);
@@ -290,6 +323,7 @@ class ImporDataAset extends Command
 
         if (preg_match('/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/u', $v, $m)) {
             $b = $bulan[mb_strtolower($m[2])] ?? null;
+
             if ($b) {
                 return Carbon::createFromFormat('Y-m-d', sprintf('%s-%s-%02d', $m[3], $b, $m[1]))->startOfDay();
             }

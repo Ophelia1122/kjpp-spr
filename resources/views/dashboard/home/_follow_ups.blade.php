@@ -31,11 +31,11 @@
                     @endphp
                     <tr class="hover:bg-blue-50/40 dark:hover:bg-blue-900/20">
                         <td class="px-6 py-3 font-medium text-gray-900 dark:text-gray-100">
-                            <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" title="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
+                            <a href="{{ route('proposals.show', $p) }}" class="whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" data-catatan="{{ $p->proposal_number }}" aria-label="{{ $p->proposal_number }}">{{ $p->proposal_number_short }}</a>
                         </td>
                         <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $p->effective_client_name ?: '-' }}</td>
                         <td class="px-6 py-3">
-                            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" title="{{ $p->status }}">
+                            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $p->status_badge_classes }}" data-catatan="{{ $p->status }}">
                                 {{ $p->status_short }}
                             </span>
                         </td>

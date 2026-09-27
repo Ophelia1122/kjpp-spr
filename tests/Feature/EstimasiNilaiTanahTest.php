@@ -35,8 +35,11 @@ class EstimasiNilaiTanahTest extends TestCase
                 'latitude'       => $lat + ($i * 0.0005),
                 'longitude'      => $lon + ($i * 0.0005),
                 'valuation_year' => 2024,
+                'data_type'      => LandValuePoint::TIPE_PEMBANDING,
                 'property_type'  => 'Rumah Tinggal',
                 'property_group' => 'hunian',
+                'property_class' => LandValuePoint::KELAS_TANAH_BANGUNAN,
+                'rate_basis'     => 'tanah',
                 'land_rate'      => $rate,
                 'city'           => 'Kota Uji',
                 'district'       => 'Kec. Uji',
@@ -73,14 +76,21 @@ class EstimasiNilaiTanahTest extends TestCase
     public function test_saringan_jenis_properti_dihormati(): void
     {
         $this->titik(-6.30, 106.80, 4, 10_000_000);
-        $this->titik(-6.30, 106.80, 4, 2_000_000, ['property_group' => 'industri', 'property_type' => 'Gudang']);
+        $this->titik(-6.30, 106.80, 4, 2_000_000, [
+            'property_type'  => 'Ruko 3 Lantai',
+            'property_class' => LandValuePoint::KELAS_RUKO,
+            'rate_basis'     => 'bangunan',
+        ]);
 
-        $hunian = app(EstimasiNilaiTanah::class)->hitung(-6.30, 106.80, 'hunian');
-        $this->assertSame(10_000_000, $hunian['tengah']);
-        $this->assertSame(4, $hunian['jumlah']);
+        $service = app(EstimasiNilaiTanah::class);
 
-        $industri = app(EstimasiNilaiTanah::class)->hitung(-6.30, 106.80, 'industri');
-        $this->assertSame(2_000_000, $industri['tengah']);
+        $tb = $service->hitung(-6.30, 106.80, null, null, null, null, LandValuePoint::KELAS_TANAH_BANGUNAN);
+        $this->assertSame(10_000_000, $tb['tengah']);
+        $this->assertSame(4, $tb['jumlah']);
+
+        $ruko = $service->hitung(-6.30, 106.80, null, null, null, null, LandValuePoint::KELAS_RUKO);
+        $this->assertSame(2_000_000, $ruko['tengah']);
+        $this->assertSame(['bangunan'], $ruko['satuan']);
     }
 
     /** Tanpa pembanding di radius mana pun, jatuh ke nilai tengah wilayah. */
@@ -272,7 +282,7 @@ class EstimasiNilaiTanahTest extends TestCase
         $this->titik(-6.30, 106.80, 5, 9_000_000);   // semuanya hunian
 
         $this->actingAs($this->admin)
-            ->get(route('estimasi.index', ['koordinat' => '-6.30, 106.80', 'kelompok' => 'industri']))
+            ->get(route('estimasi.index', ['koordinat' => '-6.30, 106.80', 'kelas' => \App\Models\LandValuePoint::KELAS_RUKO]))
             ->assertOk()
             ->assertSee('memakai')
             ->assertSee('semua jenis properti')

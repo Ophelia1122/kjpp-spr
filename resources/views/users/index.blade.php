@@ -12,7 +12,7 @@
             <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau username..."
                    class="h-[34px] w-full rounded-md border-gray-300 py-0 text-sm shadow-sm dark:border-gray-600">
         </form>
-        <a href="{{ route('users.create') }}" title="Tambah pengguna" aria-label="Tambah pengguna"
+        <a href="{{ route('users.create') }}" data-catatan="Tambah pengguna" aria-label="Tambah pengguna"
            class="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-3 text-xs font-medium text-white transition hover:border-blue-700 hover:bg-blue-700">
             <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>

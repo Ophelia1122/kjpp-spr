@@ -36,7 +36,7 @@
 
         <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Biodata</h2>
-            <button type="submit" title="Simpan Biodata" aria-label="Simpan Biodata"
+            <button type="submit" data-catatan="Simpan Biodata" aria-label="Simpan Biodata"
                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                 @include('partials.icon-check')
             </button>
@@ -51,7 +51,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
                 <input type="text" value="{{ $user->username }}" disabled
-                       title="Username hanya bisa diubah Administrator"
+                       data-catatan="Username hanya bisa diubah Administrator"
                        class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-500 shadow-sm dark:border-gray-600 dark:bg-gray-900">
                 <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Dipakai untuk login. Minta Administrator bila perlu diubah.</p>
             </div>
@@ -78,7 +78,7 @@
 
         <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Keamanan — Ganti Password</h2>
-            <button type="submit" title="Simpan Password Baru" aria-label="Simpan Password Baru"
+            <button type="submit" data-catatan="Simpan Password Baru" aria-label="Simpan Password Baru"
                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                 @include('partials.icon-check')
             </button>

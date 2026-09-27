@@ -29,8 +29,31 @@ class EstimasiNilaiTanah
     /** Pembanding minimum sebelum radius dilebarkan. */
     public const MIN_PEMBANDING = 3;
 
-    /** Faktor rentang hasil kalibrasi (lihat keterangan kelas). */
+    /**
+     * Faktor rentang hasil kalibrasi ulang atas 42.757 titik pembanding pasar
+     * (2026-09-27). Makin rapat radiusnya, makin tajam estimasinya, jadi
+     * faktornya ikut radius — semuanya menutup sekitar 80% kasus:
+     *   radius <=1 km  median galat 13%  faktor 1,5  -> memuat 80%
+     *   radius <=2 km  median galat 16%  faktor 1,6  -> memuat 80%
+     *   radius  >2 km  median galat 17%  faktor 1,75 -> memuat 81%
+     */
+    private const FAKTOR_PER_RADIUS = [
+        1.0 => 1.5,
+        2.0 => 1.6,
+    ];
+
     private const FAKTOR_RENTANG = 1.75;
+
+    private function faktorRentang(float $radiusKm): float
+    {
+        foreach (self::FAKTOR_PER_RADIUS as $batas => $faktor) {
+            if ($radiusKm <= $batas) {
+                return $faktor;
+            }
+        }
+
+        return self::FAKTOR_RENTANG;
+    }
 
     /** Bobot data lama: 0,88 pangkat selisih tahun. */
     private const SUSUT_TAHUN = 0.88;
@@ -42,14 +65,29 @@ class EstimasiNilaiTanah
     /** Rentang tahun data yang dipakai; null = semua tahun. */
     private ?array $tahun = null;
 
+    /** Jenis sumber titik: aset / pembanding / null = keduanya. */
+    private ?string $sumber = null;
+
+    /** Kelas properti: tanah_bangunan / ruko / apart_os_kios / null = semua. */
+    private ?string $kelas = null;
+
+    /** Tujuan penilaian laporan induk; null = semua tujuan. */
+    private ?string $tujuan = null;
+
     public function hitung(
         float $lat,
         float $lon,
         ?string $kelompok = null,
         ?float $radiusMaks = null,
         ?array $tahun = null,
+        ?string $sumber = null,
+        ?string $kelas = null,
+        ?string $tujuan = null,
     ): array {
-        $this->tahun = $tahun && count($tahun) === 2 ? [(int) $tahun[0], (int) $tahun[1]] : null;
+        $this->tahun  = $tahun && count($tahun) === 2 ? [(int) $tahun[0], (int) $tahun[1]] : null;
+        $this->sumber = $sumber ?: null;
+        $this->kelas  = $kelas ?: null;
+        $this->tujuan = $tujuan ?: null;
 
         $tahunIni = (int) now()->year;
         $radius   = $this->tanggaRadius($radiusMaks);
@@ -112,6 +150,18 @@ class EstimasiNilaiTanah
             $query->whereBetween('valuation_year', $this->tahun);
         }
 
+        if ($this->sumber) {
+            $query->where('data_type', $this->sumber);
+        }
+
+        if ($this->kelas) {
+            $query->where('property_class', $this->kelas);
+        }
+
+        if ($this->tujuan) {
+            $query->where('purpose', $this->tujuan);
+        }
+
         return $query->get()
             ->map(function (LandValuePoint $p) use ($lat, $lon) {
                 return [
@@ -137,6 +187,7 @@ class EstimasiNilaiTanah
         }
 
         $tengah = $this->kuantilBerbobot($nilai, $bobot, 0.5);
+        $faktor = $this->faktorRentang((float) str_replace(',', '.', $cakupan));
 
         $mentah = $nilai;
         sort($mentah);
@@ -144,8 +195,9 @@ class EstimasiNilaiTanah
         return [
             'status'      => 'ok',
             'tengah'      => (int) round($tengah),
-            'bawah'       => (int) round($tengah / self::FAKTOR_RENTANG),
-            'atas'        => (int) round($tengah * self::FAKTOR_RENTANG),
+            'bawah'       => (int) round($tengah / $faktor),
+            'atas'        => (int) round($tengah * $faktor),
+            'faktor'      => $faktor,
             'data_min'    => (int) $mentah[0],
             'data_maks'   => (int) $mentah[count($mentah) - 1],
             'jumlah'      => count($nilai),
@@ -155,6 +207,7 @@ class EstimasiNilaiTanah
             'tahun_min'   => (int) $dalam->min(fn ($b) => $b['titik']->valuation_year),
             'tahun_maks'  => (int) $dalam->max(fn ($b) => $b['titik']->valuation_year),
             'kelompok'    => $kelompok,
+            'satuan'      => $dalam->pluck('titik.rate_basis')->unique()->values()->all(),
             'tren'        => $this->tren($dalam),
             'pembanding'  => $dalam,
         ];
@@ -224,7 +277,7 @@ class EstimasiNilaiTanah
             'sampai'    => $tahun[count($tahun) - 1]['tahun'],
             'pesan'     => $cukup
                 ? null
-                : 'Datanya tersebar di ' . count($tahun) . ' tahun dengan ' . $n . ' titik saja — arah angkanya ditampilkan apa adanya, belum cukup untuk disebut tren.',
+                : 'Datanya tersebar di ' . count($tahun) . ' tahun dengan ' . $n . ' titik saja, arah angkanya ditampilkan apa adanya, belum cukup untuk disebut tren.',
         ];
     }
 
@@ -257,6 +310,18 @@ class EstimasiNilaiTanah
                 $query->whereBetween('valuation_year', $this->tahun);
             }
 
+            if ($this->sumber) {
+                $query->where('data_type', $this->sumber);
+            }
+
+            if ($this->kelas) {
+                $query->where('property_class', $this->kelas);
+            }
+
+            if ($this->tujuan) {
+                $query->where('purpose', $this->tujuan);
+            }
+
             $titik = $query->get();
 
             if ($titik->count() < self::MIN_PEMBANDING) {
@@ -274,6 +339,7 @@ class EstimasiNilaiTanah
                 'tengah'     => (int) round($tengah),
                 'bawah'      => (int) round($tengah / self::FAKTOR_RENTANG),
                 'atas'       => (int) round($tengah * self::FAKTOR_RENTANG),
+                'faktor'     => self::FAKTOR_RENTANG,
                 'data_min'   => (int) $nilai[0],
                 'data_maks'  => (int) $nilai[count($nilai) - 1],
                 'jumlah'     => count($nilai),
@@ -283,6 +349,7 @@ class EstimasiNilaiTanah
                 'tahun_min'  => (int) $titik->min('valuation_year'),
                 'tahun_maks' => (int) $titik->max('valuation_year'),
                 'kelompok'   => $kelompok,
+                'satuan'     => $titik->pluck('rate_basis')->unique()->values()->all(),
                 'jarak_acuan' => $terdekat['jarak'],
                 'tren'       => $this->tren($titik->map(fn ($p) => [
                     'titik' => $p,

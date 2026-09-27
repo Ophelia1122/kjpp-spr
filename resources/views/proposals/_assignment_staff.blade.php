@@ -22,7 +22,7 @@
          data-id="{{ $staff->id }}" @if ($petugasBoleh) draggable="true" @endif>
         <div class="flex min-w-0 items-center gap-2">
             @if ($petugasBoleh)
-                <span class="staff-grip cursor-grab text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400" title="Geser untuk mengubah urutan" aria-hidden="true">
+                <span class="staff-grip cursor-grab text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400" data-catatan="Geser untuk mengubah urutan" aria-hidden="true">
                     <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5"/>
                     </svg>

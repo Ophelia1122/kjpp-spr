@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 class LandValuePoint extends Model
 {
     protected $fillable = [
+        'data_type', 'offer_type', 'purpose', 'source_name', 'source_phone', 'source_status',
+        'property_class', 'rate_basis', 'offer_total',
         'report_number', 'valuation_date', 'valuation_year',
         'latitude', 'longitude',
         'property_type', 'property_group',
@@ -27,9 +29,107 @@ class LandValuePoint extends Model
         'latitude'       => 'float',
         'longitude'      => 'float',
         'land_rate'      => 'integer',
+        'offer_total'    => 'integer',
         'land_area'      => 'integer',
         'building_area'  => 'integer',
     ];
+
+    /** Objek penilaian KJPP sendiri. */
+    public const TIPE_ASET = 'aset';
+
+    /** Data penawaran/transaksi pasar hasil survei. */
+    public const TIPE_PEMBANDING = 'pembanding';
+
+    public const TIPE_LABELS = [
+        self::TIPE_ASET        => 'Objek penilaian',
+        self::TIPE_PEMBANDING  => 'Data pembanding',
+    ];
+
+    public function getTipeLabelAttribute(): string
+    {
+        return self::TIPE_LABELS[$this->data_type] ?? $this->data_type;
+    }
+
+    /**
+     * Tujuan penilaian ditulis bermacam gaya di berkas ("REVALUASI ASET",
+     * "Revaluasi Aset"). Dibakukan supaya saringannya tidak pecah.
+     */
+    public static function tujuanBaku(?string $tujuan): ?string
+    {
+        $t = mb_strtolower(trim((string) $tujuan));
+
+        if ($t === '' || $t === '-') {
+            return null;
+        }
+
+        return match (true) {
+            str_contains($t, 'penjaminan')                        => 'Penjaminan Utang',
+            str_contains($t, 'lelang')                            => 'Lelang',
+            str_contains($t, 'jual beli') || str_contains($t, 'dibeli') => 'Jual Beli',
+            str_contains($t, 'laporan keuangan') || str_contains($t, 'akuntansi')
+                || str_contains($t, 'pencatatan')                 => 'Laporan Keuangan',
+            str_contains($t, 'revaluasi')                         => 'Revaluasi Aset',
+            str_contains($t, 'ayda')                              => 'AYDA',
+            str_contains($t, 'sewa')                              => 'Sewa',
+            default                                               => 'Lainnya',
+        };
+    }
+
+    /**
+     * Tiga kategori kerja (2026-09-27, permintaan user). Ruko dan
+     * Apart/OS/Kios dipisah karena harganya dihitung per m² BANGUNAN, bukan
+     * per m² tanah — angkanya sama pentingnya, tapi satuannya beda dan tidak
+     * boleh dijumlahkan jadi satu.
+     */
+    public const KELAS_TANAH_BANGUNAN = 'tanah_bangunan';
+    public const KELAS_RUKO           = 'ruko';
+    public const KELAS_APART          = 'apart_os_kios';
+
+    public const KELAS_LABELS = [
+        self::KELAS_TANAH_BANGUNAN => 'Tanah & Bangunan',
+        self::KELAS_RUKO           => 'Ruko',
+        self::KELAS_APART          => 'Apart / OS / Kios',
+    ];
+
+    /** Satuan land_rate per kelas. */
+    public const SATUAN = [
+        self::KELAS_TANAH_BANGUNAN => 'tanah',
+        self::KELAS_RUKO           => 'bangunan',
+        self::KELAS_APART          => 'bangunan',
+    ];
+
+    public const SATUAN_LABELS = [
+        'tanah'    => 'per m² tanah',
+        'bangunan' => 'per m² bangunan',
+    ];
+
+    /**
+     * Jenis properti dari berkas ditulis ratusan ragam. Yang menentukan cara
+     * hitungnya cuma tiga kategori di atas.
+     */
+    public static function kelas(?string $jenis): string
+    {
+        $j = mb_strtolower(trim((string) $jenis));
+
+        return match (true) {
+            str_contains($j, 'ruko') || str_contains($j, 'rukan')     => self::KELAS_RUKO,
+            str_contains($j, 'apartemen') || str_contains($j, 'apart')
+                || str_contains($j, 'office space') || str_contains($j, 'kios')
+                || str_contains($j, 'per unit') || str_contains($j, 'condotel')
+                || str_contains($j, 'strata')                          => self::KELAS_APART,
+            default                                                    => self::KELAS_TANAH_BANGUNAN,
+        };
+    }
+
+    public function getKelasLabelAttribute(): string
+    {
+        return self::KELAS_LABELS[$this->property_class] ?? $this->property_class;
+    }
+
+    public function getSatuanLabelAttribute(): string
+    {
+        return self::SATUAN_LABELS[$this->rate_basis] ?? $this->rate_basis;
+    }
 
     /**
      * Kelompok properti untuk menyaring pembanding. Jenis Properti dari pusat

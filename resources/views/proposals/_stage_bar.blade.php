@@ -33,7 +33,7 @@
                 $kini  = $i === $posisi;
             @endphp
             <div role="listitem" class="flex shrink-0 items-center gap-1">
-                <span title="{{ $status }}"
+                <span data-catatan="{{ $status }}"
                       class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap
                              {{ $kini
                                 ? 'bg-blue-600 text-white'

@@ -84,7 +84,7 @@
                 @foreach ($cols as $col)
                     <th class="{{ $col['class'] }}">
                         @if ($col['key'])
-                            <a href="{{ $sortUrl($col['key']) }}" @isset($col['tip']) title="{{ $col['tip'] }}" aria-label="{{ $col['tip'] }}" @endisset
+                            <a href="{{ $sortUrl($col['key']) }}" @isset($col['tip']) data-catatan="{{ $col['tip'] }}" aria-label="{{ $col['tip'] }}" @endisset
                                class="inline-flex items-center gap-1 hover:text-gray-800 dark:hover:text-gray-200">
                                 {{ $col['label'] }}
                                 @if ($currentSort === $col['key'])
@@ -125,7 +125,7 @@
                          bulan/tahun) supaya tabel tidak perlu digeser ke samping.
                          Nomor lengkap muncul sebagai tooltip. --}}
                     <td class="px-3 py-3 font-semibold text-gray-900 whitespace-nowrap dark:text-gray-100"
-                        title="{{ $project->proposal_number }}">
+                        data-catatan="{{ $project->proposal_number }}">
                         {{ $project->proposal_number_short }}
                     </td>
                     {{-- Nama Klien, bukan Pemberi Tugas (2026-09-14, feedback user). --}}
@@ -134,7 +134,7 @@
                     {{-- Objek & alamat jadi satu kolom dua baris (2026-09-25, feedback
                          user): jenis objek tetap terbaca penuh, alamat jadi baris
                          kedua yang lebih redup dan dipotong satu baris. --}}
-                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400" title="{{ $obj['full'] }}&#10;{{ $locations->implode(' | ') ?: $firstAddr }}">
+                    <td class="px-3 py-3 text-gray-500 dark:text-gray-400" data-catatan="{{ $obj['full'] }}&#10;{{ $locations->implode(' | ') ?: $firstAddr }}">
                         <span class="block max-w-[280px] truncate font-medium text-gray-700 dark:text-gray-300">{{ $obj['short'] }}</span>
                         <span class="block max-w-[280px] truncate text-[11px] text-gray-400 dark:text-gray-400">{{ $firstAddr ?: '—' }}</span>
                         @if ($locations->count() > 1)
@@ -145,14 +145,14 @@
                     </td>
                     <td class="px-3 py-3 text-center">
                         <span class="inline-block px-2.5 py-1 rounded-full font-semibold whitespace-nowrap {{ $project->status_badge_classes }}"
-                              title="{{ $project->status }}">
+                              data-catatan="{{ $project->status }}">
                             {{ $project->status_short }}
                         </span>
                     </td>
                     <td class="px-3 py-3 whitespace-nowrap text-center">
                         @if ($sla)
                             <span class="inline-flex items-center gap-1.5 {{ $sla['state'] === 'overdue' ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400' }}"
-                                  title="SLA {{ $sla['phase'] }} — target {{ $sla['target'] ?? '—' }}">
+                                  data-catatan="SLA {{ $sla['phase'] }} — target {{ $sla['target'] ?? '—' }}">
                                 <span class="h-2 w-2 shrink-0 rounded-full {{ $slaDotTone[$sla['state']] ?? $slaDotTone['none'] }}"></span>
                                 {{ $sla['text'] }}
                             </span>
@@ -174,7 +174,7 @@
                                           class="opacity-0 transition group-hover:opacity-100 focus-within:opacity-100"
                                           data-confirm="Tandai invoice {{ $tagihanBelumLunas[0]->invoice_number }} sebesar Rp {{ number_format($tagihanBelumLunas[0]->amount, 0, ',', '.') }} sudah LUNAS hari ini?">
                                         @csrf
-                                        <button type="submit" title="Tandai lunas" aria-label="Tandai lunas"
+                                        <button type="submit" data-catatan="Tandai lunas" aria-label="Tandai lunas"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 dark:text-gray-400 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-300">
                                             <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
@@ -183,13 +183,13 @@
                                     </form>
                                 @endif
                             @endcan
-                            <a href="{{ route('proposals.exportPdf', $project) }}" title="Unduh proposal PDF" aria-label="Unduh proposal PDF"
+                            <a href="{{ route('proposals.exportPdf', $project) }}" data-catatan="Unduh proposal PDF" aria-label="Unduh proposal PDF"
                                class="grid h-8 w-8 place-items-center rounded-md text-gray-500 opacity-0 transition hover:bg-gray-100 hover:text-gray-900 group-hover:opacity-100 focus:opacity-100 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
                                 <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                                 </svg>
                             </a>
-                            <a href="{{ route('proposals.show', $project) }}" title="Lihat / kelola" aria-label="Lihat / kelola"
+                            <a href="{{ route('proposals.show', $project) }}" data-catatan="Lihat / kelola" aria-label="Lihat / kelola"
                                class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-blue-100 hover:text-blue-700 dark:text-gray-400 dark:hover:bg-blue-900/40 dark:hover:text-blue-300">
                                 <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
@@ -198,7 +198,7 @@
                             </a>
                             @can('proposals.manage')
                                 @if ($project->status === \App\Models\Project::STATUS_DRAFT)
-                                    <a href="{{ route('proposals.edit', $project) }}" title="Edit proposal" aria-label="Edit proposal"
+                                    <a href="{{ route('proposals.edit', $project) }}" data-catatan="Edit proposal" aria-label="Edit proposal"
                                        class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
                                         <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
@@ -211,7 +211,7 @@
                                           data-confirm="{{ $project->status === \App\Models\Project::STATUS_BATAL ? 'Hapus permanen proyek batal ' . $project->proposal_number . ' beserta seluruh invoice-nya? Aksi ini tidak bisa dibatalkan.' : 'Yakin hapus proposal ' . $project->proposal_number . '? Aksi ini tidak bisa dibatalkan.' }}">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" title="Hapus proposal" aria-label="Hapus proposal"
+                                        <button type="submit" data-catatan="Hapus proposal" aria-label="Hapus proposal"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-red-100 hover:text-red-700 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-300">
                                             <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
@@ -257,11 +257,11 @@
                 <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
                         {{-- Kartu HP disamakan dengan tabel desktop (2026-09-13, feedback user). --}}
-                        <p class="font-semibold text-gray-900 dark:text-gray-100" title="{{ $project->proposal_number }}">{{ $project->proposal_number_short }}</p>
+                        <p class="font-semibold text-gray-900 dark:text-gray-100" data-catatan="{{ $project->proposal_number }}">{{ $project->proposal_number_short }}</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400">{{ $project->effective_client_name ?: '-' }}</p>
                     </div>
                     <span class="shrink-0 inline-block px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $project->status_badge_classes }}"
-                          title="{{ $project->status }}">
+                          data-catatan="{{ $project->status }}">
                         {{ $project->status_short }}
                     </span>
                 </div>
@@ -290,7 +290,7 @@
                 @if (in_array($project->status, [\App\Models\Project::STATUS_DRAFT, \App\Models\Project::STATUS_BATAL], true))
                     <div class="mt-2 flex items-center gap-1.5 border-t border-gray-100 pt-2 dark:border-gray-700">
                         @if ($project->status === \App\Models\Project::STATUS_DRAFT)
-                        <a href="{{ route('proposals.edit', $project) }}" title="Edit proposal" aria-label="Edit proposal"
+                        <a href="{{ route('proposals.edit', $project) }}" data-catatan="Edit proposal" aria-label="Edit proposal"
                            class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
                             <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
@@ -301,7 +301,7 @@
                               data-confirm="{{ $project->status === \App\Models\Project::STATUS_BATAL ? 'Hapus permanen proyek batal ' . $project->proposal_number . ' beserta seluruh invoice-nya? Aksi ini tidak bisa dibatalkan.' : 'Yakin hapus proposal ' . $project->proposal_number . '? Aksi ini tidak bisa dibatalkan.' }}">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" title="Hapus proposal" aria-label="Hapus proposal"
+                            <button type="submit" data-catatan="Hapus proposal" aria-label="Hapus proposal"
                                     class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-red-100 hover:text-red-700 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-300">
                                 <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
@@ -332,7 +332,7 @@
 <div id="bulkBar" class="fixed inset-x-0 bottom-4 z-40 hidden justify-center px-4">
     <div class="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-2 shadow-xl dark:border-gray-700 dark:bg-gray-800">
         <span id="bulkCount" class="text-sm font-medium text-gray-700 dark:text-gray-200">0 dipilih</span>
-        <button type="button" id="bulkExport" title="Export baris terpilih ke Excel" aria-label="Export baris terpilih ke Excel"
+        <button type="button" id="bulkExport" data-catatan="Export baris terpilih ke Excel" aria-label="Export baris terpilih ke Excel"
                 class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
             <svg aria-hidden="true" class="h-[16px] w-[16px]" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
@@ -342,9 +342,9 @@
         <form id="bulkZipForm" action="{{ route('proposals.exportZip') }}" method="POST" class="flex items-center gap-1">
             @csrf
             <input type="hidden" name="format" id="bulkZipFormat" value="pdf">
-            <button type="submit" data-format="pdf" title="Unduh proposal terpilih (PDF)"
+            <button type="submit" data-format="pdf" data-catatan="Unduh proposal terpilih (PDF)"
                     class="rounded-md border border-rose-200 px-2 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-900/30">PDF</button>
-            <button type="submit" data-format="word" title="Unduh proposal terpilih (Word)"
+            <button type="submit" data-format="word" data-catatan="Unduh proposal terpilih (Word)"
                     class="rounded-md border border-blue-200 px-2 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/30">Word</button>
         </form>
 

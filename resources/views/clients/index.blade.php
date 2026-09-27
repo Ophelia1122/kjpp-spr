@@ -17,7 +17,7 @@
             @endif
         </form>
         @can('clients.manage')
-            <a href="{{ route('clients.create') }}" title="Tambah klien baru" aria-label="Tambah klien baru"
+            <a href="{{ route('clients.create') }}" data-catatan="Tambah klien baru" aria-label="Tambah klien baru"
                class="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-3 text-xs font-medium text-white transition hover:border-blue-700 hover:bg-blue-700">
                 <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>

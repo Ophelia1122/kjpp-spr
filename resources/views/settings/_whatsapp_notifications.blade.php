@@ -139,7 +139,7 @@
                         @error("n.$step.template") <p class="text-xs text-red-600">{{ $message }}</p> @enderror
                         <div class="flex flex-wrap gap-1">
                             @foreach (WhatsAppNotification::PLACEHOLDERS as $ph => $tip)
-                                <button type="button" title="{{ $tip }}" data-wa-insert="{{ $ph }}" data-target="tpl_{{ $step }}"
+                                <button type="button" data-catatan="{{ $tip }}" data-wa-insert="{{ $ph }}" data-target="tpl_{{ $step }}"
                                         class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-600 hover:bg-blue-50 hover:text-blue-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-blue-900/30">{{ $ph }}</button>
                             @endforeach
                         </div>

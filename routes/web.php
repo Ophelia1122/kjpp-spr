@@ -95,6 +95,10 @@ Route::middleware('auth')->group(function () {
     // Memakai izin proposals.view: halaman baca-saja dari data internal.
     Route::middleware('permission:proposals.view')
         ->get('/estimasi-tanah', [\App\Http\Controllers\EstimasiTanahController::class, 'index'])->name('estimasi.index');
+    Route::middleware('permission:proposals.view')
+        ->get('/estimasi-tanah/cara-kerja', [\App\Http\Controllers\EstimasiTanahController::class, 'cara'])->name('estimasi.cara');
+    Route::middleware('permission:proposals.view')
+        ->get('/estimasi-tanah/export', [\App\Http\Controllers\EstimasiTanahController::class, 'exportExcel'])->name('estimasi.export');
 
     Route::middleware('permission:clients.view')->get('/clients', [ClientController::class, 'index'])->name('clients.index');
     // Detail klien + proyek yang melibatkannya (2026-09-15).

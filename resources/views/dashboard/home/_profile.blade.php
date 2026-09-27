@@ -58,7 +58,7 @@
     <div class="grid w-full grid-cols-3 gap-x-3 gap-y-3 border-t border-gray-100 pt-3 dark:border-gray-700
                 sm:ml-auto sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2 sm:border-0 sm:pt-0">
         @foreach ($stats as $s)
-            <div class="min-w-0 sm:min-w-[86px] sm:border-l sm:border-gray-100 sm:pl-4 sm:first:border-0 sm:first:pl-0 dark:border-gray-700" title="{{ $s['tip'] }}">
+            <div class="min-w-0 sm:min-w-[86px] sm:border-l sm:border-gray-100 sm:pl-4 sm:first:border-0 sm:first:pl-0 dark:border-gray-700" data-catatan="{{ $s['tip'] }}">
                 <p class="truncate text-[10px] uppercase tracking-wide text-gray-400 sm:text-[11px] dark:text-gray-400">{{ $s['label'] }}</p>
                 <p class="text-lg font-bold leading-tight {{ $s['tone'] }}">{{ $s['value'] }}</p>
                 <p class="text-[11px] text-gray-400 dark:text-gray-400">{{ $s['sub'] }}</p>

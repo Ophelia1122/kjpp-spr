@@ -15,7 +15,7 @@
             <form action="{{ route('projects.workflow', [$project, $key]) }}" method="POST"
                   data-confirm="{{ $step['title'] }} untuk proyek {{ $project->proposal_number }}?">
                 @csrf
-                <button type="submit" title="{{ $step['tip'] }}"
+                <button type="submit" data-catatan="{{ $step['tip'] }}"
                         class="inline-flex items-center gap-1 rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-900/30">
                     <svg aria-hidden="true" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>

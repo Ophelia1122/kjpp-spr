@@ -107,7 +107,7 @@
     </div>
         @if ($activeSla)
             <span id="quickNavSla"
-                  title="{{ $activeSla['label'] }} · Target: {{ $activeSla['target'] ?? '—' }}"
+                  data-catatan="{{ $activeSla['label'] }} · Target: {{ $activeSla['target'] ?? '—' }}"
                   class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap {{ $slaBadgeTone[$activeSla['state']] ?? $slaBadgeTone['none'] }}">
                 <span class="leading-none">⏱</span>
                 <span>{{ $activeSla['text'] }}</span>
@@ -191,13 +191,13 @@
                      selesai hanya Administrator (2026-09-23, feedback user). --}}
                 @can('proposals.manage')
                     @if (! $project->isDone() || auth()->user()->isAdministrator())
-                        <a href="{{ route('proposals.edit', $project) }}" title="Edit Proposal" aria-label="Edit Proposal"
+                        <a href="{{ route('proposals.edit', $project) }}" data-catatan="Edit Proposal" aria-label="Edit Proposal"
                            class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                             @include('partials.icon-pencil')
                         </a>
                     @endif
                 @endcan
-                <a href="{{ route('proposals.lengkap', $project) }}" title="Lihat seluruh data proyek" aria-label="Lihat seluruh data proyek"
+                <a href="{{ route('proposals.lengkap', $project) }}" data-catatan="Lihat seluruh data proyek" aria-label="Lihat seluruh data proyek"
                    class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                     <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
@@ -210,7 +210,7 @@
                          edit konten proposal, lebih pas dikelompokkan
                          dengan ikon Edit Proposal daripada berdiri sendiri
                          di banner atas. --}}
-                    <a href="{{ route('proposals.texts', $project) }}" title="Edit Bab Proposal{{ ($project->section_texts_count ?? 0) > 0 ? ' (' . $project->section_texts_count . ' bab diedit)' : '' }}" aria-label="Edit Bab Proposal{{ ($project->section_texts_count ?? 0) > 0 ? ' (' . $project->section_texts_count . ' bab diedit)' : '' }}"
+                    <a href="{{ route('proposals.texts', $project) }}" data-catatan="Edit Bab Proposal{{ ($project->section_texts_count ?? 0) > 0 ? ' (' . $project->section_texts_count . ' bab diedit)' : '' }}" aria-label="Edit Bab Proposal{{ ($project->section_texts_count ?? 0) > 0 ? ' (' . $project->section_texts_count . ' bab diedit)' : '' }}"
                        class="relative grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                         <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
@@ -226,7 +226,7 @@
                     <form action="{{ route('proposals.duplicate', $project) }}" method="POST"
                           data-confirm="Duplikat proposal {{ $project->proposal_number }}? Salinan dibuat sebagai Draft dengan nomor sementara yang harus Anda ganti.">
                         @csrf
-                        <button type="submit" title="Duplikat proposal" aria-label="Duplikat proposal"
+                        <button type="submit" data-catatan="Duplikat proposal" aria-label="Duplikat proposal"
                                 class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                             <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"/>
@@ -243,7 +243,7 @@
                 <dd class="font-medium text-gray-900 dark:text-gray-100">
                     {{ $project->effective_client_name }}
                     @unless ($project->client_id || trim((string) $project->client_name))
-                        <span class="text-gray-400 font-normal dark:text-gray-400" title="Nama Klien belum diisi — memakai nama Pemberi Tugas.">(= Pemberi Tugas)</span>
+                        <span class="text-gray-400 font-normal dark:text-gray-400" data-catatan-nada="peringatan" data-catatan="Nama Klien belum diisi, memakai nama Pemberi Tugas.">(= Pemberi Tugas)</span>
                     @endunless
                 </dd>
                 @if ($project->namedClient)
@@ -393,16 +393,16 @@
                 @can('survey.manage')
                     <div class="flex items-center gap-1" @unless ($surveyOpen) hidden @endunless>
                         @if ($hasSurvey)
-                            <button type="button" id="surveyEditBtn" title="Edit" aria-label="Edit"
+                            <button type="button" id="surveyEditBtn" data-catatan="Edit" aria-label="Edit"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                                 @include('partials.icon-pencil')
                             </button>
-                            <button type="submit" form="surveyForm" id="surveySaveBtn" hidden title="Simpan" aria-label="Simpan"
+                            <button type="submit" form="surveyForm" id="surveySaveBtn" hidden data-catatan="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
                         @else
-                            <button type="submit" form="surveyForm" title="Simpan Jadwal Survei" aria-label="Simpan Jadwal Survei"
+                            <button type="submit" form="surveyForm" data-catatan="Simpan Jadwal Survei" aria-label="Simpan Jadwal Survei"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
@@ -456,7 +456,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Nama Penilai Lapangan <span class="font-normal text-gray-400">(1–{{ \App\Models\Project::MAX_APPRAISERS }} orang)</span>
-                                <span class="inline-block align-text-bottom text-gray-400 dark:text-gray-400" title="Daftar ini menampilkan semua pengguna aktif, pilih akun Surveyor yang benar-benar turun lapangan karena mengikat pada Timeline Proyek.">
+                                <span class="inline-block align-text-bottom text-gray-400 dark:text-gray-400" data-catatan="Daftar ini menampilkan semua pengguna aktif, pilih akun Surveyor yang benar-benar turun lapangan karena mengikat pada Timeline Proyek.">
                                     <svg aria-hidden="true" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/>
                                     </svg>
@@ -473,7 +473,7 @@
                                     @php $slotValue = $chosenAppraisers[$slot] ?? null; @endphp
                                     <div class="survey-appraiser-slot flex items-center gap-2" @if ($slot > 0 && ! $slotValue) hidden @endif>
                                         <select name="appraiser_ids[]" @if ($slot === 0) required @endif @disabled($hasSurvey)
-                                                @if ($hasSurvey) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                                @if ($hasSurvey) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                                 class="survey-field min-w-0 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                                             <option value="">-- Pilih Penilai {{ $slot + 1 }} --</option>
                                             @foreach ($fieldAppraiserOptions as $appraiserOption)
@@ -483,7 +483,7 @@
                                             @endforeach
                                         </select>
                                         @if ($slot > 0)
-                                            <button type="button" class="survey-appraiser-remove grid h-8 w-8 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30" title="Hapus penilai ini" aria-label="Hapus penilai ini" @if ($hasSurvey) hidden @endif>&times;</button>
+                                            <button type="button" class="survey-appraiser-remove grid h-8 w-8 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30" data-catatan="Hapus penilai ini" aria-label="Hapus penilai ini" @if ($hasSurvey) hidden @endif>&times;</button>
                                         @endif
                                     </div>
                                 @endfor
@@ -503,7 +503,7 @@
                             </label>
                             <input type="date" name="valuation_date" lang="id" @disabled($hasSurvey)
                                    data-survey-field
-                                   @if ($hasSurvey) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                   @if ($hasSurvey) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                    value="{{ old('valuation_date', $project->valuation_date_manual?->toDateString()) }}"
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                             {{-- Keterangan dulu tersembunyi di balik ikon hover; dipindah
@@ -535,7 +535,7 @@
                                 <div class="grid grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-start">
                                     <div class="min-w-0">
                                         <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $loop->iteration }}. {{ $obj->short_label }}</p>
-                                        <p class="truncate text-xs text-gray-500 dark:text-gray-400" title="{{ $obj->location }}">{{ $obj->location }}</p>
+                                        <p class="truncate text-xs text-gray-500 dark:text-gray-400" data-catatan="{{ $obj->location }}">{{ $obj->location }}</p>
 
                                         {{-- Penilai per objek (2026-09-25, feedback user): nama dipilih
                                              langsung, tiap nama terpilih dapat SPJ penuh untuk objek ini. --}}
@@ -665,16 +665,16 @@
                 @can('assignment_letter.manage')
                     <div class="flex items-center gap-1" @unless ($suratOpen) hidden @endunless>
                         @if ($hasSurat)
-                            <button type="button" id="suratEditBtn" title="Edit" aria-label="Edit"
+                            <button type="button" id="suratEditBtn" data-catatan="Edit" aria-label="Edit"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                                 @include('partials.icon-pencil')
                             </button>
-                            <button type="submit" form="suratTugasForm" id="suratSaveBtn" hidden title="Simpan" aria-label="Simpan"
+                            <button type="submit" form="suratTugasForm" id="suratSaveBtn" hidden data-catatan="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
                         @else
-                            <button type="submit" form="suratTugasForm" title="Simpan" aria-label="Simpan"
+                            <button type="submit" form="suratTugasForm" data-catatan="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
@@ -710,7 +710,7 @@
                                    value="{{ old('assignment_letter_number', $project->assignment_letter_number) }}"
                                    placeholder="Contoh: 1570/KJPPSPR-ST/VIII/2026"
                                    @disabled($hasSurat)
-                                   @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                   @if ($hasSurat) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm font-mono disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                         </div>
                         <div>
@@ -718,7 +718,7 @@
                             <input type="date" name="assignment_letter_date" id="surat_date" lang="id"
                                    value="{{ old('assignment_letter_date', $project->assignment_letter_date?->toDateString()) }}"
                                    @disabled($hasSurat)
-                                   @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                   @if ($hasSurat) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                         </div>
 
@@ -729,7 +729,7 @@
                             @php $suratRecipient = old('assignment_letter_recipient_client_id', $project->assignment_letter_recipient_client_id ?? $project->instructing_client_id); @endphp
                             <select name="assignment_letter_recipient_client_id" id="surat_recipient"
                                     @disabled($hasSurat)
-                                    @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                    @if ($hasSurat) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                     class="mt-1 w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-900">
                                 @foreach ($project->receivedFromOptions() as $opt)
                                     <option value="{{ $opt['id'] }}" @selected($opt['id'] == $suratRecipient)>{{ $opt['label'] }}</option>
@@ -744,7 +744,7 @@
                             @php $suratOnBehalf = old('assignment_letter_on_behalf_client_id', $project->assignment_letter_on_behalf_client_id ?? $project->instructing_client_id); @endphp
                             <select name="assignment_letter_on_behalf_client_id" id="surat_on_behalf"
                                     @disabled($hasSurat)
-                                    @if ($hasSurat) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                    @if ($hasSurat) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                     class="mt-1 w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-900">
                                 @foreach ($project->receivedFromOptions() as $opt)
                                     <option value="{{ $opt['id'] }}" @selected($opt['id'] == $suratOnBehalf)>{{ $opt['label'] }}</option>
@@ -931,10 +931,10 @@
                 @if ($project->remaining_balance > 0)
                     <div class="flex items-center gap-x-4 gap-y-1 flex-wrap text-xs font-semibold">
                         <span class="whitespace-nowrap {{ $project->uninvoiced_balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-400' }}"
-                              title="Nilai kontrak yang belum dibuatkan invoice">
+                              data-catatan="Nilai kontrak yang belum dibuatkan invoice">
                             Sisa Tagihan: Rp {{ number_format($project->uninvoiced_balance, 0, ',', '.') }}
                         </span>
-                        <span class="whitespace-nowrap text-rose-600 dark:text-rose-400" title="Nilai kontrak yang belum dibayar">
+                        <span class="whitespace-nowrap text-rose-600 dark:text-rose-400" data-catatan="Nilai kontrak yang belum dibayar">
                             Sisa Pelunasan: Rp {{ number_format($project->remaining_balance, 0, ',', '.') }}
                         </span>
                     </div>
@@ -974,7 +974,7 @@
                                 @endcan
                                 @can('invoices.manage')
                                     @if ($inv->status !== 'Paid')
-                                        <button type="button" onclick="openVerifyPaidModal('{{ route('invoices.markAsPaid', $inv) }}')" title="Tandai Dibayar" aria-label="Tandai Dibayar"
+                                        <button type="button" onclick="openVerifyPaidModal('{{ route('invoices.markAsPaid', $inv) }}')" data-catatan="Tandai Dibayar" aria-label="Tandai Dibayar"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 dark:text-gray-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300">
                                             <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
@@ -983,7 +983,7 @@
                                     @endif
 
                                     <div class="relative" data-dropdown>
-                                        <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false" title="Aksi lain" aria-label="Aksi lain"
+                                        <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false" data-catatan="Aksi lain" aria-label="Aksi lain"
                                                 class="grid h-8 w-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100">
                                             <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.9" stroke="currentColor" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
@@ -1056,16 +1056,16 @@
                 @can('tax_invoice.manage')
                     <div class="flex items-center gap-1">
                         @if ($hasFaktur)
-                            <button type="button" id="fakturEditBtn" title="Edit" aria-label="Edit"
+                            <button type="button" id="fakturEditBtn" data-catatan="Edit" aria-label="Edit"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                                 @include('partials.icon-pencil')
                             </button>
-                            <button type="submit" form="fakturForm" id="fakturSaveBtn" hidden title="Simpan" aria-label="Simpan"
+                            <button type="submit" form="fakturForm" id="fakturSaveBtn" hidden data-catatan="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
                         @else
-                            <button type="submit" form="fakturForm" title="Simpan" aria-label="Simpan"
+                            <button type="submit" form="fakturForm" data-catatan="Simpan" aria-label="Simpan"
                                     class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                 @include('partials.icon-check')
                             </button>
@@ -1085,7 +1085,7 @@
                                    value="{{ old('tax_invoice_number', $project->tax_invoice_number) }}"
                                    placeholder="Contoh: 010.000-26.00000001"
                                    @disabled($hasFaktur)
-                                   @if ($hasFaktur) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                   @if ($hasFaktur) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm font-mono disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                         </div>
                         <div>
@@ -1093,7 +1093,7 @@
                             <input type="date" name="tax_invoice_date" id="faktur_date" lang="id"
                                    value="{{ old('tax_invoice_date', $project->tax_invoice_date?->toDateString()) }}"
                                    @disabled($hasFaktur)
-                                   @if ($hasFaktur) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                   @if ($hasFaktur) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                         </div>
                     </div>
@@ -1149,16 +1149,16 @@
                         @can('final_report.manage')
                             <div class="flex items-center gap-1">
                                 @if ($hasFinalReport)
-                                    <button type="button" id="finalReportEditBtn" title="Edit" aria-label="Edit"
+                                    <button type="button" id="finalReportEditBtn" data-catatan="Edit" aria-label="Edit"
                                             class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
                                         @include('partials.icon-pencil')
                                     </button>
-                                    <button type="submit" form="finalReportForm" id="finalReportSaveBtn" hidden title="Simpan" aria-label="Simpan"
+                                    <button type="submit" form="finalReportForm" id="finalReportSaveBtn" hidden data-catatan="Simpan" aria-label="Simpan"
                                             class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                         @include('partials.icon-check')
                                     </button>
                                 @else
-                                    <button type="submit" form="finalReportForm" title="Simpan" aria-label="Simpan"
+                                    <button type="submit" form="finalReportForm" data-catatan="Simpan" aria-label="Simpan"
                                             class="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300">
                                         @include('partials.icon-check')
                                     </button>
@@ -1175,7 +1175,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Nomor Laporan Final</label>
                                 <input type="text" name="final_report_number" id="final_report_number" required @disabled($hasFinalReport)
-                                       @if ($hasFinalReport) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                       @if ($hasFinalReport) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                        value="{{ old('final_report_number', $project->final_report_number) }}"
                                        placeholder="00000/2.0131-00/KJPPSPR-PRO/APP/_/____"
                                        class="w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
@@ -1183,7 +1183,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Tanggal Final</label>
                                 <input type="date" name="final_report_date" id="final_report_date" lang="id" @disabled($hasFinalReport)
-                                       @if ($hasFinalReport) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                       @if ($hasFinalReport) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                        value="{{ old('final_report_date', $project->final_report_date?->toDateString()) }}"
                                        class="w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
                             </div>
@@ -1191,7 +1191,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Keterangan (opsional)</label>
                             <textarea name="final_report_notes" id="final_report_notes" rows="2" @disabled($hasFinalReport)
-                                      @if ($hasFinalReport) title="Terkunci — klik ikon Edit untuk mengubah." @endif
+                                      @if ($hasFinalReport) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
                                       class="w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">{{ old('final_report_notes', $project->final_report_notes) }}</textarea>
                         </div>
                     </form>
@@ -1435,7 +1435,7 @@
                                 ? rtrim(rtrim(number_format($chip['nominal'] / 1000000, 1, ',', '.'), '0'), ',') . ' jt'
                                 : number_format($chip['nominal'] / 1000, 0, ',', '.') . ' rb'; @endphp
                             <button type="button" onclick="isiDariTermin({{ $chip['nominal'] }}, 'Termin {{ $chip['no'] }}')"
-                                    title="Termin {{ $chip['no'] }} — Rp {{ number_format($chip['nominal'], 0, ',', '.') }}"
+                                    data-catatan="Termin {{ $chip['no'] }}: Rp {{ number_format($chip['nominal'], 0, ',', '.') }}"
                                     class="rounded-md border px-2 py-1.5 text-center text-xs font-medium leading-tight {{ $i === $terminTerpakai ? 'border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60' }}">
                                 Termin {{ $chip['no'] }} &middot; {{ rtrim(rtrim(number_format($chip['pct'], 2, ',', '.'), '0'), ',') }}%
                                 <span class="block text-[11px] font-normal opacity-80">Rp {{ $ringkas }}</span>

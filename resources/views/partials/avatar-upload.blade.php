@@ -20,11 +20,11 @@
                  alt="Foto profil" class="h-full w-full object-cover">
         </span>
 
-        <button type="button" data-avatar-edit title="{{ $hasPhoto ? 'Ganti foto profil' : 'Unggah foto profil' }}" aria-label="{{ $hasPhoto ? 'Ganti foto profil' : 'Unggah foto profil' }}"
+        <button type="button" data-avatar-edit data-catatan="{{ $hasPhoto ? 'Ganti foto profil' : 'Unggah foto profil' }}" aria-label="{{ $hasPhoto ? 'Ganti foto profil' : 'Unggah foto profil' }}"
                 class="absolute -bottom-0.5 -right-0.5 grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 shadow hover:bg-blue-50 hover:text-blue-700 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-blue-900/40">
             @include('partials.icon-pencil')
         </button>
-        <button type="button" data-avatar-trash title="Hapus foto profil" aria-label="Hapus foto profil" @unless ($hasPhoto) hidden @endunless
+        <button type="button" data-avatar-trash data-catatan="Hapus foto profil" aria-label="Hapus foto profil" @unless ($hasPhoto) hidden @endunless
                 class="absolute -bottom-0.5 -left-0.5 grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-500 shadow hover:bg-red-50 hover:text-red-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-red-900/40">
             @include('partials.icon-trash')
         </button>

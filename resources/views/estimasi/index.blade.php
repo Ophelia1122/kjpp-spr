@@ -12,35 +12,56 @@
     <x-page-header title="Map Market" class="py-3 pl-4 pr-3 sm:py-4 sm:pl-6 sm:pr-5"
         subtitle="<span class='hidden sm:inline'>{{ number_format($totalTitik, 0, ',', '.') }} titik data {{ $tahunData[0] }}&ndash;{{ $tahunData[1] }}</span>">
         <form method="GET" action="{{ route('estimasi.index') }}" class="grid w-full grid-cols-2 items-end gap-x-2 gap-y-1.5 sm:flex sm:w-auto sm:flex-wrap sm:gap-2">
-            <div class="col-span-2 w-full sm:w-[230px]">
-                <label for="koordinat" class="mb-0.5 block text-[11px] font-medium text-gray-500 dark:text-gray-400">Titik Koordinat</label>
+            <div class="col-span-2 w-full sm:w-[190px]">
+                <label for="koordinat" class="mb-0.5 block text-[10px] font-medium text-gray-500 dark:text-gray-400">Titik Koordinat</label>
                 <input type="text" name="koordinat" id="koordinat"
                        value="{{ request('koordinat') }}" placeholder="-6.304484, 106.805611"
-                       class="h-9 w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                       class="h-9 w-full rounded-md border-gray-300 text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900">
             </div>
 
-            <div class="w-full sm:w-[160px]">
-                <label for="kelompok" class="mb-0.5 block text-center text-[11px] font-medium text-gray-500 dark:text-gray-400">Jenis properti</label>
-                <select name="kelompok" id="kelompok" class="h-9 w-full rounded-md border-gray-300 py-0 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">
+            <div class="w-full sm:w-[132px]">
+                <label for="sumber" class="mb-0.5 block truncate text-center text-[10px] font-medium text-gray-500 dark:text-gray-400">Sumber data</label>
+                <select name="sumber" id="sumber" class="h-9 w-full rounded-md border-gray-300 py-0 text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                    <option value="">Semua sumber</option>
+                    @foreach (\App\Models\LandValuePoint::TIPE_LABELS as $kunci => $labelSumber)
+                        <option value="{{ $kunci }}" @selected($sumber === $kunci)>{{ $labelSumber }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="w-full sm:w-[140px]">
+                <label for="kelas" class="mb-0.5 block truncate text-center text-[10px] font-medium text-gray-500 dark:text-gray-400">Jenis properti</label>
+                <select name="kelas" id="kelas" class="h-9 w-full rounded-md border-gray-300 py-0 text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900">
                     <option value="">Semua jenis</option>
-                    @foreach (\App\Models\LandValuePoint::GROUPS as $kunci => $label)
-                        <option value="{{ $kunci }}" @selected($kelompok === $kunci)>{{ $label }}</option>
+                    @foreach (\App\Models\LandValuePoint::KELAS_LABELS as $kunci => $labelKelas)
+                        <option value="{{ $kunci }}" @selected($kelas === $kunci)>{{ $labelKelas }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="w-full sm:w-[140px]">
+                <label for="tujuan" class="mb-0.5 block truncate text-center text-[10px] font-medium text-gray-500 dark:text-gray-400">Tujuan penilaian</label>
+                <select name="tujuan" id="tujuan" class="h-9 w-full rounded-md border-gray-300 py-0 text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                    <option value="">Semua tujuan</option>
+                    @foreach ($daftarTujuan as $t)
+                        <option value="{{ $t }}" @selected($tujuan === $t)>{{ $t }}</option>
                     @endforeach
                 </select>
             </div>
 
             {{-- Radius diketik bebas; dikosongkan berarti 0,5 sampai 5 km bertahap. --}}
-            <div class="w-full sm:w-[104px]">
-                <label for="radius" class="mb-0.5 block text-center text-[11px] font-medium text-gray-500 dark:text-gray-400">Radius (km)</label>
+            <div class="w-full sm:w-[58px]">
+                <label for="radius" class="mb-0.5 block truncate text-center text-[10px] font-medium text-gray-500 dark:text-gray-400">Radius</label>
                 <input type="number" name="radius" id="radius" step="0.1" min="0.1" max="50"
-                       value="{{ $radius }}" placeholder="3"
-                       class="h-9 w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">
+                       value="{{ $radius }}" placeholder="3" data-catatan="Jari-jari pencarian pembanding, dalam kilometer. Kosongkan untuk memakai 3 km."
+                       data-catatan-judul="Radius"
+                       class="tanpa-pemutar h-9 w-full rounded-md border-gray-300 px-1 text-center text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900">
             </div>
 
             {{-- Rentang tahun: satu garis, dua pegangan. Dua input range
                  ditumpuk; hanya pegangannya yang menerima klik. --}}
-            <div class="col-span-2 w-full sm:w-[180px]">
-                <label class="mb-0.5 block text-center text-[11px] font-medium text-gray-500 dark:text-gray-400">
+            <div class="col-span-2 w-full sm:w-[150px]">
+                <label class="mb-0.5 block truncate text-center text-[10px] font-medium text-gray-500 dark:text-gray-400">
                     Tahun <span id="tahunTampil" class="font-semibold text-gray-700 dark:text-gray-300">{{ $tahunMin }}&ndash;{{ $tahunMax }}</span>
                 </label>
                 <div class="relative flex h-9 items-center">
@@ -58,20 +79,25 @@
         </form>
     </x-page-header>
 
-    <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[360px_1fr]">
+    <div class="grid grid-cols-1 items-start gap-2 lg:grid-cols-[360px_1fr]">
 
         {{-- Kolom kiri: panel hasil, ditukar tiap kali titik berganti. --}}
         {{-- Di ponsel peta muncul lebih dulu (2026-09-26, permintaan user). --}}
-        <div id="panelHasil" class="order-2 flex flex-col gap-4 lg:order-1 lg:h-[calc(100dvh-17rem)] lg:min-h-[420px]">
+        {{-- Tingginya dipatok setinggi peta. Kartu pembanding memakai sisa
+             ruangnya, jadi tabel di dalamnya digulir, bukan memanjangkan
+             halaman (2026-09-27, permintaan user). --}}
+        <div id="panelHasil" class="order-2 flex flex-col gap-2 lg:order-1 lg:h-[calc(100dvh-15rem)] lg:min-h-[420px]">
             @include('estimasi._hasil')
         </div>
 
         {{-- Kolom kanan: peta, tidak pernah dimuat ulang. --}}
-        <div class="order-1 flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:order-2 lg:h-[calc(100dvh-17rem)] lg:min-h-[420px] dark:border-gray-700 dark:bg-gray-800">
+        <div class="order-1 flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:order-2 lg:h-[calc(100dvh-15rem)] lg:min-h-[420px] dark:border-gray-700 dark:bg-gray-800">
             <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
                 <h2 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Peta sebaran</h2>
-                <div class="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500 dark:text-gray-400">
                     <span class="inline-flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full bg-blue-600"></span> titik dicari</span>
+                    <span class="inline-flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full bg-gray-400"></span> pembanding pasar</span>
+                    <span class="inline-flex items-center gap-1"><span class="inline-block h-2 w-2 bg-gray-400"></span> objek penilaian</span>
                     <span class="inline-flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span> di bawah tengah</span>
                     <span class="inline-flex items-center gap-1"><span class="inline-block h-2 w-2 rounded-full bg-rose-500"></span> di atas tengah</span>
                 </div>
@@ -109,6 +135,7 @@
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Luas tanah / bangunan</dt><dd id="rincLuas" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Jarak dari titik dicari</dt><dd id="rincJarak" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Lokasi</dt><dd id="rincLokasi" class="text-gray-800 dark:text-gray-200"></dd></div>
+                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Sumber</dt><dd id="rincSumber" class="text-gray-800 dark:text-gray-200"></dd></div>
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nomor laporan</dt><dd id="rincNomor" class="break-all text-[10px] text-gray-600 dark:text-gray-300"></dd></div>
                     </dl>
 
@@ -123,16 +150,43 @@
         </div>
     </div>
 
-    <p class="text-[11px] text-gray-500 dark:text-gray-400">
-        Dihitung dari nilai <span class="font-medium">kesimpulan penilaian terdahulu</span> di sekitar titik, bukan data penawaran pasar.
-        Titik yang lebih dekat dan lebih baru diberi bobot lebih besar; nilai sebenarnya jatuh di dalam rentang pada sekitar 8 dari 10 kasus.
-        <span class="font-medium">Bukan pengganti analisis penilai dan tidak untuk dikutip sebagai pembanding di laporan.</span>
+    {{-- Keterangan kaki dipendekkan jadi satu baris supaya kolom data tidak
+         terdorong sampai halaman ikut bergulir (2026-09-27, permintaan user).
+         Penjelasan panjangnya ada di halaman Cara Kerja. --}}
+    <p class="text-[11px] text-gray-500 sm:truncate dark:text-gray-400">
+        Dihitung dari {{ number_format($totalTitik, 0, ',', '.') }} titik data KJPP: objek penilaian dan pembanding
+        pasar hasil survei. Titik tengahnya median berbobot, makin dekat dan makin baru makin besar
+        pengaruhnya. Panduan internal, bukan pembanding laporan.
+        <a href="{{ route('estimasi.cara') }}" class="font-medium text-blue-600 hover:underline dark:text-blue-400">Cara kerja &amp; asal data &rarr;</a>
     </p>
 </div>
 
 <style>
     /* Pegangan penggeser tahun: hanya pegangannya yang bisa ditarik,
        garisnya digambar oleh div di belakangnya. */
+    /* Titik objek penilaian digambar kotak; pembanding tetap bulat. */
+    .titik-aset { rx: 0; ry: 0; }
+
+    /* Kolom radius dipersempit, jadi tombol naik-turun bawaan dibuang
+       supaya angkanya tetap terbaca (2026-09-27, permintaan user). */
+    .tanpa-pemutar::-webkit-outer-spin-button,
+    .tanpa-pemutar::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .tanpa-pemutar { -moz-appearance: textfield; appearance: textfield; }
+
+    /* Lencana catatan pada kartu tren: berkedip pelan, dan kotak catatannya
+       muncul saat kursor mengambang atau lencananya menerima fokus papan
+       ketik (2026-09-27, permintaan user). */
+    .tanda-catatan { display: inline-flex; animation: kedip 1.6s ease-in-out infinite; }
+    .tanda-catatan:hover, .tanda-catatan:focus-visible { animation: none; }
+    .kotak-catatan { display: none; }
+    .kotak-catatan.terlihat { display: block; }
+
+    @keyframes kedip { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+    @media (prefers-reduced-motion: reduce) {
+        .tanda-catatan { animation: none; }
+    }
+
     .geser-tahun::-webkit-slider-thumb {
         -webkit-appearance: none; pointer-events: auto; cursor: grab;
         height: 16px; width: 16px; border-radius: 9999px;
@@ -244,6 +298,10 @@
             (t.lt ? t.lt.toLocaleString('id-ID') + ' m²' : '—') + ' / ' + (t.lb ? t.lb.toLocaleString('id-ID') + ' m²' : '—');
         document.getElementById('rincJarak').textContent  = jarakTeks(t.km);
         document.getElementById('rincLokasi').textContent = t.almt || [t.lk, t.kota].filter(Boolean).join(', ') || '—';
+        document.getElementById('rincSumber').textContent = t.tipe === 'aset'
+            ? 'Objek penilaian KJPP'
+            : ['Data pembanding', t.jenisTransaksi, t.namaSumber, t.statusSumber, t.telepon]
+                .filter(Boolean).join(' · ');
         document.getElementById('rincNomor').textContent  = t.no || '—';
         document.getElementById('rincMaps').href          = 'https://www.google.com/maps?q=' + t.la + ',' + t.lo;
 
@@ -268,8 +326,12 @@
 
         (data.titik || []).forEach(function (t) {
             var warna = t.rp > tengah ? '#e11d48' : '#10b981';
+            // Bentuk membedakan asal data (2026-09-27, permintaan user):
+            // bulat = pembanding pasar, kotak = objek penilaian KJPP.
             var penanda = L.circleMarker([t.la, t.lo], {
-                radius: 7, color: warna, fillColor: warna, fillOpacity: 0.8, weight: 1, warnaAsli: warna
+                radius: 7, color: warna, fillColor: warna, fillOpacity: 0.8, weight: 1,
+                warnaAsli: warna,
+                className: t.tipe === 'aset' ? 'titik-aset' : ''
             }).addTo(lapisan);
 
             function buka(e) {
@@ -321,9 +383,13 @@
         var parameter = new URLSearchParams();
         parameter.set('koordinat', koordinat);
 
-        var kelompok = document.getElementById('kelompok').value;
+        var kelas  = document.getElementById('kelas').value;
+        var tujuan = document.getElementById('tujuan').value;
         var radius   = document.getElementById('radius').value;
-        if (kelompok) parameter.set('kelompok', kelompok);
+        var sumber = document.getElementById('sumber').value;
+        if (sumber)   parameter.set('sumber', sumber);
+        if (kelas)  parameter.set('kelas', kelas);
+        if (tujuan) parameter.set('tujuan', tujuan);
         if (radius)   parameter.set('radius', radius);
         parameter.set('tahun_min', Math.min(+thMin.value, +thMax.value));
         parameter.set('tahun_max', Math.max(+thMin.value, +thMax.value));
@@ -388,7 +454,9 @@
     });
 
     // Jenis properti & radius & tahun: langsung hitung ulang.
-    document.getElementById('kelompok').addEventListener('change', hitungUlang);
+    document.getElementById('kelas').addEventListener('change', hitungUlang);
+    document.getElementById('tujuan').addEventListener('change', hitungUlang);
+    document.getElementById('sumber').addEventListener('change', hitungUlang);
     document.getElementById('radius').addEventListener('input', function () {
         clearTimeout(jedaKetik);
         jedaKetik = setTimeout(hitungUlang, 500);
@@ -426,6 +494,42 @@
     });
 
     gambar(true);
+
+    // Kotak catatan pada kartu tren. Pendengarnya dipasang di dokumen, sebab
+    // panel hasil ditukar tiap kali titik baru dipilih.
+    function catatan(sasaran, tampil) {
+        var lencana = sasaran.closest ? sasaran.closest('.tanda-catatan') : null;
+
+        if (! lencana) {
+            return;
+        }
+
+        var kotak = lencana.closest('.kartu-tren').querySelector('.kotak-catatan');
+
+        if (kotak) {
+            kotak.classList.toggle('terlihat', tampil);
+        }
+    }
+
+    document.addEventListener('mouseover', function (e) { catatan(e.target, true); });
+    document.addEventListener('mouseout',  function (e) { catatan(e.target, false); });
+    document.addEventListener('focusin',   function (e) { catatan(e.target, true); });
+    document.addEventListener('focusout',  function (e) { catatan(e.target, false); });
+
+    // Layar sentuh tidak punya kursor mengambang: ketuk untuk membuka.
+    document.addEventListener('click', function (e) {
+        var lencana = e.target.closest('.tanda-catatan');
+
+        if (! lencana) {
+            return;
+        }
+
+        var kotak = lencana.closest('.kartu-tren').querySelector('.kotak-catatan');
+
+        if (kotak) {
+            kotak.classList.toggle('terlihat');
+        }
+    });
 })();
 </script>
 @endsection
