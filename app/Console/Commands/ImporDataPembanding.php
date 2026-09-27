@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\LandValuePoint;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 /**
@@ -118,9 +119,37 @@ class ImporDataPembanding extends Command
 
         if ($this->option('uji')) {
             $this->warn('Mode --uji: tidak ada yang disimpan.');
+
+            return self::SUCCESS;
         }
 
+        $this->line('Tujuan penilaian    : ' . $this->isiTujuan() . ' baris terisi');
+
         return self::SUCCESS;
+    }
+
+    /**
+     * Berkas pembanding tidak memuat tujuan penilaian, tetapi nomor laporannya
+     * sama dengan data aset. Tujuannya disalin lewat nomor laporan itu
+     * (2026-09-27): tanpa langkah ini saringan tujuan tidak menemukan apa pun
+     * pada data pembanding.
+     */
+    private function isiTujuan(): int
+    {
+        // Satu pernyataan UPDATE, bukan satu kueri per nomor laporan: ada
+        // ribuan nomor dan cara per-baris makan belasan menit.
+        return DB::update(
+            'UPDATE land_value_points p
+                JOIN (
+                    SELECT report_number, MIN(purpose) AS tujuan
+                      FROM land_value_points
+                     WHERE data_type = ? AND purpose IS NOT NULL AND report_number IS NOT NULL
+                  GROUP BY report_number
+                ) a ON a.report_number = p.report_number
+                SET p.purpose = a.tujuan
+              WHERE p.data_type = ? AND p.purpose IS NULL',
+            [LandValuePoint::TIPE_ASET, LandValuePoint::TIPE_PEMBANDING],
+        );
     }
 
     /** @return array{baris:int,simpan:int,koordinat:int,harga:int,ekstrem:int} */
