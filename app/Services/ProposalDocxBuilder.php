@@ -33,6 +33,20 @@ use PhpOffice\PhpWord\SimpleType\TblWidth as TblWidthSimpleType;
  */
 class ProposalDocxBuilder
 {
+    /**
+     * Sentimeter -> twip BULAT. PhpWord menulis w:w/w:pgMar/w:pgSz apa
+     * adanya tanpa pembulatan; Converter::cmToTwip() aslinya kembalikan
+     * pecahan panjang (mis. 5669.291338582678), yang tidak valid menurut
+     * skema OOXML (ST_TwipsMeasure harus bilangan bulat). LibreOffice
+     * memaafkannya, Microsoft Word tidak selalu — tabel dan margin halaman
+     * bisa berantakan hanya saat dibuka di Word (2026-09-28, bug ditemukan
+     * dari berkas hasil generate yang dikirim user).
+     */
+    private static function twip(float $cm): int
+    {
+        return (int) round(Converter::cmToTwip($cm));
+    }
+
     private PhpWord $word;
     private Section $s;
     private array $cl;          // config('proposal_clauses')
@@ -367,15 +381,15 @@ class ProposalDocxBuilder
         // Kop halaman-1 (logo panjang) lebih tinggi dari margin atas —
         // Word/LibreOffice otomatis menurunkan baris isi pertama.
         $this->s = $this->word->addSection([
-            'pageSizeW'    => Converter::cmToTwip(21.0),
-            'pageSizeH'    => Converter::cmToTwip(29.7),
-            'marginTop'    => Converter::cmToTwip(2.75),
-            'marginBottom' => Converter::cmToTwip(2.54),
-            'marginLeft'   => Converter::cmToTwip(2.54),
-            'marginRight'  => Converter::cmToTwip(2.54),
+            'pageSizeW'    => self::twip(21.0),
+            'pageSizeH'    => self::twip(29.7),
+            'marginTop'    => self::twip(2.75),
+            'marginBottom' => self::twip(2.54),
+            'marginLeft'   => self::twip(2.54),
+            'marginRight'  => self::twip(2.54),
             'gutter'       => 0,
-            'headerHeight' => Converter::cmToTwip(1.0),
-            'footerHeight' => Converter::cmToTwip(1.0),
+            'headerHeight' => self::twip(1.0),
+            'footerHeight' => self::twip(1.0),
         ]);
 
         $this->buildHeaders();
@@ -607,10 +621,10 @@ class ProposalDocxBuilder
     /** Kop surat proposal konsultasi: perihalnya menyebut jenis pekerjaan. */
     private function letterHeadKonsultasi(): void
     {
-        $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0, 'layout' => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED]);
         $t->addRow();
-        $t->addCell(Converter::cmToTwip(10))->addText('No. ' . $this->project->proposal_number, $this->fBold, ['spaceAfter' => 0]);
-        $t->addCell(Converter::cmToTwip(6.5))->addText('Jakarta, ' . $this->idDate($this->project->effective_proposal_date), $this->fBold, ['alignment' => Jc::RIGHT, 'spaceAfter' => 0]);
+        $t->addCell(self::twip(10))->addText('No. ' . $this->project->proposal_number, $this->fBold, ['spaceAfter' => 0]);
+        $t->addCell(self::twip(6.5))->addText('Jakarta, ' . $this->idDate($this->project->effective_proposal_date), $this->fBold, ['alignment' => Jc::RIGHT, 'spaceAfter' => 0]);
 
         $this->s->addTextBreak(1);
         $pt = $this->project->instructingClient;
@@ -769,10 +783,10 @@ class ProposalDocxBuilder
 
     private function buildLetterHead(): void
     {
-        $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0, 'layout' => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED]);
         $t->addRow();
-        $t->addCell(Converter::cmToTwip(10))->addText('No. ' . $this->project->proposal_number, $this->fBold, ['spaceAfter' => 0]);
-        $t->addCell(Converter::cmToTwip(6.5))->addText('Jakarta, ' . $this->idDate($this->project->effective_proposal_date), $this->fBold, ['alignment' => Jc::RIGHT, 'spaceAfter' => 0]);
+        $t->addCell(self::twip(10))->addText('No. ' . $this->project->proposal_number, $this->fBold, ['spaceAfter' => 0]);
+        $t->addCell(self::twip(6.5))->addText('Jakarta, ' . $this->idDate($this->project->effective_proposal_date), $this->fBold, ['alignment' => Jc::RIGHT, 'spaceAfter' => 0]);
 
         $this->s->addTextBreak(1);
         $pt = $this->project->instructingClient;
@@ -921,10 +935,23 @@ class ProposalDocxBuilder
             foreach ($this->statusPenilaiPoin() as $key => $text) {
                 $this->bulletItem($text);
                 if ($key === 'ojk') {
+                    // Ditutup DULU sebelum sub-daftar nomor mulai: baris "•"
+                    // (2 sel) dan baris "1." (3 sel) tidak boleh berbagi satu
+                    // <w:tbl> (lihat catatan di bawah loop) — kalau ditutup
+                    // cuma SESUDAH loop, baris "•" terakhir sudah keburu
+                    // nempel ke baris nomor pertama di tabel yang sama.
+                    $this->closeList();
                     $sectors = $this->ojkSectors();
                     foreach ($sectors as $i => $sector) {
                         $this->numberedSubItem($i + 1, $sector . ($i === count($sectors) - 1 ? '.' : ''));
                     }
+                    // Baris nomor (3 sel) dan baris poin "•" (2 sel) TIDAK
+                    // boleh berbagi satu <w:tbl>: Word memakai baris pertama
+                    // sebagai acuan kolom, jadi baris berikutnya yang beda
+                    // jumlah sel jadi berantakan (2026-09-28, bug dari hasil
+                    // generate user). LibreOffice tak masalah, makanya lolos
+                    // sebelumnya.
+                    $this->closeList();
                 }
             }
         });
@@ -993,7 +1020,7 @@ class ProposalDocxBuilder
         // terhadap lebar halaman PENUH, tidak dikurangi indent — makanya
         // dipakai lebar absolut (dxa) + 'layout' fixed di sini.
         $ratios  = [0.9, 4.6, 5.2, 3.4, 3.0]; // No | Jenis | Lokasi | Bentuk | Atas Nama
-        $targetW = (int) Converter::cmToTwip(self::PAGE_CONTENT_W_CM) - $this->bodyIndent;
+        $targetW = (int) self::twip(self::PAGE_CONTENT_W_CM) - $this->bodyIndent;
         $colW    = $this->distributeWidths($ratios, $targetW);
 
         $tbl = $this->s->addTable([
@@ -1083,8 +1110,8 @@ class ProposalDocxBuilder
      */
     private function indentedColWidths(array $ratiosCm): array
     {
-        $natural = (int) Converter::cmToTwip(array_sum($ratiosCm));
-        $cap     = (int) Converter::cmToTwip(self::PAGE_CONTENT_W_CM) - $this->bodyIndent;
+        $natural = (int) self::twip(array_sum($ratiosCm));
+        $cap     = (int) self::twip(self::PAGE_CONTENT_W_CM) - $this->bodyIndent;
 
         return $this->distributeWidths($ratiosCm, min($natural, $cap));
     }
@@ -1126,14 +1153,14 @@ class ProposalDocxBuilder
 
             // Tabel 3 kolom (label | ":" | isi) supaya titik dua Maksud & Tujuan
             // benar-benar sejajar & baris lanjutan isi rapi.
-            $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+            $t = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0, 'layout' => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED]);
             foreach ([['Maksud Penilaian', $parts['maksud']], ['Tujuan Penilaian', $parts['tujuan']]] as $i => [$label, $val]) {
                 $t->addRow(null, ['cantSplit' => true]);
                 $pad = ['spaceAfter' => $i === 0 ? 120 : 0, 'spaceBefore' => 0];
-                $lc = $t->addCell(Converter::cmToTwip(3.3) + $this->bodyIndent);
+                $lc = $t->addCell(self::twip(3.3) + $this->bodyIndent);
                 $lc->addText($label, $this->fBody, ['indentation' => ['left' => $this->bodyIndent]] + $pad);
-                $t->addCell(Converter::cmToTwip(0.35))->addText(':', $this->fBody, $pad);
-                $vc = $t->addCell(Converter::cmToTwip(12.4) - $this->bodyIndent);
+                $t->addCell(self::twip(0.35))->addText(':', $this->fBody, $pad);
+                $vc = $t->addCell(self::twip(12.4) - $this->bodyIndent);
                 $vr = $vc->addTextRun(['alignment' => Jc::BOTH] + $pad);
                 foreach ($this->styleRuns($val) as [$rt, $b, $it]) {
                     $vr->addText($rt, $this->runFont($b, $it));
@@ -1662,11 +1689,14 @@ class ProposalDocxBuilder
         // tanda tangan tidak berdiri sendiri di halaman terakhir isi —
         // minimal bab 25 ikut di halaman yang sama (bab 24 ikut kalau muat).
         $this->bodyOr('pernyataan_pemberi_tugas', function () {
-            $this->para($this->cl['pernyataan_pemberi_tugas'], null, ['keepNext' => true]);
+            // spaceAfter dirapatkan ke 60 (bawaan paragraf 120) — bab 25 dan
+            // blok tanda tangan sama-sama wajib satu halaman dengan bab 24
+            // (2026-09-28, permintaan user), jadi tiap twip dihemat di sini.
+            $this->para($this->cl['pernyataan_pemberi_tugas'], null, ['keepNext' => true, 'spaceAfter' => 60]);
             // Paragraf penutup dilebarkan: tanpa indent isi bab, jadi mulai
             // sejajar nomor bab dan lebih lebar dari paragraf di atasnya
             // (2026-09-25, permintaan user).
-            $this->para($this->cl['penutup_spk'], null, ['keepNext' => true, 'indentation' => ['left' => 0]]);
+            $this->para($this->cl['penutup_spk'], null, ['keepNext' => true, 'indentation' => ['left' => 0], 'spaceAfter' => 60]);
         }, null, ['keepNext' => true]);
     }
 
@@ -1785,11 +1815,12 @@ class ProposalDocxBuilder
     private function sectionTandaTangan(): void
     {
         // Paragraf jeda ber-keepNext = jembatan supaya blok tanda tangan
-        // (tabel di bawah) menempel dengan Bab 25. Jaraknya dipersempit dari
-        // 480 ke 200 twip (2026-09-25, permintaan user): bab 24, bab 25 dan
-        // blok tanda tangan harus muat pada SATU halaman, termasuk proposal
-        // dengan rincian biaya + 3 termin + 2 rekening bank.
-        $this->s->addText('', $this->fBody, ['spaceBefore' => 200, 'spaceAfter' => 0, 'keepNext' => true]);
+        // (tabel di bawah) menempel dengan Bab 25. Dipersempit lagi ke 80
+        // twip (2026-09-28, permintaan user): Word merender Arial Narrow
+        // sedikit lebih longgar dari LibreOffice, jadi kombinasi rincian
+        // biaya + 3 termin + 2 rekening bank bisa lempar bab 25+tanda tangan
+        // ke halaman baru walau di LibreOffice masih muat.
+        $this->s->addText('', $this->fBody, ['spaceBefore' => 80, 'spaceAfter' => 0, 'keepNext' => true]);
 
         $sig      = $this->signatory();
         $approver = $this->project->effective_approver_name;
@@ -1812,11 +1843,11 @@ class ProposalDocxBuilder
         // tanda tangan basah seperti semula (feedback user 2026-09-21).
         $img = $this->signatureImage();
         if (! $img) {
-            // Ruang tanda tangan basah disamakan tingginya dengan barcode/
-            // stempel (2026-09-25, permintaan user): 6 baris kosong ~ 78pt,
-            // sepadan dengan gambar 2,65 cm ~ 75pt. Sebelumnya 7 baris, yang
-            // membuat proposal tanpa barcode 16pt lebih tinggi.
-            $l->addTextBreak(6);
+            // Ruang tanda tangan basah dipangkas ke 4 baris (2026-09-28,
+            // permintaan user: bab 24-25-tanda tangan HARUS satu halaman).
+            // Barcode/stempel tidak ikut mengecil (path lain), jadi cuma
+            // proposal TANPA barcode yang lebih ringkas ruang tanda tangannya.
+            $l->addTextBreak(4);
         } else {
             [$file, $wCm, $hCm] = $img;
             $l->addImage($file, [
@@ -1837,7 +1868,9 @@ class ProposalDocxBuilder
         $r = $t->addCell($colW[1]);
         $r->addText('Menyetujui,', $this->fBody, ['spaceAfter' => 0]);
         $r->addText($approver, $this->fBold, ['spaceAfter' => 0]);
-        $r->addTextBreak(7); // ruang tanda tangan + stempel
+        // Dipangkas 2 baris (7->5), sepadan dengan pangkasan kolom kiri
+        // (2026-09-28, permintaan user: "biar sama dengan sebelahnya").
+        $r->addTextBreak(5); // ruang tanda tangan + stempel
         // Garis dipendekkan (2026-09-14, feedback user) — versi lama lebih
         // lebar dari kolom sehingga ")" turun ke baris kedua.
         $r->addText('( ________________________ )', $this->fBody, ['spaceAfter' => 0]);
@@ -2043,7 +2076,7 @@ class ProposalDocxBuilder
         $markerW = $this->bodyIndent + $this->listMarkerCol();
         // Titik dua mengikuti master (2268 twip pada lebar halaman penuh),
         // diskalakan ke lebar tabel daftar yang dipakai builder.
-        $kolonAt = (int) round(2268 * self::LIST_TABLE_W / Converter::cmToTwip(self::PAGE_CONTENT_W_CM));
+        $kolonAt = (int) round(2268 * self::LIST_TABLE_W / self::twip(self::PAGE_CONTENT_W_CM));
         $labelW  = max(600, $kolonAt - $markerW);
         $kolonW  = 128;
 
@@ -2432,7 +2465,7 @@ class ProposalDocxBuilder
     /** Perkiraan lebar "N. " pada font isi (twip) — utk indent isi bab. */
     private function numPrefixIndent(): int
     {
-        return (int) Converter::cmToTwip(0.20 + 0.20 * strlen((string) $this->secNo));
+        return (int) self::twip(0.20 + 0.20 * strlen((string) $this->secNo));
     }
 
     /** Gaya indent isi bab (kosong bila di luar bab). */
@@ -2683,9 +2716,19 @@ class ProposalDocxBuilder
         if ($this->listTbl === null) {
             if ($this->listJustClosed) {
                 // OOXML: dua tabel tak boleh berdempet -> sisipkan paragraf mini.
-                $this->s->addText('', ['size' => 1], ['spaceAfter' => 0, 'spaceBefore' => 0]);
+                // Tinggi barisnya dikunci pas (bukan ikut ukuran huruf) biar
+                // tidak ada jarak terlihat antar tabel (2026-09-28, feedback
+                // user: "dihimpit langsung").
+                $this->s->addText('', ['size' => 1], [
+                    'spaceAfter' => 0, 'spaceBefore' => 0,
+                    'spacing' => 1, 'spacingLineRule' => 'exact',
+                ]);
             }
-            $this->listTbl = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+            // 'layout' fixed wajib (2026-09-28, bug ditemukan dari hasil generate
+            // user): tanpa ini Word (bukan LibreOffice) mengabaikan lebar kolom
+            // penanda/isi dan menata ulang sendiri berdasar isi, sehingga
+            // penanda "1."/"•" jadi menempel atau terpisah jauh dari isinya.
+            $this->listTbl = $this->s->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0, 'layout' => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED]);
             $this->listKey = $extra;
             $this->listJustClosed = false;
         }
@@ -2833,12 +2876,12 @@ class ProposalDocxBuilder
     private function kvTable($container, array $rows, float $labelCm = 2.4, float $valCm = 6.4, bool $bold = false): void
     {
         $f = $bold ? $this->fBold : $this->fBody;
-        $t = $container->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
+        $t = $container->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0, 'layout' => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED]);
         foreach ($rows as [$k, $v]) {
             $t->addRow();
-            $t->addCell(Converter::cmToTwip($labelCm))->addText($k, $f, ['spaceAfter' => 0]);
-            $t->addCell(Converter::cmToTwip(0.3))->addText(':', $f, ['spaceAfter' => 0]);
-            $t->addCell(Converter::cmToTwip($valCm))->addText((string) $v, $f, ['spaceAfter' => 0]);
+            $t->addCell(self::twip($labelCm))->addText($k, $f, ['spaceAfter' => 0]);
+            $t->addCell(self::twip(0.3))->addText(':', $f, ['spaceAfter' => 0]);
+            $t->addCell(self::twip($valCm))->addText((string) $v, $f, ['spaceAfter' => 0]);
         }
     }
 
