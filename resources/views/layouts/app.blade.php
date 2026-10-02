@@ -1077,20 +1077,16 @@
     </script>
 
     {{-- ===================== BUKA KUNCI FIELD (2026-10-02, laporan admin) =====================
-         Toggle .disabled = false saja ternyata tidak cukup: beberapa
-         kontrol native (terutama <select>) tetap tak merespons klik
-         walau sudah tampak aktif — cuma panah-bawah keyboard yang jalan.
-         Sekadar membaca offsetHeight (reflow) tidak memaksa browser
-         membangun ulang render object-nya; disabled>none>balik memaksa
-         repaint penuh, bukan cuma reflow. Dipakai bareng oleh kartu
-         Penilai Lapangan, Surat Tugas, Faktur Pajak, dan Laporan Final. --}}
+         Dipakai bareng oleh kartu Penilai Lapangan, Surat Tugas, Faktur
+         Pajak, dan Laporan Final. Percobaan toggle display:none/balik
+         buat maksa repaint <select> malah bikin SEMUA field di kartu
+         gagal kebuka (2026-10-02, laporan admin) — dibalikin ke reflow
+         offsetHeight biasa yang terbukti aman, walau belum tentu cukup
+         buat semua jenis kontrol. --}}
     <script>
     window.kjppUnlockField = function (el) {
         el.disabled = false;
-        var prevDisplay = el.style.display;
-        el.style.display = 'none';
         void el.offsetHeight;
-        el.style.display = prevDisplay;
         el.removeAttribute('title');
         // Tooltip "Terkunci" (lihat kotak petunjuk global) dipasang lewat
         // data-catatan*, bukan title — tanpa ini tooltipnya nyangkut
