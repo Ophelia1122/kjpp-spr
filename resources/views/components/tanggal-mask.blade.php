@@ -37,7 +37,7 @@
     $isoValue = $value instanceof \Carbon\Carbon ? $value->toDateString() : (string) $value;
 @endphp
 
-<div {{ $attributes->merge(['class' => 'relative']) }} data-tanggal-mask>
+<div id="{{ $idBase }}" {{ $attributes->merge(['class' => 'relative']) }} data-tanggal-mask>
     <input type="text" id="{{ $idBase }}_display" data-tm-display
            value="{{ $isoValue ? \Carbon\Carbon::parse($isoValue)->format('d/m/Y') : '' }}"
            @if ($required) required @endif

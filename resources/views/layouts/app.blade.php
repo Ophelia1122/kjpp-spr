@@ -1045,6 +1045,14 @@
             var pickBtn = container.querySelector('[data-tm-pick]');
             if (disp)    disp.disabled = !editable;
             if (pickBtn) pickBtn.disabled = !editable;
+            if (editable) {
+                // Tooltip "Terkunci" dipasang di wrapper lewat data-catatan*
+                // (2026-10-02, laporan admin) — dibuang supaya tidak
+                // menyesatkan walau field sudah aktif.
+                container.removeAttribute('data-catatan');
+                container.removeAttribute('data-catatan-nada');
+                container.removeAttribute('data-catatan-judul');
+            }
         }
 
         // Dipanggil skrip lain yang dulu langsung menulis .value elemen
@@ -1066,6 +1074,31 @@
             initAll(document);
         }
     })();
+    </script>
+
+    {{-- ===================== BUKA KUNCI FIELD (2026-10-02, laporan admin) =====================
+         Toggle .disabled = false saja ternyata tidak cukup: beberapa
+         kontrol native (terutama <select>) tetap tak merespons klik
+         walau sudah tampak aktif — cuma panah-bawah keyboard yang jalan.
+         Sekadar membaca offsetHeight (reflow) tidak memaksa browser
+         membangun ulang render object-nya; disabled>none>balik memaksa
+         repaint penuh, bukan cuma reflow. Dipakai bareng oleh kartu
+         Penilai Lapangan, Surat Tugas, Faktur Pajak, dan Laporan Final. --}}
+    <script>
+    window.kjppUnlockField = function (el) {
+        el.disabled = false;
+        var prevDisplay = el.style.display;
+        el.style.display = 'none';
+        void el.offsetHeight;
+        el.style.display = prevDisplay;
+        el.removeAttribute('title');
+        // Tooltip "Terkunci" (lihat kotak petunjuk global) dipasang lewat
+        // data-catatan*, bukan title — tanpa ini tooltipnya nyangkut
+        // menyesatkan walau field sudah aktif (2026-10-02, laporan admin).
+        el.removeAttribute('data-catatan');
+        el.removeAttribute('data-catatan-nada');
+        el.removeAttribute('data-catatan-judul');
+    };
     </script>
 
     @include('partials.ui-motion')

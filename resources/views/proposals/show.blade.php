@@ -624,12 +624,7 @@
                                         window.kjppTanggalMask.setEditable(el, true);
                                         return;
                                     }
-                                    el.disabled = false;
-                                    // Paksa reflow: tanpa ini ikon datepicker kadang tetap
-                                    // tak responsif terhadap klik walau field sudah aktif
-                                    // (bug render Chromium, panah-bawah tetap jalan tanpa ini).
-                                    void el.offsetHeight;
-                                    el.removeAttribute('title');
+                                    window.kjppUnlockField(el);
                                 });
                                 document.querySelectorAll('#surveyForm .survey-appraiser-remove').forEach(function (el) { el.hidden = false; });
                                 editable = true;
@@ -795,12 +790,7 @@
                                         window.kjppTanggalMask.setEditable(el, true);
                                         return;
                                     }
-                                    el.disabled = false;
-                                    // Paksa reflow: tanpa ini ikon datepicker kadang tetap
-                                    // tak responsif terhadap klik walau field sudah aktif
-                                    // (bug render Chromium, panah-bawah tetap jalan tanpa ini).
-                                    void el.offsetHeight;
-                                    el.removeAttribute('title');
+                                    window.kjppUnlockField(el);
                                 });
                                 document.getElementById('surat_number').focus();
                                 b.hidden = true;
@@ -1140,8 +1130,7 @@
                                         window.kjppTanggalMask.setEditable(el, true);
                                         return;
                                     }
-                                    el.disabled = false;
-                                    el.removeAttribute('title');
+                                    window.kjppUnlockField(el);
                                 });
                                 document.getElementById('faktur_number').focus();
                                 b.hidden = true;
@@ -1245,8 +1234,7 @@
                                             window.kjppTanggalMask.setEditable(el, true);
                                             return;
                                         }
-                                        el.disabled = false;
-                                        el.removeAttribute('title');
+                                        window.kjppUnlockField(el);
                                     });
                                     document.getElementById('final_report_number').focus();
                                     b.hidden = true;
