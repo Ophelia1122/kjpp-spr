@@ -514,6 +514,7 @@
                     @include('partials.payment-terms', [
                         'termPercents' => array_map('floatval', explode(',', old('payment_terms', '50,50'))),
                         'locked'       => false,
+                        'singleTermTiming' => old('payment_single_term_timing'),
                     ])
                 </div>
             </div>

@@ -1608,7 +1608,7 @@ class ProposalDocxBuilder
         $percents = $p->paymentTermPercents();
         $last     = count($percents) - 1;
 
-        $this->keepRows(function () use ($percents, $last, $total, $rp) {
+        $this->keepRows(function () use ($p, $percents, $last, $total, $rp) {
             $sisa = $total;
 
             foreach ($percents as $i => $pctTerm) {
@@ -1619,7 +1619,12 @@ class ProposalDocxBuilder
                 // menyeret blok Rekening Bank sesudahnya.
                 $this->listKeepNext = $i !== $last;
 
-                $posisi = $last === 0 ? 'last' : ($i === 0 ? 'first' : ($i === $last ? 'last' : 'mid'));
+                // 1 tahap (100%): defaultnya "sebelum laporan final diserahkan"
+                // (posisi 'last'), tapi admin boleh pilih "sebelum inspeksi"
+                // (posisi 'first') - permintaan admin 2026-10-02.
+                $posisi = $last === 0
+                    ? ($p->paymentSingleTermBeforeInspection() ? 'first' : 'last')
+                    : ($i === 0 ? 'first' : ($i === $last ? 'last' : 'mid'));
 
                 $this->listNum(strtr($this->polaTermin($posisi), [
                     ':tahap'      => Terbilang::romawi($i + 1),

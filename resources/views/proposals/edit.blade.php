@@ -600,6 +600,7 @@
                              terkunci saat proyek masuk tahap pencetakan buku
                              (2026-09-24, feedback user). --}}
                         'locked'       => ! $project->canEditPaymentTerms(auth()->user()),
+                        'singleTermTiming' => old('payment_single_term_timing', $project->payment_single_term_timing),
                     ])
                 </div>
             </div>

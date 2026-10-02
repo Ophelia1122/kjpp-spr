@@ -243,6 +243,7 @@ class ProposalController extends Controller
             'value_basis_manual'       => $validated['value_basis_manual'] ?? null,
             'payment_scheme'           => $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP,
             'payment_terms'            => $this->parsePaymentTerms($validated['payment_terms'] ?? null),
+            'payment_single_term_timing' => $validated['payment_single_term_timing'] ?? null,
             'psak_classification'      => $validated['psak_classification'] ?? null,
             'financial_reporting_date' => $validated['financial_reporting_date'] ?? null,
             'is_public_company'        => $request->boolean('is_public_company'),
@@ -384,6 +385,11 @@ class ProposalController extends Controller
         // angkanya sudah dipakai di dokumen, jadi request diabaikan.
         if (array_key_exists('payment_terms', $validated) && $project->canEditPaymentTerms($request->user())) {
             $updateData['payment_terms'] = $this->parsePaymentTerms($validated['payment_terms']);
+        }
+        // Ikut gerbang yang sama dengan payment_terms — cuma relevan dan
+        // boleh diubah di jendela waktu yang sama (2026-10-02).
+        if (array_key_exists('payment_single_term_timing', $validated) && $project->canEditPaymentTerms($request->user())) {
+            $updateData['payment_single_term_timing'] = $validated['payment_single_term_timing'];
         }
 
         $project->update($updateData + $this->signatureData($request, $project));
@@ -1037,6 +1043,9 @@ class ProposalController extends Controller
                     $fail('Jumlah seluruh termin harus 100%.');
                 }
             }],
+            // Hanya relevan kalau termin 1 tahap (100%) - lihat
+            // Project::paymentSingleTermBeforeInspection() (2026-10-02, permintaan admin).
+            'payment_single_term_timing' => 'nullable|in:' . implode(',', Project::PAYMENT_SINGLE_TERM_TIMINGS),
             'psak_classification'      => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|string|max:255',
             'financial_reporting_date' => 'required_if:proposal_purpose,Pelaporan Keuangan|nullable|date',
             'is_public_company'        => 'nullable|boolean',

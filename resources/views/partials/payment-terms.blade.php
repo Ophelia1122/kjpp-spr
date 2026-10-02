@@ -5,11 +5,16 @@
      "payment_terms" berformat lama ("50,50"), jadi validasi & parser di
      ProposalController tidak berubah.
 
-     Dibutuhkan: $termPercents (array persen tersimpan), $locked (bool). --}}
+     Dibutuhkan: $termPercents (array persen tersimpan), $locked (bool).
+     Opsional: $singleTermTiming ('final' bawaan, atau 'inspeksi') — kapan
+     termin dibayar kalau cuma 1 tahap (100%), permintaan admin 2026-10-02:
+     defaultnya "sebelum laporan final diserahkan", boleh diganti "sebelum
+     inspeksi dilaksanakan". Tidak relevan kalau tahapnya lebih dari 1. --}}
 @php
     $fmt   = fn ($n) => rtrim(rtrim(number_format((float) $n, 2, '.', ''), '0'), '.');
     $terms = array_values(array_map($fmt, $termPercents ?: [50, 50]));
     $terms = count($terms) > 3 ? array_slice($terms, 0, 3) : $terms;
+    $singleTermTiming = in_array($singleTermTiming ?? null, ['final', 'inspeksi'], true) ? $singleTermTiming : 'final';
 @endphp
 
 <div class="sm:col-span-2">
@@ -44,11 +49,26 @@
         </div>
     </div>
 
+    {{-- Cuma relevan kalau 1 Tahap (100%) — disembunyikan JS kalau tidak
+         (2026-10-02, permintaan admin). --}}
+    <div id="pt_single_timing_group" class="mt-2 hidden flex-wrap items-center gap-2">
+        <span class="text-xs text-gray-500 dark:text-gray-400">Dibayar :</span>
+        <div class="inline-flex rounded-lg border border-gray-300 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-900/60" role="group" aria-label="Kapan termin 100% dibayarkan">
+            @foreach (['final' => 'Sebelum Laporan Final', 'inspeksi' => 'Sebelum Inspeksi'] as $key => $label)
+                <button type="button" data-single-timing="{{ $key }}" @disabled($locked ?? false)
+                        class="pt-single-timing rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 transition disabled:cursor-not-allowed disabled:opacity-60 dark:text-gray-300">
+                    {{ $label }}
+                </button>
+            @endforeach
+        </div>
+    </div>
+
     <div id="pt_rows" class="mt-3 space-y-2"></div>
 
     <p id="pt_hint" class="mt-2 text-xs text-gray-500 dark:text-gray-400"></p>
     <input type="hidden" name="payment_terms" id="paymentTerms" value="{{ old('payment_terms', implode(',', $terms)) }}">
     @error('payment_terms') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+    <input type="hidden" name="payment_single_term_timing" id="paymentSingleTermTiming" value="{{ $singleTermTiming }}">
 </div>
 
 <script>
@@ -68,6 +88,12 @@
     const stageBtns = [...document.querySelectorAll('.pt-stage')];
     const modeBtns  = [...document.querySelectorAll('.pt-mode')];
 
+    // Pilihan "Dibayar sebelum ..." — cuma relevan & ditampilkan kalau
+    // tahapnya 1 (100%), permintaan admin 2026-10-02.
+    const singleTimingHidden = document.getElementById('paymentSingleTermTiming');
+    const singleTimingGroup  = document.getElementById('pt_single_timing_group');
+    const singleTimingBtns   = [...document.querySelectorAll('.pt-single-timing')];
+
     const ON  = 'bg-blue-600 text-white shadow-sm';
     const OFF = 'text-gray-600 dark:text-gray-300';
 
@@ -76,6 +102,8 @@
         .filter(v => v > 0);
     if (!values.length) values = [50, 50];
     if (values.length > 3) values = values.slice(0, 3);
+
+    let singleTiming = singleTimingHidden.value === 'inspeksi' ? 'inspeksi' : 'final';
 
     let mode  = 'persen';
     let total = 0;   // total biaya jasa, diisi recalcFeeTotal() lewat window.ptSetTotal
@@ -115,6 +143,15 @@
 
         const amt     = amounts();
         const oneOnly = values.length === 1;
+
+        // Tombol "Dibayar sebelum ..." cuma muncul kalau 1 tahap.
+        singleTimingGroup.classList.toggle('hidden', !oneOnly);
+        singleTimingGroup.classList.toggle('flex', oneOnly);
+        singleTimingBtns.forEach(b => {
+            const active = b.dataset.singleTiming === singleTiming;
+            b.className = 'pt-single-timing rounded-md px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ' + (active ? ON : OFF);
+            b.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
         const dead    = LOCKED || oneOnly || (mode === 'nominal' && total <= 0);
 
         rowsBox.innerHTML = values.map((v, i) => `
@@ -241,6 +278,13 @@
     modeBtns.forEach(btn => btn.addEventListener('click', () => {
         if (LOCKED || btn.dataset.mode === mode) return;
         mode = btn.dataset.mode;
+        paint();
+    }));
+
+    singleTimingBtns.forEach(btn => btn.addEventListener('click', () => {
+        if (LOCKED || btn.dataset.singleTiming === singleTiming) return;
+        singleTiming = btn.dataset.singleTiming;
+        singleTimingHidden.value = singleTiming;
         paint();
     }));
 

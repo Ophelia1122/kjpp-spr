@@ -368,6 +368,20 @@ class Project extends Model
         self::PAYMENT_SCHEME_LATER,
     ];
 
+    /**
+     * Kapan termin dibayarkan kalau pembayaran cuma 1 tahap (100%) —
+     * permintaan admin 2026-10-02. Default lama = FINAL (sebelum laporan
+     * final diserahkan); INSPEKSI = sebelum inspeksi lapangan, sama seperti
+     * kalimat termin pertama pada skema 2/3 tahap.
+     */
+    public const PAYMENT_SINGLE_TERM_FINAL    = 'final';
+    public const PAYMENT_SINGLE_TERM_INSPEKSI = 'inspeksi';
+
+    public const PAYMENT_SINGLE_TERM_TIMINGS = [
+        self::PAYMENT_SINGLE_TERM_FINAL,
+        self::PAYMENT_SINGLE_TERM_INSPEKSI,
+    ];
+
     protected $fillable = [
         'proposal_number',
         'proposal_date',
@@ -395,6 +409,7 @@ class Project extends Model
         'value_basis_manual',
         'payment_scheme',
         'payment_terms',
+        'payment_single_term_timing',
         'psak_classification',
         'financial_reporting_date',
         'is_public_company',
@@ -712,6 +727,16 @@ class Project extends Model
         }
 
         return $this->isPaymentDeferred() ? [100.0] : [50.0, 50.0];
+    }
+
+    /**
+     * Kalau termin cuma 1 tahap (100%), apakah dibayar sebelum inspeksi
+     * (bukan default "sebelum laporan final diserahkan")? Tidak relevan
+     * kalau tahapnya lebih dari 1 — lihat ProposalDocxBuilder::polaTermin().
+     */
+    public function paymentSingleTermBeforeInspection(): bool
+    {
+        return $this->payment_single_term_timing === self::PAYMENT_SINGLE_TERM_INSPEKSI;
     }
 
     public function isPaymentDeferred(): bool
