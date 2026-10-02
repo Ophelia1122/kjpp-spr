@@ -614,6 +614,10 @@
                             b.addEventListener('click', function () {
                                 document.querySelectorAll('#surveyForm .survey-field, #surveyForm [data-survey-field]').forEach(function (el) {
                                     el.disabled = false;
+                                    // Paksa reflow: tanpa ini ikon datepicker kadang tetap
+                                    // tak responsif terhadap klik walau field sudah aktif
+                                    // (bug render Chromium, panah-bawah tetap jalan tanpa ini).
+                                    void el.offsetHeight;
                                     el.removeAttribute('title');
                                 });
                                 document.querySelectorAll('#surveyForm .survey-appraiser-remove').forEach(function (el) { el.hidden = false; });
@@ -773,7 +777,13 @@
                             b.addEventListener('click', function () {
                                 ['surat_number', 'surat_date', 'surat_recipient', 'surat_on_behalf', 'surat_request_basis'].forEach(function (id) {
                                     var el = document.getElementById(id);
-                                    if (el) { el.disabled = false; el.removeAttribute('title'); }
+                                    if (!el) return;
+                                    el.disabled = false;
+                                    // Paksa reflow: tanpa ini ikon datepicker kadang tetap
+                                    // tak responsif terhadap klik walau field sudah aktif
+                                    // (bug render Chromium, panah-bawah tetap jalan tanpa ini).
+                                    void el.offsetHeight;
+                                    el.removeAttribute('title');
                                 });
                                 document.getElementById('surat_number').focus();
                                 b.hidden = true;
