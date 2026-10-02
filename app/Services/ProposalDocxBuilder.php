@@ -74,6 +74,15 @@ class ProposalDocxBuilder
     private bool $abaikanDefault = false;
 
     /**
+     * true = builder dipakai untuk EDITOR Teks Baku (proyek contoh di memori).
+     * Placeholder dibiarkan apa adanya (":klien" tetap ":klien"), supaya
+     * admin mengedit variabel — bukan nama contoh yang ikut tersimpan
+     * (2026-10-02, feedback user: teks baku malah berisi "PT Contoh
+     * Pemberi Tugas").
+     */
+    private bool $modeContoh = false;
+
+    /**
      * Klausul Jasa Konsultasi (config/proposal_clauses_konsultasi.php) untuk
      * jenis pekerjaan proyek ini, atau [] bila proyeknya penilaian.
      */
@@ -351,7 +360,10 @@ class ProposalDocxBuilder
         $no = preg_match('/^\s*(\d+)/', (string) $this->project->proposal_number, $m)
             ? str_pad(substr($m[1], -5), 5, '0', STR_PAD_LEFT)
             : '00000';
-        $client = $this->project->instructingClient?->client_name ?? 'Klien';
+        // Nama Klien, bukan Pemberi Tugas (2026-10-02, feedback user):
+        // berkasnya dicari staf dengan nama klien yang dinilai. Kosong =
+        // jatuh ke Pemberi Tugas lewat effective_client_name.
+        $client = $this->project->effective_client_name ?: 'Klien';
         $client = trim(preg_replace('/\s+/', ' ', preg_replace('#[\\\\/:*?"<>|]+#', ' ', $client)));
 
         return $no . ' - Pnw_' . $client;
@@ -808,10 +820,11 @@ class ProposalDocxBuilder
     {
         $basis = trim((string) $this->project->request_basis) ?: $this->cl['pembuka_basis_placeholder'];
 
-        return strtr($this->cl['pembuka'], [
-            ':basis' => $basis,
-            ':klien' => $this->project->instructingClient->client_name,
-        ]);
+        // Editor teks baku menampilkan ":basis" apa adanya; dokumen asli
+        // mengisinya dengan isian proyek (2026-10-02, feedback user).
+        $isi = $this->placeholderProyek();
+
+        return strtr($this->cl['pembuka'], ($this->modeContoh ? [] : [':basis' => $basis]) + $isi);
     }
 
     // ---------- sections ----------
@@ -1000,9 +1013,7 @@ class ProposalDocxBuilder
 
     private function pgnLaporanLkBaku(): string
     {
-        return strtr($this->cl['pengguna_laporan_lk_kap'], [
-            ':klien' => $this->project->instructingClient->client_name,
-        ]);
+        return strtr($this->cl['pengguna_laporan_lk_kap'], $this->placeholderProyek());
     }
 
     private function sectionObjek(): void
@@ -1172,7 +1183,11 @@ class ProposalDocxBuilder
     private function maksudTujuanParts(): array
     {
         $p = $this->project->proposal_purpose;
-        $klien = $this->project->instructingClient->client_name;
+        // Dulu semua klausa tujuan memakai nama Pemberi Tugas lewat :klien.
+        // Sekarang pakai peta placeholder penuh, jadi tiap klausa bisa
+        // menyebut :klien atau :pemberi_tugas sesuai maksudnya
+        // (2026-10-02, feedback user).
+        $isi = $this->placeholderProyek();
 
         $maksud = match ($p) {
             Project::PURPOSE_LELANG      => $this->cl['maksud_lelang'],
@@ -1180,13 +1195,13 @@ class ProposalDocxBuilder
             default                      => $this->cl['maksud_pasar'],
         };
         $tujuan = match ($p) {
-            Project::PURPOSE_JUAL_BELI        => strtr($this->cl['tujuan_jual_beli'], [':klien' => $klien]),
-            Project::PURPOSE_PENJAMINAN_UTANG => strtr($this->cl['tujuan_penjaminan'], [':klien' => $klien]),
-            Project::PURPOSE_LELANG           => strtr($this->cl['tujuan_lelang'], [':klien' => $klien]),
+            Project::PURPOSE_JUAL_BELI        => strtr($this->cl['tujuan_jual_beli'], $isi),
+            Project::PURPOSE_PENJAMINAN_UTANG => strtr($this->cl['tujuan_penjaminan'], $isi),
+            Project::PURPOSE_LELANG           => strtr($this->cl['tujuan_lelang'], $isi),
             Project::PURPOSE_LK_PROPERTI      => strtr($this->cl['tujuan_lk'], [
                 ':objek' => $this->project->asset_type ?: '…sebutkan objek penilaian…',
                 ':psak'  => $this->project->psak_classification ?: 'Aset Tetap/Investasi/Persediaan/lainnya',
-            ]),
+            ] + $isi),
         };
 
         return ['maksud' => $maksud, 'tujuan' => $tujuan];
@@ -1907,8 +1922,15 @@ class ProposalDocxBuilder
      * sedikit dan memakai data yang selalu ada di proposal.
      */
     public const PLACEHOLDER = [
-        ':klien'            => 'Nama Pemberi Tugas',
+        // :klien dulu DIISI nama Pemberi Tugas — menyesatkan saat keduanya
+        // berbeda (2026-10-02, feedback user). Sekarang masing-masing punya
+        // variabel sendiri.
+        ':klien'            => 'Nama Klien (kosong = ikut Pemberi Tugas)',
+        ':pemberi_tugas'    => 'Nama Pemberi Tugas',
+        ':alamat_klien'         => 'Alamat Nama Klien',
+        ':alamat_pemberi_tugas' => 'Alamat Pemberi Tugas',
         ':pengguna_laporan' => 'Nama seluruh Pengguna Laporan',
+        ':basis'            => 'Dasar permintaan penilaian (isian "Dasar Permintaan")',
         ':nomor_proposal'   => 'Nomor proposal',
         ':tanggal_proposal' => 'Tanggal proposal',
         ':tujuan'           => 'Tujuan penilaian',
@@ -1929,8 +1951,19 @@ class ProposalDocxBuilder
 
     private function placeholderProyek(): array
     {
+        // Editor teks baku: variabel dibiarkan utuh, tidak diganti nilai contoh.
+        if ($this->modeContoh) {
+            return array_combine(array_keys(self::PLACEHOLDER), array_keys(self::PLACEHOLDER));
+        }
+
         return [
-            ':klien'            => (string) optional($this->project->instructingClient)->client_name,
+            ':klien'            => (string) $this->project->effective_client_name,
+            ':pemberi_tugas'    => (string) optional($this->project->instructingClient)->client_name,
+            ':alamat_klien'     => (string) (optional($this->project->namedClient)->address
+                ?: optional($this->project->instructingClient)->address),
+            ':alamat_pemberi_tugas' => (string) optional($this->project->instructingClient)->address,
+            ':basis'            => trim((string) $this->project->request_basis)
+                ?: (string) $this->cl['pembuka_basis_placeholder'],
             ':pengguna_laporan' => $this->joinParties(
                 $this->project->intendedUsers->map(fn ($u) => (string) $u->client_name)->all()
             ),
@@ -2180,6 +2213,7 @@ class ProposalDocxBuilder
     {
         $builder = new self(self::proyekContoh($purpose));
         $builder->abaikanDefault = true;
+        $builder->modeContoh     = true;
 
         $out = [];
 

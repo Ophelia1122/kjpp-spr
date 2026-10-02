@@ -212,6 +212,8 @@ class ProposalController extends Controller
             'proposal_number'          => $validated['proposal_number'],
             'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
+            // Dasar Nilai manual boleh diubah saat edit (2026-10-02).
+            'value_basis_manual'       => $validated['value_basis_manual'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
             // Nama Klien dipilih dari Database Klien (2026-09-14, feedback user).
             'client_id'                => $validated['client_id'] ?? null,
@@ -234,10 +236,11 @@ class ProposalController extends Controller
             'sla_draft_days'           => $validated['sla_draft_days'],
             'sla_final_days'           => $validated['sla_final_days'],
             'service_type'             => $validated['service_type'] ?? Project::SERVICE_PENILAIAN,
-            'consulting_type'          => $validated['consulting_type'] ?? null,
+            'consulting_type'          => $this->jenisKonsultasi($validated),
             'work_object_description'  => $validated['work_object_description'] ?? null,
             'letter_attn'              => $validated['letter_attn'] ?? null,
             'proposal_purpose'         => $this->jenisPekerjaan($validated),
+            'value_basis_manual'       => $validated['value_basis_manual'] ?? null,
             'payment_scheme'           => $validated['payment_scheme'] ?? Project::PAYMENT_SCHEME_DP,
             'payment_terms'            => $this->parsePaymentTerms($validated['payment_terms'] ?? null),
             'psak_classification'      => $validated['psak_classification'] ?? null,
@@ -314,6 +317,8 @@ class ProposalController extends Controller
             'proposal_number'          => $validated['proposal_number'],
             'proposal_date'            => $validated['proposal_date'],
             'request_basis'            => $validated['request_basis'] ?? null,
+            // Dasar Nilai manual boleh diubah saat edit (2026-10-02).
+            'value_basis_manual'       => $validated['value_basis_manual'] ?? null,
             'instructing_client_id'    => $validated['instructing_client_id'],
             // Nama Klien dipilih dari Database Klien (2026-09-14). Teks lama
             // dipertahankan sampai diganti dengan pilihan klien.
@@ -873,11 +878,35 @@ class ProposalController extends Controller
      * penilaian — supaya filter List Project, export Excel, dan Teks Baku
      * Proposal per tujuan tetap bekerja tanpa perlakuan khusus (2026-09-25).
      */
+    /** Jenis Pekerjaan konsultasi; "Lainnya" diganti teks yang diketik. */
+    private function jenisKonsultasi(array $validated): ?string
+    {
+        $jenis = $validated['consulting_type'] ?? null;
+
+        if ($jenis === Project::PILIHAN_LAINNYA) {
+            return trim((string) ($validated['consulting_type_other'] ?? '')) ?: $jenis;
+        }
+
+        return $jenis;
+    }
+
     private function jenisPekerjaan(array $validated): string
     {
-        return ($validated['service_type'] ?? Project::SERVICE_PENILAIAN) === Project::SERVICE_KONSULTASI
-            ? (string) $validated['consulting_type']
+        $konsultasi = ($validated['service_type'] ?? Project::SERVICE_PENILAIAN) === Project::SERVICE_KONSULTASI;
+
+        $pilihan = $konsultasi
+            ? (string) ($validated['consulting_type'] ?? '')
             : (string) ($validated['proposal_purpose'] ?? '');
+
+        // "Lainnya" disimpan sebagai teks yang diketik, bukan kata "Lainnya"
+        // (2026-10-02, permintaan user), supaya dokumen & filter menyebut
+        // tujuan/jenis yang sebenarnya.
+        if ($pilihan === Project::PILIHAN_LAINNYA) {
+            $kunci = $konsultasi ? 'consulting_type_other' : 'proposal_purpose_other';
+            $pilihan = trim((string) ($validated[$kunci] ?? '')) ?: $pilihan;
+        }
+
+        return $pilihan;
     }
 
     private function validateProposal(Request $request, ?Project $project = null): array
@@ -908,7 +937,7 @@ class ProposalController extends Controller
             'service_type'             => ['nullable', Rule::in(Project::SERVICE_TYPES)],
             'consulting_type'          => [
                 $konsultasi ? 'required' : 'nullable',
-                Rule::in(Project::CONSULTING_TYPES),
+                Rule::in(array_merge(Project::CONSULTING_TYPES, [Project::PILIHAN_LAINNYA])),
             ],
             // Uraian objek pekerjaan: satu paragraf yang dicetak di bab Objek
             // Pekerjaan dan di Surat Tugas proposal konsultasi.
@@ -973,7 +1002,20 @@ class ProposalController extends Controller
                 Project::PURPOSE_PENJAMINAN_UTANG,
                 Project::PURPOSE_LELANG,
                 Project::PURPOSE_LK_PROPERTI,
+                Project::PILIHAN_LAINNYA,
             ])],
+            // "Lainnya" = tujuan/jenis diketik sendiri (2026-10-02, permintaan
+            // user). Nilainya yang akhirnya disimpan, lihat jenisPekerjaan().
+            'proposal_purpose_other'   => [
+                $request->input('proposal_purpose') === Project::PILIHAN_LAINNYA ? 'required' : 'nullable',
+                'string', 'max:120',
+            ],
+            'consulting_type_other'    => [
+                $request->input('consulting_type') === Project::PILIHAN_LAINNYA ? 'required' : 'nullable',
+                'string', 'max:120',
+            ],
+            // Dasar Nilai manual; kosong = otomatis dari tujuan penilaian.
+            'value_basis_manual'       => ['nullable', 'string', 'max:120'],
             // Skema pembayaran hanya relevan/bisa diubah selagi Draft/
             // Menunggu Persetujuan (lihat blade create/edit) — kalau field
             // tidak dikirim (mis. edit setelah lewat tahap itu), diabaikan

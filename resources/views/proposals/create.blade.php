@@ -319,14 +319,34 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tujuan Penilaian</label>
                             <select name="proposal_purpose" id="proposal_purpose" onchange="toggleLkFields()"
                                     class="mt-1 w-full rounded-md shadow-sm {{ $errCls('proposal_purpose') }}">
-                                @foreach (['Penjaminan Utang', 'Jual Beli', 'Lelang', 'Pelaporan Keuangan'] as $purpose)
+                                @foreach (['Penjaminan Utang', 'Jual Beli', 'Lelang', 'Pelaporan Keuangan', 'Lainnya'] as $purpose)
                                     <option value="{{ $purpose }}" @selected(old('proposal_purpose') === $purpose)>
                                         {{ $purpose === 'Pelaporan Keuangan' ? 'Pelaporan Keuangan (LK Properti)' : $purpose }}
                                     </option>
                                 @endforeach
                             </select>
+                            {{-- "Lainnya" memunculkan isian bebas (2026-10-02, permintaan user). --}}
+                            <input type="text" name="proposal_purpose_other" id="proposal_purpose_other" maxlength="120"
+                                   value="{{ old('proposal_purpose_other') }}" placeholder="Sebutkan tujuan penilaiannya"
+                                   @unless (old('proposal_purpose') === 'Lainnya') hidden @endunless
+                                   class="mt-2 w-full rounded-md shadow-sm {{ $errCls('proposal_purpose_other') }}">
                             <p class="mt-1 text-xs text-gray-400 dark:text-gray-400" id="purpose_hint"></p>
                             @error('proposal_purpose')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                            @error('proposal_purpose_other')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            {{-- Dasar Nilai manual (2026-10-02, permintaan user).
+                                 Kosong = otomatis dari tujuan penilaian. --}}
+                            <label for="value_basis_manual" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Dasar Nilai <span class="font-normal text-gray-400">(opsional)</span>
+                            </label>
+                            <input type="text" name="value_basis_manual" id="value_basis_manual" maxlength="120"
+                                   value="{{ old('value_basis_manual') }}" placeholder="Kosongkan untuk otomatis"
+                                   class="mt-1 w-full rounded-md shadow-sm {{ $errCls('value_basis_manual') }}">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">
+                                Kosong = ikut tujuan penilaian (Nilai Pasar / Nilai Wajar).
+                            </p>
+                            @error('value_basis_manual')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Laporan</label>
@@ -346,10 +366,16 @@
                             <label for="consulting_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Pekerjaan</label>
                             <select name="consulting_type" id="consulting_type" required
                                     class="mt-1 w-full rounded-md shadow-sm {{ $errCls('consulting_type') }}">
-                                @foreach (\App\Models\Project::CONSULTING_TYPES as $jenis)
+                                @foreach (array_merge(\App\Models\Project::CONSULTING_TYPES, ['Lainnya']) as $jenis)
                                     <option value="{{ $jenis }}" @selected(old('consulting_type', $consultingType) === $jenis)>{{ $jenis }}</option>
                                 @endforeach
                             </select>
+                            {{-- "Lainnya" memunculkan isian bebas (2026-10-02, permintaan user). --}}
+                            <input type="text" name="consulting_type_other" id="consulting_type_other" maxlength="120"
+                                   value="{{ old('consulting_type_other') }}" placeholder="Sebutkan jenis pekerjaannya"
+                                   @unless (old('consulting_type', $consultingType) === 'Lainnya') hidden @endunless
+                                   class="mt-2 w-full rounded-md shadow-sm {{ $errCls('consulting_type_other') }}">
+                            @error('consulting_type_other')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                             <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Jasa Konsultasi (SPI 350). Tidak bisa diubah setelah proposal disimpan.</p>
                             @error('consulting_type')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                         </div>
@@ -1230,6 +1256,15 @@
         'Pelaporan Keuangan': 'Dasar Nilai: Nilai Wajar (Fair Value), mengacu PSAK 113.',
     };
 
+    // "Lainnya" pada Jenis Pekerjaan juga memunculkan isian bebas.
+    document.addEventListener('change', function (e) {
+        if (e.target.id !== 'consulting_type') return;
+        const lain = document.getElementById('consulting_type_other');
+        if (! lain) return;
+        lain.hidden = e.target.value !== 'Lainnya';
+        if (e.target.value !== 'Lainnya') lain.value = '';
+    });
+
     function toggleLkFields() {
         // Proposal konsultasi tidak merender dropdown tujuannya.
         const select = document.getElementById('proposal_purpose');
@@ -1237,6 +1272,13 @@
 
         const purpose = select.value;
         document.getElementById('lk_fields').classList.toggle('hidden', purpose !== 'Pelaporan Keuangan');
+
+        // Isian bebas muncul hanya untuk "Lainnya" (2026-10-02, permintaan user).
+        const lain = document.getElementById('proposal_purpose_other');
+        if (lain) {
+            lain.hidden = purpose !== 'Lainnya';
+            if (purpose !== 'Lainnya') lain.value = '';
+        }
         document.getElementById('purpose_hint').textContent = purposeHints[purpose] ?? '';
     }
 
