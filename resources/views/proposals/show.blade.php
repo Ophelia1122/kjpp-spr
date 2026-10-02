@@ -1368,7 +1368,19 @@
              Semua langkah alur proyek beserta tanggal, jam, pelaku, dan catatan. --}}
         <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Riwayat Proyek</h3>
+                <div class="flex items-center gap-1.5">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">Riwayat Proyek</h3>
+                    {{-- Tombol tambah catatan manual (2026-10-02, permintaan
+                         admin) — buka modal, bukan form yang selalu terlihat. --}}
+                    @can('proposals.view')
+                        <button type="button" onclick="openManualNoteModal()" data-catatan="Tambah Catatan" aria-label="Tambah Catatan"
+                                class="grid h-6 w-6 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">
+                            <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                            </svg>
+                        </button>
+                    @endcan
+                </div>
                 {{-- Legenda warna (2026-09-25, feedback user): tanpa ini titik
                      berwarna di kiri tidak bisa dibaca artinya. --}}
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -1424,55 +1436,6 @@
             @empty
                 <p class="text-xs text-gray-400 dark:text-gray-400">Belum ada riwayat.</p>
             @endforelse
-
-            {{-- ---------- TAMBAH CATATAN MANUAL (2026-10-02, permintaan admin) ---------- --}}
-            @can('proposals.view')
-                <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
-                    <form action="{{ route('projects.notes.store', $project) }}" method="POST" id="manualNoteForm" class="space-y-2">
-                        @csrf
-                        <label for="manualNoteText" class="block text-xs font-medium text-gray-700 dark:text-gray-300">+ Tambah Catatan</label>
-                        <textarea name="note" id="manualNoteText" rows="2" maxlength="2000" required
-                                  placeholder="Mis. klien minta percepat jadwal survei, tunggu konfirmasi lokasi, dll."
-                                  class="w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">{{ old('note') }}</textarea>
-                        @error('note') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div class="inline-flex rounded-lg border border-gray-300 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-900/60" role="group" aria-label="Urgensi catatan">
-                                @foreach (['biasa' => 'Biasa', 'penting' => 'Penting', 'mendesak' => 'Mendesak'] as $key => $label)
-                                    <button type="button" data-urgency="{{ $key }}"
-                                            class="manual-note-urgency rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 transition dark:text-gray-300">
-                                        {{ $label }}
-                                    </button>
-                                @endforeach
-                            </div>
-                            <input type="hidden" name="urgency" id="manualNoteUrgency" value="{{ old('urgency', 'biasa') }}">
-                            <button type="submit" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-600 px-3 text-xs font-medium text-white hover:bg-blue-700">
-                                Simpan Catatan
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                <script>
-                (function () {
-                    const hidden = document.getElementById('manualNoteUrgency');
-                    const btns   = [...document.querySelectorAll('.manual-note-urgency')];
-                    const ON  = { biasa: 'bg-violet-600 text-white', penting: 'bg-amber-600 text-white', mendesak: 'bg-rose-600 text-white' };
-                    const OFF = 'text-gray-600 dark:text-gray-300';
-
-                    function paint() {
-                        btns.forEach(b => {
-                            const active = b.dataset.urgency === hidden.value;
-                            b.className = 'manual-note-urgency rounded-md px-3 py-1.5 text-xs font-medium transition ' + (active ? ON[b.dataset.urgency] : OFF);
-                            b.setAttribute('aria-pressed', active ? 'true' : 'false');
-                        });
-                    }
-                    btns.forEach(btn => btn.addEventListener('click', () => {
-                        hidden.value = btn.dataset.urgency;
-                        paint();
-                    }));
-                    paint();
-                })();
-                </script>
-            @endcan
         </div>
     </div>
 
@@ -1666,6 +1629,75 @@
         </form>
     </div>
 </div>
+
+{{-- ===================== MODAL 3: TAMBAH CATATAN MANUAL (2026-10-02, permintaan admin) ===================== --}}
+<div id="manualNoteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 dark:bg-gray-800">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">Tambah Catatan</h2>
+            <button type="button" onclick="closeManualNoteModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
+        </div>
+        <form action="{{ route('projects.notes.store', $project) }}" method="POST" id="manualNoteForm" class="space-y-3">
+            @csrf
+            <div>
+                <label for="manualNoteText" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Catatan</label>
+                <textarea name="note" id="manualNoteText" rows="3" maxlength="2000" required
+                          placeholder="Mis. klien minta percepat jadwal survei, tunggu konfirmasi lokasi, dll."
+                          class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">{{ old('note') }}</textarea>
+                @error('note') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Urgensi</label>
+                <div class="mt-1 inline-flex rounded-lg border border-gray-300 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-900/60" role="group" aria-label="Urgensi catatan">
+                    @foreach (['biasa' => 'Biasa', 'penting' => 'Penting', 'mendesak' => 'Mendesak'] as $key => $label)
+                        <button type="button" data-urgency="{{ $key }}"
+                                class="manual-note-urgency rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 transition dark:text-gray-300">
+                            {{ $label }}
+                        </button>
+                    @endforeach
+                </div>
+                <input type="hidden" name="urgency" id="manualNoteUrgency" value="{{ old('urgency', 'biasa') }}">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeManualNoteModal()"
+                        class="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/60">Batal</button>
+                <button type="submit"
+                        class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">Simpan Catatan</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function () {
+    const hidden = document.getElementById('manualNoteUrgency');
+    const btns   = [...document.querySelectorAll('.manual-note-urgency')];
+    const ON  = { biasa: 'bg-violet-600 text-white', penting: 'bg-amber-600 text-white', mendesak: 'bg-rose-600 text-white' };
+    const OFF = 'text-gray-600 dark:text-gray-300';
+
+    function paint() {
+        btns.forEach(b => {
+            const active = b.dataset.urgency === hidden.value;
+            b.className = 'manual-note-urgency rounded-md px-3 py-1.5 text-xs font-medium transition ' + (active ? ON[b.dataset.urgency] : OFF);
+            b.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+    btns.forEach(btn => btn.addEventListener('click', () => {
+        hidden.value = btn.dataset.urgency;
+        paint();
+    }));
+    paint();
+})();
+
+function openManualNoteModal() {
+    document.getElementById('manualNoteModal').classList.remove('hidden');
+    document.getElementById('manualNoteModal').classList.add('flex');
+    document.getElementById('manualNoteText').focus();
+}
+function closeManualNoteModal() {
+    document.getElementById('manualNoteModal').classList.add('hidden');
+    document.getElementById('manualNoteModal').classList.remove('flex');
+}
+</script>
 
 {{-- ===================== MODAL 4: KEMBALIKAN REVIEW (ALASAN WAJIB) ===================== --}}
 <div id="reviewRejectModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
