@@ -1046,6 +1046,9 @@
             if (disp)    disp.disabled = !editable;
             if (pickBtn) pickBtn.disabled = !editable;
             if (editable) {
+                // Dipasang proposals/_inline_edit saat field terkunci — lihat
+                // catatan di kjppUnlockField.
+                if (disp) { disp.style.pointerEvents = ''; disp.removeAttribute('title'); }
                 // Tooltip "Terkunci" dipasang di wrapper lewat data-catatan*
                 // (2026-10-02, laporan admin) — dibuang supaya tidak
                 // menyesatkan walau field sudah aktif.
@@ -1078,15 +1081,16 @@
 
     {{-- ===================== BUKA KUNCI FIELD (2026-10-02, laporan admin) =====================
          Dipakai bareng oleh kartu Penilai Lapangan, Surat Tugas, Faktur
-         Pajak, dan Laporan Final. Percobaan toggle display:none/balik
-         buat maksa repaint <select> malah bikin SEMUA field di kartu
-         gagal kebuka (2026-10-02, laporan admin) — dibalikin ke reflow
-         offsetHeight biasa yang terbukti aman, walau belum tentu cukup
-         buat semua jenis kontrol. --}}
+         Pajak, dan Laporan Final. proposals/_inline_edit memasang
+         pointer-events:none + title "Klik untuk mengubah" ke field yang
+         terkunci supaya klik jatuh ke pembungkusnya; keduanya WAJIB
+         dibalikin di sini. Tanpa itu field tampak aktif tapi klik mouse
+         tembus (dropdown & kalender tidak kebuka, cuma keyboard yang
+         jalan) — akar masalah yang dilaporkan admin. --}}
     <script>
     window.kjppUnlockField = function (el) {
         el.disabled = false;
-        void el.offsetHeight;
+        el.style.pointerEvents = '';
         el.removeAttribute('title');
         // Tooltip "Terkunci" (lihat kotak petunjuk global) dipasang lewat
         // data-catatan*, bukan title — tanpa ini tooltipnya nyangkut
