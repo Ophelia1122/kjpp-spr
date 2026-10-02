@@ -23,6 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // dinonaktifkan langsung ter-logout di request berikutnya.
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureUserIsActive::class);
 
+        // Cookie "Ingat saya di perangkat ini" dibatasi 24 jam meski cookie
+        // bawaan Laravel sendiri bertahan 5 tahun (2026-10-02, keluhan admin
+        // tidak pernah ter-logout walau PC dimatikan). Diterapkan ke SEMUA
+        // request yang sudah login, sama seperti EnsureUserIsActive di atas.
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureRememberNotExpired::class);
+
         // User yang SUDAH login lalu membuka halaman tamu (mis. /login)
         // diarahkan ke Beranda (2026-09-15, feedback user). Bawaan Laravel
         // mencari route bernama 'dashboard' lebih dulu — di aplikasi ini itu

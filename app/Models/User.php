@@ -182,6 +182,7 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'dark_mode' => 'boolean',
             'ojk_sectors' => 'array',
+            'remember_token_issued_at' => 'datetime',
         ];
     }
 

@@ -32,10 +32,20 @@ class LoginController extends Controller
             ])->onlyInput('username');
         }
 
-        if (!Auth::attempt($credentials, $request->boolean('remember'))) {
+        $remember = $request->boolean('remember');
+        if (!Auth::attempt($credentials, $remember)) {
             return back()->withErrors([
                 'username' => 'Username atau password yang Anda masukkan salah.',
             ])->onlyInput('username');
+        }
+
+        // Cookie "Ingat saya" bawaan Laravel bertahan 5 tahun — dicatat jam
+        // terbitnya di sini supaya EnsureRememberNotExpired bisa memaksa
+        // login ulang maksimal 24 jam kemudian, walau PC dimatikan
+        // (2026-10-02, permintaan admin). Login tanpa centang "Ingat saya"
+        // tidak terpengaruh kolom ini sama sekali.
+        if ($remember) {
+            Auth::user()->forceFill(['remember_token_issued_at' => now()])->save();
         }
 
         $request->session()->regenerate();
