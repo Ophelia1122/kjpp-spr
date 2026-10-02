@@ -100,8 +100,11 @@ class RepresentatifDocx
     }
 
     /**
-     * Paragraf ${lokasi} digandakan: satu paragraf per lokasi, bernomor
-     * "1.", "2.", ... termasuk bila hanya satu lokasi (2026-09-21, feedback user).
+     * Paragraf ${lokasi} digandakan: satu paragraf per lokasi. Nomornya
+     * (mis. "1)") sudah dari penomoran daftar Word di templat sendiri —
+     * jangan ditambah nomor manual di sini, nanti dobel (2026-10-02,
+     * feedback user; sebelumnya pernah ditambah manual di sini tapi
+     * templat sekarang sudah bernomor sendiri).
      */
     private function expandLocations(string $xml): string
     {
@@ -114,9 +117,8 @@ class RepresentatifDocx
         $locs = $this->locations();
 
         $out = '';
-        foreach ($locs as $i => $loc) {
-            $text = ($i + 1) . '. ' . $loc;
-            $out .= str_replace('${lokasi}', htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8'), $para);
+        foreach ($locs as $loc) {
+            $out .= str_replace('${lokasi}', htmlspecialchars($loc, ENT_XML1 | ENT_QUOTES, 'UTF-8'), $para);
         }
 
         return substr($xml, 0, $start) . $out . substr($xml, $end);
