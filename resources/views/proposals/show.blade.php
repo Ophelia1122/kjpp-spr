@@ -505,7 +505,9 @@
                                              :value="old('valuation_date', $project->valuation_date_manual?->toDateString())"
                                              :disabled="$hasSurvey"
                                              data-survey-field
-                                             @if ($hasSurvey) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
+                                             :data-catatan-nada="$hasSurvey ? 'peringatan' : null"
+                                             :data-catatan-judul="$hasSurvey ? 'Terkunci' : null"
+                                             :data-catatan="$hasSurvey ? 'Klik ikon Edit untuk mengubah.' : null"
                                              class="mt-1" />
                             {{-- Keterangan dulu tersembunyi di balik ikon hover; dipindah
                                  jadi tulisan tetap di bawah kolom (2026-09-24, feedback user). --}}
@@ -731,7 +733,9 @@
                             <x-tanggal-mask name="assignment_letter_date" id="surat_date"
                                              :value="old('assignment_letter_date', $project->assignment_letter_date?->toDateString())"
                                              :disabled="$hasSurat"
-                                             @if ($hasSurat) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
+                                             :data-catatan-nada="$hasSurat ? 'peringatan' : null"
+                                             :data-catatan-judul="$hasSurat ? 'Terkunci' : null"
+                                             :data-catatan="$hasSurat ? 'Klik ikon Edit untuk mengubah.' : null"
                                              class="mt-1" />
                         </div>
 
@@ -1116,7 +1120,9 @@
                             <x-tanggal-mask name="tax_invoice_date" id="faktur_date"
                                              :value="old('tax_invoice_date', $project->tax_invoice_date?->toDateString())"
                                              :disabled="$hasFaktur"
-                                             @if ($hasFaktur) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
+                                             :data-catatan-nada="$hasFaktur ? 'peringatan' : null"
+                                             :data-catatan-judul="$hasFaktur ? 'Terkunci' : null"
+                                             :data-catatan="$hasFaktur ? 'Klik ikon Edit untuk mengubah.' : null"
                                              class="mt-1" />
                         </div>
                     </div>
@@ -1214,7 +1220,9 @@
                                 <x-tanggal-mask name="final_report_date" id="final_report_date"
                                                  :value="old('final_report_date', $project->final_report_date?->toDateString())"
                                                  :disabled="$hasFinalReport"
-                                                 @if ($hasFinalReport) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif />
+                                                 :data-catatan-nada="$hasFinalReport ? 'peringatan' : null"
+                                                 :data-catatan-judul="$hasFinalReport ? 'Terkunci' : null"
+                                                 :data-catatan="$hasFinalReport ? 'Klik ikon Edit untuk mengubah.' : null" />
                             </div>
                         </div>
                         <div>
