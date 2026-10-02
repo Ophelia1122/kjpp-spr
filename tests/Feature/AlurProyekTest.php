@@ -64,6 +64,7 @@ class AlurProyekTest extends TestCase
         return array_merge([
             'proposal_number'       => '00123/2.0131-00/KJPPSPR-PRO/APP/IX/2026',
             'proposal_date'         => now()->toDateString(),
+            'request_basis'         => 'Surat permohonan penilaian.',
             'instructing_client_id' => $this->klien->id,
             'signed_by_user_id'     => $this->admin->id,
             'intended_user_ids'     => [$this->klien->id],

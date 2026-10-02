@@ -76,7 +76,7 @@ return [
             ],
             'penjelasan_status_penilai_konsultan' => [
                 'judul' => "Penjelasan Status Penilai (Konsultan)",
-                'teks'  => "Penilai Publik yang bertanggung jawab sekaligus yang bertanda tangan di dalam Laporan Penilaian ini adalah **Arief Rachman Setiady, S.M., M.M, MAPPI (Cert.)** merupakan Penilai Publik Properti dengan Nomor Izin Penilai Publik **No. P.1.25.00690** berdasarkan Surat Keputusan Menteri Keuangan Nomor **185/MK/SJ/2025** Tanggal **23 April 2025.**\n"
+                'teks'  => "Penilai Publik yang bertanggung jawab sekaligus yang bertanda tangan di dalam Laporan Penilaian ini adalah **:penilai_nama** merupakan :penilai_jenis dengan Nomor Izin Penilai Publik **No. :penilai_izin** berdasarkan Surat Keputusan Menteri Keuangan Nomor :penilai_sk_menkeu.\n"
                           . "\n"
                           . "Penilai bertindak atas nama Kantor Jasa Penilai Publik SUGIANTO PRASODJO DAN REKAN memiliki Izin Usaha resmi dari Kementerian Keuangan Republik Indonesia No. 2.15.0131. KJPP Sugianto Prasodjo dan Rekan adalah perusahaan penilai independen yang terdaftar di Masyarakat Profesi Penilai Indonesia (MAPPI) dan terdaftar di Otoritas Jasa Keuangan/OJK (d/h Bapepam-LK) berdasarkan Surat Tanda Terdaftar Profesi Penunjang Pasar Modal No. S-859/PM.223/2015 tanggal 17 November 2015.\n"
                           . "\n"
@@ -125,7 +125,7 @@ return [
             ],
             'pelaporan' => [
                 'judul' => "Pelaporan",
-                'teks'  => "**Laporan Final akan diserahkan** dalam waktu 14 (empat belas) hari kerja setelah inspeksi lapangan dan wawancara dengan pihak manajemen **:klien.**",
+                'teks'  => "**Laporan Final akan diserahkan** dalam waktu :sla_final hari kerja setelah inspeksi lapangan dan wawancara dengan pihak manajemen **:klien.**",
             ],
             'ruang_lingkup_laporan' => [
                 'judul' => "Ruang Lingkup Laporan",
@@ -178,7 +178,7 @@ return [
             ],
             'penjelasan_status_penilai_konsultan' => [
                 'judul' => "Penjelasan Status Penilai (Konsultan)",
-                'teks'  => "Penilai Publik dalam pekerjaan sebagai konsultan yang bertanggung jawab sekaligus yang bertanda tangan di dalam Laporan Studi Kelayakan ini adalah **Nama Penilai Publik, MAPPI (Cert.),** merupakan Penilai Publik Properti dengan lzin Penilai Publik **No. P.1.15.00425** berdasarkan Surat Keputusan Menteri Keuangan Republik Indonesia Nomor 328/KM.1/2015 tanggal **21 April 2015**.\n"
+                'teks'  => "Penilai Publik dalam pekerjaan sebagai konsultan yang bertanggung jawab sekaligus yang bertanda tangan di dalam Laporan Studi Kelayakan ini adalah **:penilai_nama,** merupakan :penilai_jenis dengan lzin Penilai Publik **No. :penilai_izin** berdasarkan Surat Keputusan Menteri Keuangan Republik Indonesia Nomor :penilai_sk_menkeu.\n"
                           . "\n"
                           . "Penilai bertindak atas nama **Kantor Jasa Penilai Publik SUGIANTO PRASODJO DAN REKAN** memiliki **lzin Usaha resmi dari Kementerian Keuangan Republik Indonesia No. 2.15.0131** berdasarkan **Kepmenkeu No. 722/KM.1/2015** tanggal **09 September 2015** dari Menteri Keuangan Republik Indonesia**.** KJPP Sugianto Prasodjo dan Rekan adalah perusahaan penilai independen yang terdaftar di Masyarakat Profesi Penilai Indonesia (MAPPI)\n"
                           . "\n"
@@ -279,7 +279,7 @@ return [
             ],
             'pelaporan' => [
                 'judul' => "Pelaporan",
-                'teks'  => "Laporan final akan diserahkan dalam jangka waktu 21 (duapuluh satu) hari kerja, dengan timeline pekerjaan sebagaimana tercantum pada Lampiran 1 Kerangka Acuan Kerja (KAK)/*Term of Reference (ToR)* bagian IV.",
+                'teks'  => "Laporan final akan diserahkan dalam jangka waktu :sla_final hari kerja, dengan timeline pekerjaan sebagaimana tercantum pada Lampiran 1 Kerangka Acuan Kerja (KAK)/*Term of Reference (ToR)* bagian IV.",
             ],
             'pembatalan_penugasan' => [
                 'judul' => "Pembatalan Penugasan",
@@ -478,7 +478,7 @@ return [
             ],
             'tor_jangka_waktu_penyerahan' => [
                 'judul' => "JANGKA WAKTU PENYERAHAN",
-                'teks'  => "Laporan studi kelayakan proyek akan kami serahkan dalam jangka waktu 21 (dua puluh satu) hari kerja terhitung setelah datadata yang lengkap terima dilakukan sebanyak 2 (dua) buku, dan disusun dalam Bahasa Indonesia. Adapun jadwal pelaksanaan pengerjaan penyusunan studi kelayakan sebagai berikut:",
+                'teks'  => "Laporan studi kelayakan proyek akan kami serahkan dalam jangka waktu :sla_final hari kerja terhitung setelah datadata yang lengkap terima dilakukan sebanyak 2 (dua) buku, dan disusun dalam Bahasa Indonesia. Adapun jadwal pelaksanaan pengerjaan penyusunan studi kelayakan sebagai berikut:",
             ],
             'tor_pekerjaan_tambahan' => [
                 'judul' => "PEKERJAAN TAMBAHAN",
@@ -642,7 +642,7 @@ return [
             ],
             'penjelasan_status_penilai_konsultan' => [
                 'judul' => "Penjelasan Status Penilai (Konsultan)",
-                'teks'  => "Penilai Publik dalam pekerjaan bertindak sebagai konsultan yang bertanggung jawab sekaligus yang bertanda tangan di dalam Laporan Pengawasan Proyek ini adalah **Nama Penilai Publik, MAPPI (Cert.),** merupakan Penilai Publik Properti/Bisnis/Properti dan Bisnis dengan lzin Penilai Publik **No. P-x.xx.xxxxx** berdasarkan Surat Keputusan Menteri Keuangan Republik Indonesia Nomor **xxx/xx/xx/xxx** tanggal **xx xxx xxxx**.\n"
+                'teks'  => "Penilai Publik dalam pekerjaan bertindak sebagai konsultan yang bertanggung jawab sekaligus yang bertanda tangan di dalam Laporan Pengawasan Proyek ini adalah **:penilai_nama,** merupakan :penilai_jenis dengan lzin Penilai Publik **No. :penilai_izin** berdasarkan Surat Keputusan Menteri Keuangan Republik Indonesia Nomor :penilai_sk_menkeu.\n"
                           . "\n"
                           . "Penilai bertindak atas nama **Kantor Jasa Penilai Publik SUGIANTO PRASODJO DAN REKAN** memiliki **lzin Usaha resmi dari Kementerian Keuangan Republik Indonesia No. 2.15.0131** berdasarkan **Kepmenkeu No. 722/KM.1/2015** tanggal **09 September 2015** dari Menteri Keuangan Republik Indonesia**.** KJPP Sugianto Prasodjo dan Rekan adalah perusahaan penilai independen yang terdaftar di Masyarakat Profesi Penilai Indonesia (MAPPI) dan terdaftar di Otoritas Jasa Keuangan/OJK (d/h Bapepam-LK) berdasarkan **Surat Tanda Terdaftar Profesi Penunjang Pasar Modal No. S-859/PM.223/2015** tanggal **17 November 2015**.\n",
             ],

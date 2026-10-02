@@ -950,7 +950,10 @@ class ProposalController extends Controller
             'work_object_description'  => [$konsultasi ? 'required' : 'nullable', 'string', 'max:2000'],
             // Baris "Up." pada kop surat proposal konsultasi.
             'letter_attn'              => 'nullable|string|max:150',
-            'request_basis'            => 'nullable|string|max:1000',
+            // Wajib untuk Penilaian (2026-10-02, permintaan user): isinya
+            // dicetak di kalimat pembuka (:basis) — dulu boleh kosong dan
+            // jadi titik-titik. Proposal Konsultasi tidak memakai :basis.
+            'request_basis'            => [$konsultasi ? 'nullable' : 'required', 'string', 'max:1000'],
             'instructing_client_id'    => 'required|exists:clients,id',
             // Nama Klien (debitur/pemilik aset) — opsional, kosong = nama
             // Pemberi Tugas. Dipakai di baris "Hal" proposal.

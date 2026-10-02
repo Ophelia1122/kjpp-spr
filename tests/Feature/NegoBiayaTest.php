@@ -49,6 +49,7 @@ class NegoBiayaTest extends TestCase
         return array_merge([
             'proposal_number'   => $this->proyek->proposal_number,
             'proposal_date'     => now()->toDateString(),
+            'request_basis'     => 'Surat permohonan penilaian.',
             'instructing_client_id' => $this->klien->id,
             'intended_user_ids' => [$this->klien->id],
             'signed_by_user_id' => $this->admin->id,

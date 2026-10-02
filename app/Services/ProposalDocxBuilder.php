@@ -1140,11 +1140,14 @@ class ProposalDocxBuilder
 
     private function objekPenutupRepl(): array
     {
-        $ownerNames = $this->project->valuationObjects->pluck('owner_name')
-            ->map(fn ($n) => trim((string) $n))->filter()->unique()->implode('; ');
+        // Editor Teks Baku per Tujuan: variabel dibiarkan utuh supaya nama
+        // proyek contoh tidak membeku ke teks yang disimpan (2026-10-02).
+        if ($this->modeContoh) {
+            return [':nama_sertifikat' => ':nama_sertifikat', ':pemberi_tugas' => ':pemberi_tugas'];
+        }
 
         return [
-            ':nama_sertifikat' => $ownerNames ?: '---nama pada sertifikat---',
+            ':nama_sertifikat' => $this->placeholderLaporanObjek()[':nama_sertifikat'],
             ':pemberi_tugas'   => $this->project->instructingClient->client_name,
         ];
     }
@@ -1944,6 +1947,19 @@ class ProposalDocxBuilder
         ':proyek'           => 'Nama Singkat Proyek (Catatan Tambahan objek pertama)',
         ':lokasi'           => 'Lokasi objek pertama',
         ':sla_final'        => 'SLA Laporan Final, mis. "14 (empat belas)"',
+        // Bab Laporan & Objek dulu menampilkan angka/nama proyek contoh di
+        // editor Teks Baku per Tujuan, lalu membeku begitu disimpan
+        // (2026-10-02, laporan user: SLA "5 (lima)" tidak ikut proyek).
+        ':sla_draft'        => 'SLA Laporan Draft/Resume, mis. "5 (lima)"',
+        ':sla_total'        => 'SLA Draft + Final, mis. "12 (dua belas)"',
+        ':jenis_laporan'    => 'Jenis laporan (Terinci/Ringkas)',
+        ':nama_sertifikat'  => 'Nama pada dokumen kepemilikan objek',
+        // Data Penilai Publik penandatangan (biodata user). Dulu proposal
+        // Konsultasi menulis "P-x.xx.xxxxx" dsb. di teks bakunya (2026-10-02).
+        ':penilai_nama'      => 'Nama Penilai Publik penandatangan',
+        ':penilai_jenis'     => 'Jenis Penilai Publik, mis. "Penilai Publik Properti"',
+        ':penilai_izin'      => 'Nomor Izin Penilai Publik penandatangan',
+        ':penilai_sk_menkeu' => 'Nomor & tanggal SK Menkeu penandatangan',
     ];
 
     /** "14 (empat belas)" — angka SLA beserta terbilangnya. */
@@ -1983,6 +1999,28 @@ class ProposalDocxBuilder
             ':proyek'           => trim((string) ($this->project->valuationObjects->first()->notes ?? '')),
             ':lokasi'           => (string) ($this->project->valuationObjects->first()->location ?? ''),
             ':sla_final'        => $this->slaTerbilang($this->project->sla_final_days),
+        ] + $this->placeholderLaporanObjek();
+    }
+
+    /** Nilai untuk :sla_draft, :sla_total, :jenis_laporan, :nama_sertifikat. */
+    private function placeholderLaporanObjek(): array
+    {
+        [$style, $dt, $draft, , $total] = $this->laporanParts();
+
+        $pemilik = $this->project->valuationObjects->pluck('owner_name')
+            ->map(fn ($n) => trim((string) $n))->filter()->unique()->implode('; ');
+
+        $sig = $this->statusPenilaiRepl();
+
+        return [
+            ':sla_draft'         => $dt($draft),
+            ':sla_total'         => $dt($total),
+            ':jenis_laporan'     => $style,
+            ':nama_sertifikat'   => $pemilik ?: '---nama pada sertifikat---',
+            ':penilai_nama'      => (string) $sig[':nama'],
+            ':penilai_jenis'     => (string) $sig[':jenis'],
+            ':penilai_izin'      => (string) $sig[':izin'],
+            ':penilai_sk_menkeu' => (string) $sig[':sk_menkeu'],
         ];
     }
 
@@ -2424,12 +2462,17 @@ class ProposalDocxBuilder
 
     private function laporanPlain(): string
     {
-        [$style, $dt, $draft, $final, $total] = $this->laporanParts();
+        // Lewat placeholderProyek(): di editor Teks Baku per Tujuan hasilnya
+        // tetap variabel (:sla_draft dst.), bukan angka proyek contoh yang
+        // lalu membeku begitu disimpan (2026-10-02, laporan user).
+        $ph = $this->placeholderProyek();
 
         $items = $this->numberedPlain([
-            strtr($this->cl['laporan_intro'], [':style' => $style, ':total' => $dt($total)]),
-            strtr($this->cl['laporan_draft'], [':draft' => $dt($draft)]),
-            strtr($this->cl['laporan_final'], [':final' => $dt($final)]),
+            strtr($this->cl['laporan_intro'], [':style' => $ph[':jenis_laporan'], ':total' => $ph[':sla_total']]),
+            strtr($this->cl['laporan_draft'], [':draft' => $ph[':sla_draft']]),
+            strtr($this->cl['laporan_final'], [':final' => $this->modeContoh
+                ? ':sla_final'
+                : $this->laporanParts()[1]($this->project->sla_final_days)]),
             $this->cl['laporan_rangkap'],
         ]);
 

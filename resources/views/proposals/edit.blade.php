@@ -144,10 +144,10 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Dasar Permintaan Penilaian
-                        @include('partials.icon-info', ['tip' => 'Mengisi bagian kosong pada kalimat pembuka proposal: "Sesuai dengan informasi permintaan penilaian [teks ini], mengenai permohonan jasa Penilai…". Boleh dikosongkan — nanti tampil titik-titik untuk diisi manual di dokumen.'])
+                        Dasar Permintaan Penilaian @unless ($konsultasi)<span class="font-normal text-red-500">*</span>@endunless
+                        @include('partials.icon-info', ['tip' => 'Mengisi bagian kosong pada kalimat pembuka proposal: "Sesuai dengan informasi permintaan penilaian [teks ini], mengenai permohonan jasa Penilai…". Wajib diisi untuk proposal Penilaian.'])
                     </label>
-                    <textarea name="request_basis" rows="2"
+                    <textarea name="request_basis" rows="2" @unless ($konsultasi) required @endunless
                               placeholder="Contoh: yang kami terima melalui Pesan WhatsApp permintaan penilaian tanggal 07 September 2026"
                               class="mt-1 w-full rounded-md shadow-sm {{ $errCls('request_basis') }}">{{ old('request_basis', $project->request_basis) }}</textarea>
                     @error('request_basis')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
