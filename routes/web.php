@@ -197,6 +197,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/projects/{project}/workflow/{step}', [ProjectController::class, 'advanceWorkflow'])
         ->where('step', '[a-z_]+')->name('projects.workflow');
 
+    // --- Catatan manual di Riwayat Proyek (2026-10-02, permintaan admin) ---
+    // Izinnya sama dengan lihat detail proyek — siapa pun yang bisa buka
+    // halamannya boleh menambah catatan.
+    Route::middleware('permission:proposals.view')
+        ->post('/projects/{project}/notes', [ProjectController::class, 'addNote'])->name('projects.notes.store');
+
     // --- Invoice: lihat (termasuk cetak PDF invoice/kwitansi) ---
     Route::middleware('permission:invoices.view')->group(function () {
         Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'exportInvoice'])->name('invoices.exportInvoice');

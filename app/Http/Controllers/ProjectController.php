@@ -614,6 +614,33 @@ class ProjectController extends Controller
         return back()->withFragment('section-laporan-resmi')->with('success', 'Nomor Laporan Final berhasil disimpan.');
     }
 
+    /**
+     * Catatan manual di Riwayat Proyek (2026-10-02, permintaan admin):
+     * dipakai buat pengingat/urgensi yang tidak tercatat otomatis oleh
+     * sistem — tidak mengubah data proyek, murni catatan. Tingkat urgensi
+     * dipakai buat pewarnaan & lencana "Manual" di tampilan (lihat
+     * AuditLog::TIMELINE & partial riwayat-proyek), supaya beda jelas dari
+     * catatan sistem.
+     */
+    public function addNote(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'note'    => 'required|string|max:2000',
+            'urgency' => 'required|in:biasa,penting,mendesak',
+        ], [
+            'note.required' => 'Catatan tidak boleh kosong.',
+        ]);
+
+        \App\Helpers\AuditLogger::record(
+            'project.manual_note_' . $validated['urgency'],
+            "Menambahkan catatan manual untuk proyek {$project->proposal_number}",
+            $project,
+            $validated['note']
+        );
+
+        return back()->withFragment('section-aksi')->with('success', 'Catatan berhasil ditambahkan.');
+    }
+
         public function show(Project $project)
     {
         $project->load(

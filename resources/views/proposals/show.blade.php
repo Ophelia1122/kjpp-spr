@@ -1379,7 +1379,23 @@
                     @endforeach
                 </div>
             </div>
+            @php
+                // Kotak catatan manual diwarnai sesuai urgensi (2026-10-02,
+                // permintaan admin) — supaya beda jelas dari kotak abu-abu
+                // catatan sistem, dan urgensinya langsung kebaca.
+                $manualNoteBoxCls = [
+                    'biasa'    => 'bg-violet-50 border border-violet-200 text-violet-800 dark:bg-violet-900/30 dark:border-violet-800 dark:text-violet-200',
+                    'penting'  => 'bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-200',
+                    'mendesak' => 'bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-200',
+                ];
+                $manualNoteBadgeCls = [
+                    'biasa'    => 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300',
+                    'penting'  => 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+                    'mendesak' => 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
+                ];
+            @endphp
             @forelse ($activityLogs as $log)
+                @php $urgensi = \Illuminate\Support\Str::after($log->action, 'project.manual_note_'); @endphp
                 <div class="flex gap-3">
                     <div class="flex flex-col items-center">
                         <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {{ $log->timeline_dot }}"></span>
@@ -1388,13 +1404,18 @@
                         @endunless
                     </div>
                     <div class="min-w-0 flex-1 {{ $loop->last ? '' : 'pb-4' }}">
-                        <div class="flex flex-wrap items-baseline justify-between gap-x-3">
-                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $log->timeline_label }}</p>
+                        <div class="flex flex-wrap items-center justify-between gap-x-3">
+                            <span class="flex items-center gap-1.5">
+                                <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $log->timeline_label }}</p>
+                                @if ($log->is_manual_note)
+                                    <span class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide {{ $manualNoteBadgeCls[$urgensi] ?? $manualNoteBadgeCls['biasa'] }}">Manual</span>
+                                @endif
+                            </span>
                             <time class="text-xs text-gray-500 tabular-nums whitespace-nowrap dark:text-gray-400">{{ $log->created_at->translatedFormat('d M Y, H:i') }}</time>
                         </div>
                         <p class="text-xs text-gray-500 dark:text-gray-400">oleh {{ $log->user->name ?? 'Sistem' }}</p>
                         @if ($log->note)
-                            <p class="mt-1 rounded-md bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700 whitespace-pre-line dark:bg-gray-900/50 dark:text-gray-300">{{ $log->note }}</p>
+                            <p class="mt-1 rounded-md px-2.5 py-1.5 text-xs whitespace-pre-line {{ $log->is_manual_note ? ($manualNoteBoxCls[$urgensi] ?? $manualNoteBoxCls['biasa']) : 'bg-gray-50 text-gray-700 dark:bg-gray-900/50 dark:text-gray-300' }}">{{ $log->note }}</p>
                         @else
                             <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-400">{{ $log->description }}</p>
                         @endif
@@ -1403,6 +1424,55 @@
             @empty
                 <p class="text-xs text-gray-400 dark:text-gray-400">Belum ada riwayat.</p>
             @endforelse
+
+            {{-- ---------- TAMBAH CATATAN MANUAL (2026-10-02, permintaan admin) ---------- --}}
+            @can('proposals.view')
+                <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
+                    <form action="{{ route('projects.notes.store', $project) }}" method="POST" id="manualNoteForm" class="space-y-2">
+                        @csrf
+                        <label for="manualNoteText" class="block text-xs font-medium text-gray-700 dark:text-gray-300">+ Tambah Catatan</label>
+                        <textarea name="note" id="manualNoteText" rows="2" maxlength="2000" required
+                                  placeholder="Mis. klien minta percepat jadwal survei, tunggu konfirmasi lokasi, dll."
+                                  class="w-full rounded-md border-gray-300 text-sm shadow-sm dark:border-gray-600 dark:bg-gray-900">{{ old('note') }}</textarea>
+                        @error('note') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="inline-flex rounded-lg border border-gray-300 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-900/60" role="group" aria-label="Urgensi catatan">
+                                @foreach (['biasa' => 'Biasa', 'penting' => 'Penting', 'mendesak' => 'Mendesak'] as $key => $label)
+                                    <button type="button" data-urgency="{{ $key }}"
+                                            class="manual-note-urgency rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 transition dark:text-gray-300">
+                                        {{ $label }}
+                                    </button>
+                                @endforeach
+                            </div>
+                            <input type="hidden" name="urgency" id="manualNoteUrgency" value="{{ old('urgency', 'biasa') }}">
+                            <button type="submit" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-600 px-3 text-xs font-medium text-white hover:bg-blue-700">
+                                Simpan Catatan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <script>
+                (function () {
+                    const hidden = document.getElementById('manualNoteUrgency');
+                    const btns   = [...document.querySelectorAll('.manual-note-urgency')];
+                    const ON  = { biasa: 'bg-violet-600 text-white', penting: 'bg-amber-600 text-white', mendesak: 'bg-rose-600 text-white' };
+                    const OFF = 'text-gray-600 dark:text-gray-300';
+
+                    function paint() {
+                        btns.forEach(b => {
+                            const active = b.dataset.urgency === hidden.value;
+                            b.className = 'manual-note-urgency rounded-md px-3 py-1.5 text-xs font-medium transition ' + (active ? ON[b.dataset.urgency] : OFF);
+                            b.setAttribute('aria-pressed', active ? 'true' : 'false');
+                        });
+                    }
+                    btns.forEach(btn => btn.addEventListener('click', () => {
+                        hidden.value = btn.dataset.urgency;
+                        paint();
+                    }));
+                    paint();
+                })();
+                </script>
+            @endcan
         </div>
     </div>
 

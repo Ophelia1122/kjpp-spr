@@ -66,6 +66,15 @@ class AuditLog extends Model
         'review.rejected_to_reviewer'                 => ['Admin Produksi mengembalikan ke Reviewer', 'rose'],
         'project.draft_completed'                     => ['Draf laporan selesai', 'emerald'],
         'project.final_report_number_set'             => ['Nomor Laporan Final diisi', 'emerald'],
+        // Catatan manual admin (2026-10-02, permintaan admin): beda warna
+        // (violet) dari semua aksi sistem di atas supaya "ini catatan orang,
+        // bukan sistem" langsung kelihatan, lalu tingkat urgensi dipinjam
+        // dari bahasa warna yang sudah ada (amber = perlu perhatian,
+        // rose = mendesak) — lihat juga partial riwayat-proyek untuk
+        // lencana "Manual" & kotak warna di catatannya.
+        'project.manual_note_biasa'                   => ['Catatan admin', 'violet'],
+        'project.manual_note_penting'                 => ['Catatan admin — penting', 'amber'],
+        'project.manual_note_mendesak'                => ['Catatan admin — mendesak', 'rose'],
     ];
 
     /**
@@ -81,6 +90,7 @@ class AuditLog extends Model
         'amber'   => 'bg-amber-500',
         'emerald' => 'bg-emerald-500',
         'rose'    => 'bg-rose-500',
+        'violet'  => 'bg-violet-500',
     ];
 
     /** Keterangan warna untuk legenda di bawah judul Riwayat Proyek. */
@@ -90,6 +100,14 @@ class AuditLog extends Model
         'amber'   => 'Perlu tindakan',
         'emerald' => 'Selesai/disetujui',
         'rose'    => 'Dikembalikan',
+        'violet'  => 'Catatan manual',
+    ];
+
+    /** Aksi catatan manual admin — beda tampilan dari catatan sistem. */
+    public const MANUAL_NOTE_ACTIONS = [
+        'project.manual_note_biasa',
+        'project.manual_note_penting',
+        'project.manual_note_mendesak',
     ];
 
     public function user()
@@ -114,5 +132,10 @@ class AuditLog extends Model
     public function getTimelineDotAttribute(): string
     {
         return self::TIMELINE_DOTS[self::TIMELINE[$this->action][1] ?? 'gray'];
+    }
+
+    public function getIsManualNoteAttribute(): bool
+    {
+        return in_array($this->action, self::MANUAL_NOTE_ACTIONS, true);
     }
 }
