@@ -1350,7 +1350,7 @@
         initProposalForm();
     }
 
-    // Tanggal Proposal: logic dd/mm/yyyy dipindah ke komponen <x-tanggal-mask>
+    // Tanggal Proposal: logic dd/mm/yyyy dipindah ke komponen tanggal-mask
     // + skrip global di layouts/app.blade.php (2026-10-02), tidak perlu diulang di sini.
 </script>
 @endsection

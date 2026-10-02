@@ -1048,8 +1048,8 @@
         }
 
         // Dipanggil skrip lain yang dulu langsung menulis .value elemen
-        // <input type="date"> native (mis. pra-isi tanggal hari ini saat
-        // modal dibuka). idBase = id yang dipakai di <x-tanggal-mask id="...">.
+        // input tanggal native (mis. pra-isi tanggal hari ini saat modal
+        // dibuka). idBase = id yang dipakai di komponen tanggal-mask (prop id).
         function setValue(idBase, isoDate) {
             var iso  = document.getElementById(idBase + '_iso');
             var disp = document.getElementById(idBase + '_display');
