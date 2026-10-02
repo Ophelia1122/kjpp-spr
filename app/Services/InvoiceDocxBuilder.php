@@ -23,6 +23,20 @@ use PhpOffice\PhpWord\SimpleType\Jc;
  */
 class InvoiceDocxBuilder
 {
+    /**
+     * Sentimeter -> twip BULAT. PhpWord menulis w:w/w:pgMar/w:pgSz apa
+     * adanya tanpa pembulatan; Converter::cmToTwip() aslinya kembalikan
+     * pecahan panjang (mis. 5669.291338582678), yang tidak valid menurut
+     * skema OOXML (ST_TwipsMeasure harus bilangan bulat). LibreOffice
+     * memaafkannya, Microsoft Word tidak selalu — tabel dan margin halaman
+     * bisa berantakan hanya saat dibuka di Word (2026-09-28, bug ditemukan
+     * dari berkas hasil generate yang dikirim user).
+     */
+    private static function twip(float $cm): int
+    {
+        return (int) round(Converter::cmToTwip($cm));
+    }
+
     private const FONT = 'Arial';
 
     private PhpWord $word;
@@ -70,8 +84,8 @@ class InvoiceDocxBuilder
         $p       = $this->project;
         $client  = $p->instructingClient;
         $content = 21.0 - 1.9 * 2;
-        $leftW   = Converter::cmToTwip($content * 0.6);
-        $rightW  = Converter::cmToTwip($content * 0.4);
+        $leftW   = self::twip($content * 0.6);
+        $rightW  = self::twip($content * 0.4);
         $margins = ['cellMarginLeft' => 140, 'cellMarginRight' => 140, 'cellMarginTop' => 80, 'cellMarginBottom' => 80];
 
         // Kop: logo panjang + garis tebal.
@@ -161,7 +175,7 @@ class InvoiceDocxBuilder
         $s->addText('', $this->f(), $this->p0());
         $b = $s->addTable(['cellMarginTop' => 0, 'cellMarginBottom' => 0]);
         $b->addRow();
-        $c = $b->addCell(Converter::cmToTwip($content * 0.46));
+        $c = $b->addCell(self::twip($content * 0.46));
         $this->p($c, 'Pembayaran mohon ditransfer ke Rekening:', $this->f(10));
         $this->p($c, $this->bank['bank_name'] ?? '-', $this->f(10.5, true));
         if (! empty($this->bank['branch'])) {
@@ -170,7 +184,7 @@ class InvoiceDocxBuilder
         $this->p($c, 'A/C. ' . ($this->bank['account_number'] ?? '-'), $this->f(10.5, true));
         $this->p($c, $this->bank['account_name'] ?? config('kjpp.company_name'), $this->f(10.5, true));
 
-        $c = $b->addCell(Converter::cmToTwip($content * 0.54));
+        $c = $b->addCell(self::twip($content * 0.54));
         $this->p($c, 'Jakarta, ' . $inv->display_date->translatedFormat('d F Y'), $this->f(), Jc::CENTER);
         // Ruang tanda tangan: 7 baris, sama dengan PDF.
         for ($i = 0; $i < 7; $i++) {
@@ -202,16 +216,16 @@ class InvoiceDocxBuilder
         // Kop: logo (berbingkai) | KWITANSI | No/Tgl
         $h = $s->addTable(['cellMarginTop' => 0, 'cellMarginBottom' => 0]);
         $h->addRow();
-        $c = $h->addCell(Converter::cmToTwip($content * 0.28), array_merge($this->edges(['top', 'bottom', 'left', 'right'], 8), ['valign' => 'center']));
+        $c = $h->addCell(self::twip($content * 0.28), array_merge($this->edges(['top', 'bottom', 'left', 'right'], 8), ['valign' => 'center']));
         $logo = public_path('images/logo-spr-short.png');
         if (is_file($logo)) {
             $w = Converter::cmToPoint(4.6);
             $c->addImage($logo, ['width' => $w, 'height' => $w / (855 / 187), 'alignment' => Jc::CENTER]);
         }
-        $c = $h->addCell(Converter::cmToTwip($content * 0.32), ['valign' => 'center']);
+        $c = $h->addCell(self::twip($content * 0.32), ['valign' => 'center']);
         $this->p($c, 'KWITANSI', $this->f(18, true), Jc::CENTER);
         $this->p($c, 'RECEIPT', $this->f(11, false, true), Jc::CENTER);
-        $c = $h->addCell(Converter::cmToTwip($content * 0.40), ['valign' => 'center']);
+        $c = $h->addCell(self::twip($content * 0.40), ['valign' => 'center']);
         $run = $c->addTextRun($this->p0());
         $run->addText('No. / Number : ', $this->f(8.5));
         $run->addText((string) $inv->kwitansi_number, $this->f(8.5, true));
@@ -223,8 +237,8 @@ class InvoiceDocxBuilder
 
         // Isi kwitansi: bingkai luar, garis putus-putus abu-abu antar baris,
         // tanpa garis vertikal (seperti PDF).
-        $labelW = Converter::cmToTwip(3.6);
-        $valueW = Converter::cmToTwip($content - 3.6);
+        $labelW = self::twip(3.6);
+        $valueW = self::twip($content - 3.6);
         $t = $s->addTable($margins);
         $dots = $this->edges(['bottom'], 4, '999999', 'dotted');
 
@@ -258,9 +272,9 @@ class InvoiceDocxBuilder
             ['Total', $inv->amount, true],
         ] as [$label, $amount, $bold]) {
             $bd->addRow();
-            $this->p($bd->addCell(Converter::cmToTwip(2.4)), $label, $this->f($size, $bold));
-            $this->p($bd->addCell(Converter::cmToTwip(0.4)), ':', $this->f($size, $bold));
-            $this->p($bd->addCell(Converter::cmToTwip(3.6)), 'Rp ' . $this->rp($amount), $this->f($size, $bold), Jc::END);
+            $this->p($bd->addCell(self::twip(2.4)), $label, $this->f($size, $bold));
+            $this->p($bd->addCell(self::twip(0.4)), ':', $this->f($size, $bold));
+            $this->p($bd->addCell(self::twip(3.6)), 'Rp ' . $this->rp($amount), $this->f($size, $bold), Jc::END);
         }
 
         $s->addText('', ['size' => 2], $this->p0());
@@ -268,13 +282,13 @@ class InvoiceDocxBuilder
         // Nominal + cara bayar | rekening + tanda tangan — satu bingkai, tanpa garis tengah.
         $n = $s->addTable(array_merge($margins, ['cellMarginTop' => 60, 'cellMarginBottom' => 60]));
         $n->addRow();
-        $c = $n->addCell(Converter::cmToTwip($content * 0.45), $this->edges(['left', 'top'], 8));
+        $c = $n->addCell(self::twip($content * 0.45), $this->edges(['left', 'top'], 8));
         // Nominal meniru kwitansi baku: "Rp." besar + angka di atas bidang
         // arsiran bergaris tebal (2026-09-14, feedback user).
         $rpT = $c->addTable(['cellMarginLeft' => 40, 'cellMarginRight' => 40, 'cellMarginTop' => 20, 'cellMarginBottom' => 20]);
         $rpT->addRow();
-        $this->p($rpT->addCell(Converter::cmToTwip(1.4), ['valign' => 'bottom']), 'Rp.', $this->f(18, true));
-        $amountCell = $rpT->addCell(Converter::cmToTwip($content * 0.45 - 1.9), array_merge(
+        $this->p($rpT->addCell(self::twip(1.4), ['valign' => 'bottom']), 'Rp.', $this->f(18, true));
+        $amountCell = $rpT->addCell(self::twip($content * 0.45 - 1.9), array_merge(
             $this->edges(['top'], 24),
             $this->edges(['bottom'], 12),
             ['shading' => ['pattern' => 'diagStripe', 'color' => 'A6A6A6', 'fill' => 'FFFFFF'], 'valign' => 'center']
@@ -285,7 +299,7 @@ class InvoiceDocxBuilder
             $this->p($c, $label . '  : ................................................', $this->f(8.5), Jc::START, 40);
         }
 
-        $c = $n->addCell(Converter::cmToTwip($content * 0.55), $this->edges(['right', 'top'], 8));
+        $c = $n->addCell(self::twip($content * 0.55), $this->edges(['right', 'top'], 8));
         $this->p($c, 'Mohon ditransfer ke Rekening Kami:', $this->f($size));
         $this->p($c, 'Pemilik Rekening : ' . ($this->bank['account_name'] ?? config('kjpp.company_name')), $this->f(8.5));
         $this->p($c, 'Bank : ' . ($this->bank['bank_name'] ?? '-'), $this->f(8.5));
@@ -303,7 +317,7 @@ class InvoiceDocxBuilder
 
         // Catatan keabsahan di DALAM tabel, rata tengah, 2 baris dimulai bahasa Inggris.
         $n->addRow();
-        $c = $n->addCell(Converter::cmToTwip($content), array_merge(
+        $c = $n->addCell(self::twip($content), array_merge(
             $this->edges(['left', 'right', 'bottom'], 8),
             $this->edges(['top'], 4, '999999', 'dotted'),
             ['gridSpan' => 2]
@@ -343,13 +357,13 @@ class InvoiceDocxBuilder
         $this->word->setDefaultFontSize(10.5);
 
         return $this->word->addSection([
-            'pageSizeW'    => Converter::cmToTwip(21.0),
-            'pageSizeH'    => Converter::cmToTwip(29.7),
-            'marginTop'    => Converter::cmToTwip($topCm),
-            'marginBottom' => Converter::cmToTwip($bottomCm),
-            'marginLeft'   => Converter::cmToTwip($sideCm),
-            'marginRight'  => Converter::cmToTwip($sideCm),
-            'footerHeight' => Converter::cmToTwip(0.8),
+            'pageSizeW'    => self::twip(21.0),
+            'pageSizeH'    => self::twip(29.7),
+            'marginTop'    => self::twip($topCm),
+            'marginBottom' => self::twip($bottomCm),
+            'marginLeft'   => self::twip($sideCm),
+            'marginRight'  => self::twip($sideCm),
+            'footerHeight' => self::twip(0.8),
         ]);
     }
 

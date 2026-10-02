@@ -17,6 +17,20 @@ use PhpOffice\PhpWord\Style\Table;
  */
 class TandaTerimaDocxBuilder
 {
+    /**
+     * Sentimeter -> twip BULAT. PhpWord menulis w:w/w:pgMar/w:pgSz apa
+     * adanya tanpa pembulatan; Converter::cmToTwip() aslinya kembalikan
+     * pecahan panjang (mis. 5669.291338582678), yang tidak valid menurut
+     * skema OOXML (ST_TwipsMeasure harus bilangan bulat). LibreOffice
+     * memaafkannya, Microsoft Word tidak selalu — tabel dan margin halaman
+     * bisa berantakan hanya saat dibuka di Word (2026-09-28, bug ditemukan
+     * dari berkas hasil generate yang dikirim user).
+     */
+    private static function twip(float $cm): int
+    {
+        return (int) round(Converter::cmToTwip($cm));
+    }
+
     private const NAVY = '001F60';
     private const FONT = 'Arial Narrow';
 
@@ -36,9 +50,13 @@ class TandaTerimaDocxBuilder
         Settings::setOutputEscapingEnabled(true);
 
         $word    = new PhpWord();
+        // pageSizeW/H eksplisit: bawaan PhpWord ("DEFAULT_WIDTH") sendiri
+        // berupa pecahan (11905.511811024), sama tidak validnya menurut
+        // skema OOXML seperti Converter::cmToTwip() mentah (2026-09-28).
         $section = $word->addSection([
-            'marginTop' => Converter::cmToTwip(1.2), 'marginBottom' => Converter::cmToTwip(1.2),
-            'marginLeft' => Converter::cmToTwip(2.5), 'marginRight' => Converter::cmToTwip(2.5),
+            'pageSizeW' => self::twip(21.0), 'pageSizeH' => self::twip(29.7),
+            'marginTop' => self::twip(1.2), 'marginBottom' => self::twip(1.2),
+            'marginLeft' => self::twip(2.5), 'marginRight' => self::twip(2.5),
         ]);
 
         $r         = $this->receipt;
@@ -47,12 +65,12 @@ class TandaTerimaDocxBuilder
         $lines     = collect(preg_split('/\r\n|\r|\n/', (string) ($recipient?->address ?? '')))
             ->map(fn ($l) => trim($l))->filter()->values()->all();
         $up        = $r->recipient_up ?: '-';
-        $w         = Converter::cmToTwip(16);   // lebar isi halaman
+        $w         = self::twip(16);   // lebar isi halaman
 
         // ---------- Kotak utama ----------
         $box = $section->addTable([
             'borderSize' => 6, 'borderColor' => self::NAVY,
-            'width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => Converter::cmToTwip(0.25),
+            'width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => self::twip(0.25),
         ]);
         $box->addRow();
         $cell = $box->addCell($w);
@@ -73,8 +91,8 @@ class TandaTerimaDocxBuilder
         // Nomor/tanggal + penerima.
         $meta = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
         $meta->addRow();
-        $left  = $meta->addCell(Converter::cmToTwip(8));
-        $right = $meta->addCell(Converter::cmToTwip(8));
+        $left  = $meta->addCell(self::twip(8));
+        $right = $meta->addCell(self::twip(8));
 
         $this->labelValue($left, 'Nomor Pengiriman', $r->number);
         $this->labelValue($left, 'Tanggal Pengiriman', $r->delivery_date->translatedFormat('d F Y'));
@@ -95,14 +113,14 @@ class TandaTerimaDocxBuilder
         if ($r->note) {
             $noteTbl = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
             $noteTbl->addRow();
-            $noteTbl->addCell(Converter::cmToTwip(0.8))->addText('-', $this->f, ['spaceBefore' => 80] + $this->p0);
-            $noteTbl->addCell(Converter::cmToTwip(15))->addText($r->note, $this->f, ['alignment' => Jc::BOTH, 'spaceBefore' => 80] + $this->p0);
+            $noteTbl->addCell(self::twip(0.8))->addText('-', $this->f, ['spaceBefore' => 80] + $this->p0);
+            $noteTbl->addCell(self::twip(15))->addText($r->note, $this->f, ['alignment' => Jc::BOTH, 'spaceBefore' => 80] + $this->p0);
         }
 
         $cell->addTextBreak(1, $this->f);
 
         // Tabel dokumen: hanya baris header yang berwarna.
-        $cols = [Converter::cmToTwip(1), Converter::cmToTwip(7.4), Converter::cmToTwip(1.6), Converter::cmToTwip(3), Converter::cmToTwip(3)];
+        $cols = [self::twip(1), self::twip(7.4), self::twip(1.6), self::twip(3), self::twip(3)];
         $docs = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 60]);
         $docs->addRow(null, ['tblHeader' => true]);
         $head = ['bgColor' => self::NAVY];
@@ -126,18 +144,18 @@ class TandaTerimaDocxBuilder
         // Tanda tangan + kotak "Perhatian".
         $sign = $cell->addTable(['width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 0]);
         $sign->addRow();
-        $sc = $sign->addCell(Converter::cmToTwip(6.4));
-        $sc->addText('Diterima Oleh,', $this->fB, ['indentation' => ['left' => Converter::cmToTwip(0.6)]] + $this->p0);
+        $sc = $sign->addCell(self::twip(6.4));
+        $sc->addText('Diterima Oleh,', $this->fB, ['indentation' => ['left' => self::twip(0.6)]] + $this->p0);
         $sc->addTextBreak(3, $this->f);
         $sc->addText('( ________________ )', $this->f, $this->p0);
 
-        $nc = $sign->addCell(Converter::cmToTwip(9.6));
+        $nc = $sign->addCell(self::twip(9.6));
         $warn = $nc->addTable([
             'borderSize' => 6, 'borderColor' => '9AA4B8',
             'width' => 100 * 50, 'unit' => 'pct', 'cellMargin' => 80,
         ]);
         $warn->addRow();
-        $wc = $warn->addCell(Converter::cmToTwip(9.6));
+        $wc = $warn->addCell(self::twip(9.6));
         $small = ['name' => self::FONT, 'size' => 9.5, 'italic' => true, 'color' => '5B6478'];
         foreach (['Perhatian.', 'Mohon sertakan nama jelas penerima dan tanggal penerimaan berkas.', 'Terima kasih.'] as $t) {
             $wc->addText($t, $small, $this->p0);
@@ -166,15 +184,15 @@ class TandaTerimaDocxBuilder
         if ($r->note) {
             $noteTbl = $body->addTable([
                 'layout' => Table::LAYOUT_FIXED, 'unit' => 'dxa',
-                'width'  => Converter::cmToTwip(15.2), 'cellMargin' => 0,
+                'width'  => self::twip(15.2), 'cellMargin' => 0,
             ]);
             $noteTbl->addRow();
-            $noteTbl->addCell(Converter::cmToTwip(2.2))->addText('Keterangan', $this->fB, $this->p0);
-            $noteTbl->addCell(Converter::cmToTwip(0.3))->addText(':', $this->fB, $this->p0);
-            $noteTbl->addCell(Converter::cmToTwip(12.7))->addText($r->note, $this->f, ['alignment' => Jc::BOTH] + $this->p0);
+            $noteTbl->addCell(self::twip(2.2))->addText('Keterangan', $this->fB, $this->p0);
+            $noteTbl->addCell(self::twip(0.3))->addText(':', $this->fB, $this->p0);
+            $noteTbl->addCell(self::twip(12.7))->addText($r->note, $this->f, ['alignment' => Jc::BOTH] + $this->p0);
         }
 
-        $slip->addRow(Converter::cmToTwip(0.4));
+        $slip->addRow(self::twip(0.4));
         $slip->addCell($w, ['bgColor' => self::NAVY])->addText('', $this->f, $this->p0);
 
         $path = storage_path('app/tmp/tanda-terima-' . uniqid() . '.docx');
@@ -195,12 +213,12 @@ class TandaTerimaDocxBuilder
         $t = $container->addTable([
             'layout'     => Table::LAYOUT_FIXED,
             'unit'       => 'dxa',
-            'width'      => Converter::cmToTwip($labelCm + 0.3 + $valueCm),
+            'width'      => self::twip($labelCm + 0.3 + $valueCm),
             'cellMargin' => 0,
         ]);
         $t->addRow();
-        $t->addCell(Converter::cmToTwip($labelCm))->addText($label, $this->fB, $this->p0);
-        $t->addCell(Converter::cmToTwip(0.3))->addText(':', $this->fB, $this->p0);
-        $t->addCell(Converter::cmToTwip($valueCm))->addText($value, $this->f, $this->p0);
+        $t->addCell(self::twip($labelCm))->addText($label, $this->fB, $this->p0);
+        $t->addCell(self::twip(0.3))->addText(':', $this->fB, $this->p0);
+        $t->addCell(self::twip($valueCm))->addText($value, $this->f, $this->p0);
     }
 }

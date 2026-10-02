@@ -154,6 +154,13 @@ class Project extends Model
     public const PURPOSE_LK_PROPERTI       = 'Pelaporan Keuangan';
 
     /**
+     * Pilihan "Lainnya" pada Tujuan Penilaian & Jenis Pekerjaan
+     * (2026-10-02, permintaan user). Nilai ini hanya hidup di form —
+     * yang tersimpan adalah teks yang diketik pengguna.
+     */
+    public const PILIHAN_LAINNYA           = 'Lainnya';
+
+    /**
      * =========================================================================
      * JENIS LAYANAN (2026-09-25, permintaan user)
      *
@@ -385,6 +392,7 @@ class Project extends Model
         'sla_draft_days',
         'sla_final_days',
         'proposal_purpose',
+        'value_basis_manual',
         'payment_scheme',
         'payment_terms',
         'psak_classification',
@@ -1558,6 +1566,12 @@ class Project extends Model
      */
     public function getPrimaryValueBasisAttribute(): string
     {
+        // Isian manual menang (2026-10-02, permintaan user); kosong = otomatis
+        // dari tujuan penilaian seperti sebelumnya.
+        if (trim((string) $this->value_basis_manual) !== '') {
+            return trim((string) $this->value_basis_manual);
+        }
+
         return $this->proposal_purpose === self::PURPOSE_LK_PROPERTI
             ? 'Nilai Wajar'
             : 'Nilai Pasar';

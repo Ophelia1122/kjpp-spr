@@ -166,6 +166,23 @@
                               class="mt-1 w-full rounded-md shadow-sm {{ $errCls('request_basis') }}">{{ old('request_basis', $project->request_basis) }}</textarea>
                     @error('request_basis')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                 </div>
+                @unless ($project->isKonsultasi())
+                    <div>
+                        {{-- Dasar Nilai manual (2026-10-02, permintaan user).
+                             Kosong = otomatis dari tujuan penilaian. --}}
+                        <label for="value_basis_manual" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Dasar Nilai <span class="font-normal text-gray-400">(opsional)</span>
+                        </label>
+                        <input type="text" name="value_basis_manual" id="value_basis_manual" maxlength="120"
+                               value="{{ old('value_basis_manual', $project->value_basis_manual) }}"
+                               placeholder="Kosongkan untuk otomatis"
+                               class="mt-1 w-full rounded-md shadow-sm {{ $errCls('value_basis_manual') }}">
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">
+                            Kosong = ikut tujuan penilaian. Sekarang: {{ $project->value_basis_label }}
+                        </p>
+                        @error('value_basis_manual')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                    </div>
+                @endunless
             </div>
         </div>
 

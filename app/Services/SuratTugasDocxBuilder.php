@@ -19,6 +19,20 @@ use PhpOffice\PhpWord\SimpleType\Jc;
  */
 class SuratTugasDocxBuilder
 {
+    /**
+     * Sentimeter -> twip BULAT. PhpWord menulis w:w/w:pgMar/w:pgSz apa
+     * adanya tanpa pembulatan; Converter::cmToTwip() aslinya kembalikan
+     * pecahan panjang (mis. 5669.291338582678), yang tidak valid menurut
+     * skema OOXML (ST_TwipsMeasure harus bilangan bulat). LibreOffice
+     * memaafkannya, Microsoft Word tidak selalu — tabel dan margin halaman
+     * bisa berantakan hanya saat dibuka di Word (2026-09-28, bug ditemukan
+     * dari berkas hasil generate yang dikirim user).
+     */
+    private static function twip(float $cm): int
+    {
+        return (int) round(Converter::cmToTwip($cm));
+    }
+
     private const FONT    = 'Arial Narrow';
     private const SIZE    = 11;
     private const SIDE_CM = 1.9;
@@ -44,13 +58,13 @@ class SuratTugasDocxBuilder
         $this->word->setDefaultFontSize(self::SIZE);
 
         $section = $this->word->addSection([
-            'pageSizeW'    => Converter::cmToTwip(21.0),
-            'pageSizeH'    => Converter::cmToTwip(29.7),
-            'marginTop'    => Converter::cmToTwip(0.65),
-            'marginBottom' => Converter::cmToTwip(2.2),
-            'marginLeft'   => Converter::cmToTwip(self::SIDE_CM),
-            'marginRight'  => Converter::cmToTwip(self::SIDE_CM),
-            'footerHeight' => Converter::cmToTwip(0.6),
+            'pageSizeW'    => self::twip(21.0),
+            'pageSizeH'    => self::twip(29.7),
+            'marginTop'    => self::twip(0.65),
+            'marginBottom' => self::twip(2.2),
+            'marginLeft'   => self::twip(self::SIDE_CM),
+            'marginRight'  => self::twip(self::SIDE_CM),
+            'footerHeight' => self::twip(0.6),
         ]);
 
         $this->build($section);
@@ -199,7 +213,7 @@ class SuratTugasDocxBuilder
 
     private function cm(float $cm): int
     {
-        return (int) Converter::cmToTwip($cm);
+        return (int) self::twip($cm);
     }
 
     private function f(bool $bold = false, bool $italic = false, bool $underline = false, float $size = self::SIZE): array

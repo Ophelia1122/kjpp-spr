@@ -123,8 +123,8 @@ return [
     'maksud_wajar'  => 'Memberikan opini atas **Nilai Wajar (Fair Value)** terhadap properti yang dinilai pada tanggal penilaian.',
 
     'tujuan_jual_beli'      => 'Penilaian untuk tujuan **Jual Beli** untuk kepentingan **:klien**.',
-    'tujuan_penjaminan'     => 'Penilaian untuk tujuan **Penjaminan Utang** pada **:klien**.',
-    'tujuan_lelang'         => 'Penilaian untuk tujuan **Lelang** pada **:klien**.',
+    'tujuan_penjaminan'     => 'Penilaian untuk tujuan **Penjaminan Utang** pada **:pemberi_tugas**.',
+    'tujuan_lelang'         => 'Penilaian untuk tujuan **Lelang** pada **:pemberi_tugas**.',
     'tujuan_lk'             =>
         'Penilaian ini dilakukan untuk tujuan **Pelaporan Keuangan**. Aset berupa :objek diklasifikasikan '
         . 'sebagai :psak sesuai dengan PSAK 216/240/202, dengan pengukuran nilai wajar mengacu pada PSAK 113.',
