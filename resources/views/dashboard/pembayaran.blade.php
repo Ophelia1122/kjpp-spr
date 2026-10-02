@@ -287,8 +287,8 @@
             @csrf
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Pembayaran Diterima</label>
-                <input type="date" name="payment_date" id="mark_paid_date" value="{{ now()->toDateString() }}" required lang="id"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                <x-tanggal-mask name="payment_date" id="mark_paid_date"
+                                 :value="now()->toDateString()" required class="mt-1" />
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Kwitansi otomatis diterbitkan dengan tanggal ini.</p>
             </div>
             <div class="flex justify-end gap-2 pt-2">
@@ -357,7 +357,7 @@
         function openMarkPaidModal(actionUrl, label) {
             document.getElementById('markPaidForm').action = actionUrl;
             document.getElementById('markPaidInfo').textContent = label;
-            document.getElementById('mark_paid_date').value = new Date().toISOString().split('T')[0];
+            window.kjppTanggalMask.setValue('mark_paid_date', new Date().toISOString().split('T')[0]);
             document.getElementById('markPaidModal').classList.remove('hidden');
             document.getElementById('markPaidModal').classList.add('flex');
         }

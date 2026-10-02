@@ -91,23 +91,9 @@
                             Tanggal Proposal
                             @include('partials.icon-info', ['tip' => 'Tanggal ini tercetak di kop dokumen. Boleh diisi mundur.'])
                         </label>
-                        {{-- Diketik/tampil dd/mm/yyyy; ikon kalender membuka date picker native.
-                             Yang disubmit = hidden #proposal_date_iso (yyyy-mm-dd). --}}
-                        <div class="relative mt-1">
-                            <input type="text" id="proposal_date_display" required
-                                   placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" maxlength="10"
-                                   class="w-full rounded-md shadow-sm pr-10 {{ $errCls('proposal_date') }}">
-                            <button type="button" id="proposal_date_pick" tabindex="-1" aria-label="Pilih dari kalender"
-                                    class="absolute inset-y-0 right-0 grid w-10 place-items-center text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">
-                                <svg aria-hidden="true" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0V11.25A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-                                </svg>
-                            </button>
-                            <input type="date" id="proposal_date_picker" tabindex="-1" aria-hidden="true" lang="id"
-                                   class="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0">
-                        </div>
-                        <input type="hidden" name="proposal_date" id="proposal_date_iso"
-                               value="{{ old('proposal_date', now()->toDateString()) }}">
+                        <x-tanggal-mask name="proposal_date" id="proposal_date"
+                                         :value="old('proposal_date', now()->toDateString())"
+                                         required class="mt-1" :input-class="$errCls('proposal_date')" />
                         <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Format dd/mm/yyyy</p>
                         @error('proposal_date')<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
                     </div>
@@ -432,8 +418,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Pelaporan Keuangan (Cut-off)</label>
-                        <input type="date" name="financial_reporting_date" lang="id" value="{{ old('financial_reporting_date') }}"
-                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                        <x-tanggal-mask name="financial_reporting_date" :value="old('financial_reporting_date')" class="mt-1" />
                     </div>
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                         <input type="checkbox" name="is_public_company" value="1" @checked(old('is_public_company'))
@@ -1365,55 +1350,7 @@
         initProposalForm();
     }
 
-    /* ===== Tanggal Proposal — tampil/ketik dd/mm/yyyy, submit ISO (yyyy-mm-dd) ===== */
-    (function () {
-        var disp = document.getElementById('proposal_date_display');
-        var iso  = document.getElementById('proposal_date_iso');
-        if (!disp || !iso) return;
-
-        function isoToDisplay(v) {
-            var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
-            return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
-        }
-        function displayToIso(v) {
-            var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((v || '').trim());
-            if (!m) return '';
-            var d = +m[1], mo = +m[2], y = +m[3];
-            var dt = new Date(y, mo - 1, d);
-            if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
-            return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-        }
-
-        disp.value = isoToDisplay(iso.value);
-
-        disp.addEventListener('input', function () {
-            var digits = disp.value.replace(/\D/g, '').slice(0, 8);
-            if (digits.length > 4)      disp.value = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
-            else if (digits.length > 2) disp.value = digits.slice(0, 2) + '/' + digits.slice(2);
-            else                        disp.value = digits;
-            var parsed = displayToIso(disp.value);
-            if (parsed) iso.value = parsed;
-        });
-
-        disp.addEventListener('blur', function () {
-            var parsed = displayToIso(disp.value);
-            if (parsed) { iso.value = parsed; disp.value = isoToDisplay(parsed); }
-            else        { disp.value = isoToDisplay(iso.value); }
-        });
-
-        // Ikon kalender -> date picker native; hasilnya sinkron ke text + hidden.
-        var pick    = document.getElementById('proposal_date_picker');
-        var pickBtn = document.getElementById('proposal_date_pick');
-        if (pick && pickBtn) {
-            pickBtn.addEventListener('click', function () {
-                pick.value = iso.value || '';
-                if (typeof pick.showPicker === 'function') { try { pick.showPicker(); return; } catch (e) {} }
-                pick.focus(); pick.click();
-            });
-            pick.addEventListener('change', function () {
-                if (pick.value) { iso.value = pick.value; disp.value = isoToDisplay(pick.value); }
-            });
-        }
-    })();
+    // Tanggal Proposal: logic dd/mm/yyyy dipindah ke komponen <x-tanggal-mask>
+    // + skrip global di layouts/app.blade.php (2026-10-02), tidak perlu diulang di sini.
 </script>
 @endsection

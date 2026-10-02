@@ -501,11 +501,12 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Tanggal Penilaian
                             </label>
-                            <input type="date" name="valuation_date" lang="id" @disabled($hasSurvey)
-                                   data-survey-field
-                                   @if ($hasSurvey) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
-                                   value="{{ old('valuation_date', $project->valuation_date_manual?->toDateString()) }}"
-                                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
+                            <x-tanggal-mask name="valuation_date" id="valuation_date"
+                                             :value="old('valuation_date', $project->valuation_date_manual?->toDateString())"
+                                             :disabled="$hasSurvey"
+                                             data-survey-field
+                                             @if ($hasSurvey) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
+                                             class="mt-1" />
                             {{-- Keterangan dulu tersembunyi di balik ikon hover; dipindah
                                  jadi tulisan tetap di bawah kolom (2026-09-24, feedback user). --}}
                             <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">
@@ -562,15 +563,19 @@
                                     <div>
                                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">Tanggal survei</label>
                                         <div class="mt-1 flex items-center gap-1.5">
-                                            <input type="date" name="surveys[{{ $obj->id }}][start]" lang="id" required @disabled($hasSurvey)
-                                                   data-survey-field aria-label="Tanggal mulai survei objek {{ $loop->iteration }}"
-                                                   value="{{ old('surveys.' . $obj->id . '.start', $obj->survey_start_date?->toDateString()) }}"
-                                                   class="w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-[150px] dark:border-gray-600">
+                                            <x-tanggal-mask name="surveys[{{ $obj->id }}][start]" id="survey_start_{{ $obj->id }}"
+                                                             :value="old('surveys.' . $obj->id . '.start', $obj->survey_start_date?->toDateString())"
+                                                             :disabled="$hasSurvey" required
+                                                             data-survey-field aria-label="Tanggal mulai survei objek {{ $loop->iteration }}"
+                                                             input-class="text-sm border-gray-300 dark:border-gray-600"
+                                                             class="sm:w-[150px]" />
                                             <span class="text-xs text-gray-400 dark:text-gray-400">s/d</span>
-                                            <input type="date" name="surveys[{{ $obj->id }}][end]" lang="id" @disabled($hasSurvey)
-                                                   data-survey-field aria-label="Tanggal selesai survei objek {{ $loop->iteration }}"
-                                                   value="{{ old('surveys.' . $obj->id . '.end', $obj->survey_end_date?->toDateString()) }}"
-                                                   class="w-full rounded-md border-gray-300 text-sm shadow-sm disabled:bg-gray-100 disabled:text-gray-400 sm:w-[150px] dark:border-gray-600">
+                                            <x-tanggal-mask name="surveys[{{ $obj->id }}][end]" id="survey_end_{{ $obj->id }}"
+                                                             :value="old('surveys.' . $obj->id . '.end', $obj->survey_end_date?->toDateString())"
+                                                             :disabled="$hasSurvey"
+                                                             data-survey-field aria-label="Tanggal selesai survei objek {{ $loop->iteration }}"
+                                                             input-class="text-sm border-gray-300 dark:border-gray-600"
+                                                             class="sm:w-[150px]" />
                                         </div>
                                     </div>
                                 </div>
@@ -613,6 +618,10 @@
                         if (b) {
                             b.addEventListener('click', function () {
                                 document.querySelectorAll('#surveyForm .survey-field, #surveyForm [data-survey-field]').forEach(function (el) {
+                                    if (el.hasAttribute('data-tanggal-mask')) {
+                                        window.kjppTanggalMask.setEditable(el, true);
+                                        return;
+                                    }
                                     el.disabled = false;
                                     // Paksa reflow: tanpa ini ikon datepicker kadang tetap
                                     // tak responsif terhadap klik walau field sudah aktif
@@ -719,11 +728,11 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Surat Tugas</label>
-                            <input type="date" name="assignment_letter_date" id="surat_date" lang="id"
-                                   value="{{ old('assignment_letter_date', $project->assignment_letter_date?->toDateString()) }}"
-                                   @disabled($hasSurat)
-                                   @if ($hasSurat) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
-                                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
+                            <x-tanggal-mask name="assignment_letter_date" id="surat_date"
+                                             :value="old('assignment_letter_date', $project->assignment_letter_date?->toDateString())"
+                                             :disabled="$hasSurat"
+                                             @if ($hasSurat) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
+                                             class="mt-1" />
                         </div>
 
                         {{-- "Kepada Yth" (2026-09-14, feedback user) — pilihan sama dengan
@@ -778,6 +787,10 @@
                                 ['surat_number', 'surat_date', 'surat_recipient', 'surat_on_behalf', 'surat_request_basis'].forEach(function (id) {
                                     var el = document.getElementById(id);
                                     if (!el) return;
+                                    if (el.hasAttribute('data-tanggal-mask')) {
+                                        window.kjppTanggalMask.setEditable(el, true);
+                                        return;
+                                    }
                                     el.disabled = false;
                                     // Paksa reflow: tanpa ini ikon datepicker kadang tetap
                                     // tak responsif terhadap klik walau field sudah aktif
@@ -1100,11 +1113,11 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Faktur Pajak</label>
-                            <input type="date" name="tax_invoice_date" id="faktur_date" lang="id"
-                                   value="{{ old('tax_invoice_date', $project->tax_invoice_date?->toDateString()) }}"
-                                   @disabled($hasFaktur)
-                                   @if ($hasFaktur) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
-                                   class="mt-1 w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
+                            <x-tanggal-mask name="tax_invoice_date" id="faktur_date"
+                                             :value="old('tax_invoice_date', $project->tax_invoice_date?->toDateString())"
+                                             :disabled="$hasFaktur"
+                                             @if ($hasFaktur) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
+                                             class="mt-1" />
                         </div>
                     </div>
                 </form>
@@ -1115,8 +1128,14 @@
                             if (!b) return;
                             b.addEventListener('click', function () {
                                 ['faktur_number', 'faktur_date'].forEach(function (id) {
-                                    document.getElementById(id).disabled = false;
-                                    document.getElementById(id).removeAttribute('title');
+                                    var el = document.getElementById(id);
+                                    if (!el) return;
+                                    if (el.hasAttribute('data-tanggal-mask')) {
+                                        window.kjppTanggalMask.setEditable(el, true);
+                                        return;
+                                    }
+                                    el.disabled = false;
+                                    el.removeAttribute('title');
                                 });
                                 document.getElementById('faktur_number').focus();
                                 b.hidden = true;
@@ -1192,10 +1211,10 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Tanggal Final</label>
-                                <input type="date" name="final_report_date" id="final_report_date" lang="id" @disabled($hasFinalReport)
-                                       @if ($hasFinalReport) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif
-                                       value="{{ old('final_report_date', $project->final_report_date?->toDateString()) }}"
-                                       class="w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed dark:border-gray-600">
+                                <x-tanggal-mask name="final_report_date" id="final_report_date"
+                                                 :value="old('final_report_date', $project->final_report_date?->toDateString())"
+                                                 :disabled="$hasFinalReport"
+                                                 @if ($hasFinalReport) data-catatan-nada="peringatan" data-catatan-judul="Terkunci" data-catatan="Klik ikon Edit untuk mengubah." @endif />
                             </div>
                         </div>
                         <div>
@@ -1212,8 +1231,14 @@
                                 if (!b) return;
                                 b.addEventListener('click', function () {
                                     ['final_report_number', 'final_report_date', 'final_report_notes'].forEach(function (id) {
-                                        document.getElementById(id).disabled = false;
-                                        document.getElementById(id).removeAttribute('title');
+                                        var el = document.getElementById(id);
+                                        if (!el) return;
+                                        if (el.hasAttribute('data-tanggal-mask')) {
+                                            window.kjppTanggalMask.setEditable(el, true);
+                                            return;
+                                        }
+                                        el.disabled = false;
+                                        el.removeAttribute('title');
                                     });
                                     document.getElementById('final_report_number').focus();
                                     b.hidden = true;
@@ -1472,8 +1497,8 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Terbit Invoice</label>
-                <input type="date" name="invoice_date" value="{{ now()->toDateString() }}" required lang="id"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                <x-tanggal-mask name="invoice_date" id="invoice_date_new"
+                                 :value="now()->toDateString()" required class="mt-1" />
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeInvoiceModal()"
@@ -1550,8 +1575,8 @@
             @csrf
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Pembayaran Diterima</label>
-                <input type="date" name="payment_date" id="verify_payment_date" value="{{ now()->toDateString() }}" required lang="id"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                <x-tanggal-mask name="payment_date" id="verify_payment_date"
+                                 :value="now()->toDateString()" required class="mt-1" />
                 <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">Tanggal ini akan muncul di PDF Kwitansi sebagai tanggal penerimaan.</p>
             </div>
             <div class="flex justify-end gap-2 pt-2">
@@ -1662,7 +1687,7 @@
 
     function openVerifyPaidModal(actionUrl) {
         document.getElementById('verifyPaidForm').action = actionUrl;
-        document.getElementById('verify_payment_date').value = new Date().toISOString().split('T')[0];
+        window.kjppTanggalMask.setValue('verify_payment_date', new Date().toISOString().split('T')[0]);
         document.getElementById('verifyPaidModal').classList.remove('hidden');
         document.getElementById('verifyPaidModal').classList.add('flex');
     }

@@ -971,6 +971,103 @@
     })();
     </script>
 
+    {{-- ===================== TANGGAL BERMASKER (2026-10-02, permintaan user) =====================
+         Tampilan tanggal dipaksa "dd/mm/yyyy" dari kode sendiri (tidak ikut
+         locale OS/browser yang beda-beda per perangkat), tapi ikon kalender
+         tetap buka date picker native lewat input tersembunyi — pola yang
+         sudah terbukti jalan di Tanggal Proposal, sekarang dipakai bersama
+         lewat komponen <x-tanggal-mask>. Dipasang HANYA untuk field yang
+         datanya kesimpan/kecetak (bukan filter pencarian). --}}
+    <script>
+    (function () {
+        function isoToDisplay(v) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+            return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
+        }
+        function displayToIso(v) {
+            var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((v || '').trim());
+            if (!m) return '';
+            var d = +m[1], mo = +m[2], y = +m[3];
+            var dt = new Date(y, mo - 1, d);
+            if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
+            return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        }
+
+        function wire(container) {
+            if (!container || container.dataset.tmWired) return;
+            container.dataset.tmWired = '1';
+
+            var disp    = container.querySelector('[data-tm-display]');
+            var iso     = container.querySelector('[data-tm-iso]');
+            var picker  = container.querySelector('[data-tm-picker]');
+            var pickBtn = container.querySelector('[data-tm-pick]');
+            if (!disp || !iso) return;
+
+            disp.value = isoToDisplay(iso.value);
+
+            disp.addEventListener('input', function () {
+                var digits = disp.value.replace(/\D/g, '').slice(0, 8);
+                if (digits.length > 4)      disp.value = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+                else if (digits.length > 2) disp.value = digits.slice(0, 2) + '/' + digits.slice(2);
+                else                        disp.value = digits;
+                var parsed = displayToIso(disp.value);
+                if (parsed) iso.value = parsed;
+            });
+
+            disp.addEventListener('blur', function () {
+                var parsed = displayToIso(disp.value);
+                if (parsed) { iso.value = parsed; disp.value = isoToDisplay(parsed); }
+                else        { disp.value = isoToDisplay(iso.value); }
+            });
+
+            if (picker && pickBtn) {
+                pickBtn.addEventListener('click', function () {
+                    if (pickBtn.disabled) return;
+                    picker.value = iso.value || '';
+                    if (typeof picker.showPicker === 'function') { try { picker.showPicker(); return; } catch (e) {} }
+                    picker.focus(); picker.click();
+                });
+                picker.addEventListener('change', function () {
+                    if (picker.value) { iso.value = picker.value; disp.value = isoToDisplay(picker.value); }
+                });
+            }
+        }
+
+        function initAll(root) {
+            (root || document).querySelectorAll('[data-tanggal-mask]').forEach(wire);
+        }
+
+        // Dipanggil skrip kartu lain (tombol Edit) saat kunci dibuka/ditutup —
+        // ikut nonaktifkan teks & tombol kalender bersamaan (2026-10-02).
+        function setEditable(container, editable) {
+            if (!container) return;
+            var disp    = container.querySelector('[data-tm-display]');
+            var pickBtn = container.querySelector('[data-tm-pick]');
+            if (disp)    disp.disabled = !editable;
+            if (pickBtn) pickBtn.disabled = !editable;
+        }
+
+        // Dipanggil skrip lain yang dulu langsung menulis .value elemen
+        // <input type="date"> native (mis. pra-isi tanggal hari ini saat
+        // modal dibuka). idBase = id yang dipakai di <x-tanggal-mask id="...">.
+        function setValue(idBase, isoDate) {
+            var iso  = document.getElementById(idBase + '_iso');
+            var disp = document.getElementById(idBase + '_display');
+            if (!iso) return;
+            iso.value = isoDate || '';
+            if (disp) disp.value = isoToDisplay(iso.value);
+        }
+
+        window.kjppTanggalMask = { initAll: initAll, init: wire, setEditable: setEditable, setValue: setValue };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () { initAll(document); });
+        } else {
+            initAll(document);
+        }
+    })();
+    </script>
+
     @include('partials.ui-motion')
 </body>
 </html>

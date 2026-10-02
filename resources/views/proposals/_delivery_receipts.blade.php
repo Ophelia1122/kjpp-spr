@@ -106,9 +106,10 @@
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                    <label for="tt_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Pengiriman</label>
-                    <input type="date" id="tt_date" name="delivery_date" lang="id" required
-                           value="{{ old('delivery_date', now()->toDateString()) }}" class="{{ $fld }}">
+                    <label for="tt_date_display" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Pengiriman</label>
+                    <x-tanggal-mask id="tt_date" name="delivery_date" required
+                                     :value="old('delivery_date', now()->toDateString())"
+                                     class="mt-1" input-class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-900" />
                     @error('delivery_date') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div>

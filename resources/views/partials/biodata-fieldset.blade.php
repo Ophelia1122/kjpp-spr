@@ -72,9 +72,9 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal {{ $pair['label'] }}</label>
-                    <input type="date" name="{{ $pair['date'] }}" lang="id"
-                           value="{{ old($pair['date'], $bioUser->{$pair['date']} ? \Illuminate\Support\Carbon::parse($bioUser->{$pair['date']})->format('Y-m-d') : '') }}"
-                           class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                    <x-tanggal-mask name="{{ $pair['date'] }}"
+                                     :value="old($pair['date'], $bioUser->{$pair['date']} ? \Illuminate\Support\Carbon::parse($bioUser->{$pair['date']})->format('Y-m-d') : null)"
+                                     class="mt-1" />
                 </div>
             </div>
         @endforeach
@@ -106,9 +106,9 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Izin Pertanahan</label>
-                <input type="date" name="pertanahan_izin_date" lang="id"
-                       value="{{ old('pertanahan_izin_date', $bioUser->pertanahan_izin_date ? \Illuminate\Support\Carbon::parse($bioUser->pertanahan_izin_date)->format('Y-m-d') : '') }}"
-                       class="mt-1 w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600">
+                <x-tanggal-mask name="pertanahan_izin_date"
+                                 :value="old('pertanahan_izin_date', $bioUser->pertanahan_izin_date ? \Illuminate\Support\Carbon::parse($bioUser->pertanahan_izin_date)->format('Y-m-d') : null)"
+                                 class="mt-1" />
             </div>
         </div>
 
