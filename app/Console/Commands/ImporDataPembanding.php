@@ -52,6 +52,9 @@ class ImporDataPembanding extends Command
     private const KOLOM_LONGGAR = [
         'kecamatan' => 'Kecamatan',
         'kelurahan' => 'Kelurahan',
+        // Rincian penawaran; opsional, jadi berkas tanpa kolom ini tetap terbaca.
+        'tot_tnh'   => 'Nilai Penawaran Tanah',
+        'tot_bgn'   => 'Nilai Penawaran Bangunan',
     ];
 
     private const RATE_MIN = 50_000;
@@ -303,6 +306,9 @@ class ImporDataPembanding extends Command
                 'property_class' => $kelas,
                 'rate_basis'     => $satuan,
                 'offer_total'    => (int) $this->rupiah($ambil('total')) ?: null,
+                'offer_land'     => (int) $this->rupiah($ambil('tot_tnh')) ?: null,
+                'offer_building' => (int) $this->rupiah($ambil('tot_bgn')) ?: null,
+                'building_rate'  => (int) $this->rupiah($ambil('rate_bgn')) ?: null,
                 'offer_type'     => mb_substr($ambil('transaksi'), 0, 20) ?: null,
                 'report_number'  => mb_substr($ambil('nomor'), 0, 100) ?: null,
                 'valuation_date' => $tanggal?->toDateString(),

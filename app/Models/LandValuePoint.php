@@ -15,11 +15,11 @@ class LandValuePoint extends Model
 {
     protected $fillable = [
         'data_type', 'offer_type', 'purpose', 'source_name', 'source_phone', 'source_status',
-        'property_class', 'rate_basis', 'offer_total',
+        'property_class', 'rate_basis', 'offer_total', 'offer_land', 'offer_building',
         'report_number', 'valuation_date', 'valuation_year',
         'latitude', 'longitude',
         'property_type', 'property_group',
-        'land_rate', 'land_area', 'building_area',
+        'land_rate', 'building_rate', 'land_area', 'building_area',
         'province', 'city', 'district', 'village', 'address',
         'source_file',
     ];
@@ -30,6 +30,9 @@ class LandValuePoint extends Model
         'longitude'      => 'float',
         'land_rate'      => 'integer',
         'offer_total'    => 'integer',
+        'offer_land'     => 'integer',
+        'offer_building' => 'integer',
+        'building_rate'  => 'integer',
         'land_area'      => 'integer',
         'building_area'  => 'integer',
     ];

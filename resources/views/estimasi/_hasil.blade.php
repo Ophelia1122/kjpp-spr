@@ -196,9 +196,13 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @foreach ($hasil['pembanding']->take(100) as $baris)
+                    @foreach ($hasil['pembanding']->take(100) as $i => $baris)
                         @php $p = $baris['titik']; @endphp
-                        <tr>
+                        {{-- Klik baris = buka detail titik dan arahkan peta ke sana
+                             (2026-10-03, permintaan user). Urutan sama dengan
+                             payload peta, jadi data-titik = indeks di payload. --}}
+                        <tr data-titik="{{ $i }}" tabindex="0" role="button"
+                            class="cursor-pointer hover:bg-blue-50/60 focus:outline-none focus-visible:bg-blue-50 dark:hover:bg-gray-700/60 dark:focus-visible:bg-gray-700">
                             {{-- Jaraknya sekaligus tautan ke titiknya di Google Maps;
                                  kolom Lokasi diganti Objek karena lebih menentukan
                                  (2026-09-27, permintaan user). --}}
@@ -250,6 +254,10 @@
                 'almt' => $b['titik']->address,
                 'lt'   => $b['titik']->land_area,
                 'lb'   => $b['titik']->building_area,
+                'pt'   => $b['titik']->offer_total,
+                'pl'   => $b['titik']->offer_land,
+                'pb'   => $b['titik']->offer_building,
+                'rb'   => $b['titik']->building_rate,
                 'no'   => $b['titik']->report_number,
                 'tipe' => $b['titik']->data_type,
                 'jenisTransaksi' => $b['titik']->offer_type,

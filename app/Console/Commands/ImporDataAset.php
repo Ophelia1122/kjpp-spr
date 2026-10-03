@@ -22,7 +22,7 @@ class ImporDataAset extends Command
 {
     protected $signature = 'import:data-aset
         {--path= : Folder berisi subfolder tahun (bawaan: storage/app/private/data-aset)}
-        {--bersihkan : Kosongkan seluruh tabel dulu, bukan hanya berkas yang diimpor}
+        {--bersihkan : Hapus seluruh data ASET dulu (data pembanding tidak disentuh)}
         {--uji : Tampilkan hasil bacaan tanpa menyimpan}';
 
     protected $description = 'Impor data aset pusat (xlsx) menjadi titik nilai tanah';
@@ -75,8 +75,10 @@ class ImporDataAset extends Command
         }
 
         if ($this->option('bersihkan') && ! $this->option('uji')) {
-            LandValuePoint::query()->delete();
-            $this->warn('Tabel titik nilai tanah dikosongkan.');
+            // Hanya baris ASET. Dulu seluruh tabel dikosongkan, sehingga data
+            // pembanding ikut hilang diam-diam (2026-10-03).
+            $jml = LandValuePoint::where('data_type', LandValuePoint::TIPE_ASET)->delete();
+            $this->warn("{$jml} data aset lama dihapus.");
         }
 
         $ringkas = ['baris' => 0, 'simpan' => 0, 'koordinat' => 0, 'harga' => 0, 'ekstrem' => 0];
@@ -226,6 +228,7 @@ class ImporDataAset extends Command
                 'property_type'  => mb_substr($jenis, 0, 80) ?: null,
                 'property_group' => LandValuePoint::kelompok($jenis),
                 'land_rate'      => (int) $rate,
+                'building_rate'  => (int) $this->rupiah($ambil('rate_bgn')) ?: null,
                 'land_area'      => (int) $this->rupiah($ambil('luas_t')) ?: null,
                 'building_area'  => (int) $this->rupiah($ambil('luas_b')) ?: null,
                 'province'       => mb_substr($ambil('provinsi'), 0, 60) ?: null,

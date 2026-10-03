@@ -133,6 +133,12 @@
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Jenis</dt><dd id="rincJenis" class="text-gray-800 dark:text-gray-200"></dd></div>
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Tanggal penilaian</dt><dd id="rincTgl" class="text-gray-800 dark:text-gray-200"></dd></div>
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Luas tanah / bangunan</dt><dd id="rincLuas" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
+                        {{-- Rincian nilai (2026-10-03, permintaan user). Baris yang
+                             datanya kosong disembunyikan oleh skrip. --}}
+                        <div id="rincTotalWrap"><dt id="rincTotalLabel" class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran total</dt><dd id="rincTotal" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
+                        <div id="rincTanahWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran tanah</dt><dd id="rincTanah" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
+                        <div id="rincBgnWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran bangunan</dt><dd id="rincBgn" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
+                        <div id="rincRateBgnWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai per m² bangunan</dt><dd id="rincRateBgn" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Jarak dari titik dicari</dt><dd id="rincJarak" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Lokasi</dt><dd id="rincLokasi" class="text-gray-800 dark:text-gray-200"></dd></div>
                         <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Sumber</dt><dd id="rincSumber" class="text-gray-800 dark:text-gray-200"></dd></div>
@@ -166,6 +172,10 @@
        garisnya digambar oleh div di belakangnya. */
     /* Titik objek penilaian digambar kotak; pembanding tetap bulat. */
     .titik-aset { rx: 0; ry: 0; }
+
+    /* Baris pembanding yang sedang dibuka detailnya di peta. */
+    tr.baris-terpilih { background-color: #dbeafe; }
+    .dark tr.baris-terpilih { background-color: #1e3a5f; }
 
     /* Kolom radius dipersempit, jadi tombol naik-turun bawaan dibuang
        supaya angkanya tetap terbaca (2026-09-27, permintaan user). */
@@ -278,6 +288,9 @@
             terpilih.setStyle({ weight: 1, color: terpilih.options.warnaAsli });
             terpilih = null;
         }
+        panel.querySelectorAll('tr[data-titik].baris-terpilih').forEach(function (tr) {
+            tr.classList.remove('baris-terpilih');
+        });
     }
 
     function tulis(t, penanda) {
@@ -296,6 +309,18 @@
         document.getElementById('rincTgl').textContent    = t.tgl || ('Tahun ' + t.th);
         document.getElementById('rincLuas').textContent   =
             (t.lt ? t.lt.toLocaleString('id-ID') + ' m²' : '—') + ' / ' + (t.lb ? t.lb.toLocaleString('id-ID') + ' m²' : '—');
+        // Rincian nilai: baris tanpa data disembunyikan. Objek penilaian KJPP
+        // tidak punya "penawaran", jadi totalnya disebut nilai pasar.
+        function isiNilai(id, nilai, satuan) {
+            var dd = document.getElementById(id);
+            dd.parentElement.hidden = ! nilai;
+            dd.textContent = nilai ? rupiah(nilai) + (satuan || '') : '';
+        }
+        document.getElementById('rincTotalLabel').textContent = t.tipe === 'aset' ? 'Nilai pasar total' : 'Nilai penawaran total';
+        isiNilai('rincTotal',   t.pt);
+        isiNilai('rincTanah',   t.pl);
+        isiNilai('rincBgn',     t.pb);
+        isiNilai('rincRateBgn', t.rb, ' /m²');
         document.getElementById('rincJarak').textContent  = jarakTeks(t.km);
         document.getElementById('rincLokasi').textContent = t.almt || [t.lk, t.kota].filter(Boolean).join(', ') || '—';
         document.getElementById('rincSumber').textContent = t.tipe === 'aset'
@@ -308,7 +333,51 @@
         if (terpilih) terpilih.setStyle({ weight: 1, color: terpilih.options.warnaAsli });
         penanda.setStyle({ weight: 4, color: '#111827' });
         terpilih = penanda;
+
+        tandaiBaris(daftar.findIndex(function (x) { return x.data === t; }));
     }
+
+    /** Sorot baris tabel yang sama dengan titik terpilih, dan bawa ke layar. */
+    function tandaiBaris(indeks) {
+        panel.querySelectorAll('tr[data-titik].baris-terpilih').forEach(function (tr) {
+            tr.classList.remove('baris-terpilih');
+        });
+
+        var tr = indeks >= 0 ? panel.querySelector('tr[data-titik="' + indeks + '"]') : null;
+
+        if (tr) {
+            tr.classList.add('baris-terpilih');
+            tr.scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    /** Klik baris tabel: buka detail titik dan arahkan peta ke lokasinya. */
+    function bukaDariTabel(tr) {
+        var titik = daftar[+tr.getAttribute('data-titik')];
+
+        if (! titik) return;   // baris di luar 200 titik yang digambar
+
+        titik.buka();
+        peta.flyTo([titik.data.la, titik.data.lo], Math.max(peta.getZoom(), 16), { duration: 0.6 });
+
+        // Di ponsel peta ada di atas tabel; bawa ke layar supaya terlihat.
+        if (window.matchMedia('(max-width: 1023px)').matches) {
+            wadah.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    panel.addEventListener('click', function (e) {
+        if (e.target.closest('a, button')) return;   // tautan Google Maps & Excel tetap jalan
+        var tr = e.target.closest('tr[data-titik]');
+        if (tr) bukaDariTabel(tr);
+    });
+
+    panel.addEventListener('keydown', function (e) {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-titik]')) {
+            e.preventDefault();
+            bukaDariTabel(e.target);
+        }
+    });
 
     /** Gambar ulang titik dari data panel. */
     function gambar(pindahkanTampilan) {
