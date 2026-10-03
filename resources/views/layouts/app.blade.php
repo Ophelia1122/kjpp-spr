@@ -1012,12 +1012,16 @@
                 else                        disp.value = digits;
                 var parsed = displayToIso(disp.value);
                 if (parsed) iso.value = parsed;
+                // Dikosongkan = tanggal dihapus (field opsional). Tanpa ini
+                // ISO lama tertinggal dan tidak bisa dibatalkan (2026-10-03).
+                else if (disp.value === '') iso.value = '';
             });
 
             disp.addEventListener('blur', function () {
                 var parsed = displayToIso(disp.value);
-                if (parsed) { iso.value = parsed; disp.value = isoToDisplay(parsed); }
-                else        { disp.value = isoToDisplay(iso.value); }
+                if (parsed)                 { iso.value = parsed; disp.value = isoToDisplay(parsed); }
+                else if (disp.value === '') { iso.value = ''; }
+                else                        { disp.value = isoToDisplay(iso.value); }
             });
 
             if (picker && pickBtn) {
