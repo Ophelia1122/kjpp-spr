@@ -79,6 +79,15 @@ class ImporDataPembanding extends Command
         // Berkas "2019" dan "2019.R1" isinya sama persis; yang R1 dilewati
         // supaya datanya tidak dobel.
         $berkas = array_values(array_filter($berkas, function ($f) {
+            // "~$Nama.xlsx" = berkas kunci yang dibuat Excel saat berkas asli
+            // sedang dibuka (sering muncul di folder jaringan NAS). Bukan
+            // data, dan membuat pembaca xlsx gagal (2026-10-03).
+            if (str_starts_with(basename($f), '~$')) {
+                $this->warn('Dilewati (berkas kunci Excel): ' . basename($f));
+
+                return false;
+            }
+
             if (preg_match('/\.R\d+\.xlsx$/i', $f)) {
                 $this->warn('Dilewati (revisi ganda): ' . basename($f));
 
@@ -104,8 +113,15 @@ class ImporDataPembanding extends Command
         $bar->start();
 
         foreach ($berkas as $f) {
-            foreach ($this->impor($f) as $k => $v) {
-                $ringkas[$k] += $v;
+            // Satu berkas rusak tidak boleh menggagalkan semuanya, apalagi
+            // sesudah --bersihkan sudah menghapus data lama.
+            try {
+                foreach ($this->impor($f) as $k => $v) {
+                    $ringkas[$k] += $v;
+                }
+            } catch (\Throwable $e) {
+                $this->newLine();
+                $this->error('Gagal dibaca, dilewati: ' . basename($f) . ' (' . $e->getMessage() . ')');
             }
             $bar->advance();
         }

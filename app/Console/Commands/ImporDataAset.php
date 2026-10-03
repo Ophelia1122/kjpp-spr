@@ -68,6 +68,9 @@ class ImporDataAset extends Command
 
         $berkas = glob(rtrim($path, '\\/') . '/*/*.xlsx') ?: [];
 
+        // Berkas kunci Excel ("~$Nama.xlsx") bukan data; lihat ImporDataPembanding.
+        $berkas = array_values(array_filter($berkas, fn ($f) => ! str_starts_with(basename($f), '~$')));
+
         if (! $berkas) {
             $this->error("Tidak ada berkas .xlsx di dalam subfolder tahun pada: {$path}");
 

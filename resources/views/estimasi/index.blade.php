@@ -440,10 +440,34 @@
         }
     }
 
+    /**
+     * Terbangkan peta ke koordinat (2026-10-03, masukan tim): koordinat yang
+     * baru diketik/ditempel harus langsung terlihat, bukan menunggu pengguna
+     * zoom out lalu menggeser sendiri. Zoom mengikuti radius yang terpakai,
+     * sehingga seluruh lingkaran pencarian muat di layar.
+     */
+    function terbangKe(lat, lon) {
+        var simpul = document.getElementById('dataPeta');
+        var data   = simpul ? JSON.parse(simpul.textContent || '{}') : {};
+
+        if (data.radius > 0) {
+            // Batas dihitung manual: L.circle yang belum dipasang di peta tidak
+            // bisa memberi getBounds() (galat itu dulu memicu muat ulang halaman).
+            var dLat = data.radius / 111.32;
+            var dLon = data.radius / (111.32 * Math.cos(lat * Math.PI / 180));
+            var kotak = L.latLngBounds([lat - dLat, lon - dLon], [lat + dLat, lon + dLon]);
+            peta.flyToBounds(kotak.pad(0.12), { maxZoom: 17, duration: 0.8 });
+        } else {
+            peta.flyTo([lat, lon], 16, { duration: 0.8 });
+        }
+    }
+
     // Hitung ulang satu koordinat tanpa memuat ulang halaman.
     var permintaan = 0;
 
-    function hitung(lat, lon) {
+    // terbang = true bila koordinat datang dari kotak input (diketik, ditempel,
+    // Enter). Klik di peta dan ganti filter tidak menggeser tampilan.
+    function hitung(lat, lon, terbang) {
         var nomor = ++permintaan;
         var koordinat = lat.toFixed(6) + ', ' + lon.toFixed(6);
 
@@ -474,6 +498,7 @@
                 if (nomor !== permintaan) return;        // jawaban lama, abaikan
                 panel.innerHTML = html;
                 gambar(false);
+                if (terbang) terbangKe(lat, lon);
 
                 // Alamat ikut diperbarui supaya bisa disalin/di-muat ulang.
                 try {
@@ -508,9 +533,9 @@
         return (la >= -90 && la <= 90 && lo >= -180 && lo <= 180) ? [la, lo] : null;
     }
 
-    function hitungUlang() {
+    function hitungUlang(terbang) {
         var t = bacaKoordinat() || titikAktif;
-        if (t) hitung(t[0], t[1]);
+        if (t) hitung(t[0], t[1], terbang === true);
     }
 
     // Koordinat diketik/ditempel: tunggu berhenti mengetik sebentar.
@@ -518,7 +543,7 @@
         clearTimeout(jedaKetik);
         jedaKetik = setTimeout(function () {
             var t = bacaKoordinat();
-            if (t) hitung(t[0], t[1]);
+            if (t) hitung(t[0], t[1], true);
         }, 500);
     });
 
@@ -539,7 +564,7 @@
     // Enter di kotak koordinat tidak perlu memuat ulang halaman.
     document.querySelector('form').addEventListener('submit', function (e) {
         e.preventDefault();
-        hitungUlang();
+        hitungUlang(true);
     });
 
     tulisTahun();
