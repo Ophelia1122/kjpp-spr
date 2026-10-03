@@ -165,7 +165,7 @@
         <div class="flex items-center justify-between px-4 py-2.5">
             <h2 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pembanding terdekat</h2>
             <div class="flex items-center gap-2">
-                @php $tampil = min(100, $hasil['pembanding']->count()); @endphp
+                @php $tampil = min(200, $hasil['pembanding']->count()); @endphp
                 <span class="text-[11px] text-gray-400 dark:text-gray-400"
                       data-catatan-judul="Jumlah pembanding"
                       data-catatan="Tabel memuat {{ $tampil }} pembanding terdekat. Hitungan dan unduhan Excel memakai seluruh {{ $hasil['pembanding']->count() }} titik.">
@@ -196,7 +196,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @foreach ($hasil['pembanding']->take(100) as $i => $baris)
+                    @foreach ($hasil['pembanding']->take(200) as $i => $baris)
                         @php $p = $baris['titik']; @endphp
                         {{-- Klik baris = buka detail titik dan arahkan peta ke sana
                              (2026-10-03, permintaan user). Urutan sama dengan

@@ -107,7 +107,7 @@
                      kolom kiri, jadi berubah-ubah tiap titik baru dipilih. --}}
                 {{-- flex-1 hanya di layar besar: di ponsel kartunya tanpa tinggi
                      tetap, sehingga flex-1 membuat peta setinggi 0. --}}
-                <div class="relative h-[52dvh] max-h-[420px] min-h-[260px] border-t border-gray-100 lg:h-auto lg:max-h-none lg:min-h-0 lg:flex-1 dark:border-gray-700">
+                <div id="petaWadah" class="relative h-[52dvh] max-h-[420px] min-h-[260px] border-t border-gray-100 lg:h-auto lg:max-h-none lg:min-h-0 lg:flex-1 dark:border-gray-700">
                 <div id="petaEstimasi" class="absolute inset-0" style="background:#e5e7eb"></div>
 
                 {{-- Penanda sedang memuat hasil baru sesudah klik peta. --}}
@@ -116,39 +116,44 @@
                     Menghitung&hellip;
                 </div>
 
-                {{-- Kotak rincian titik. Ditaruh di kiri bawah supaya tidak
-                     menabrak tombol Peta/Satelit di kanan atas (2026-09-26,
-                     feedback user). --}}
+                {{-- Kotak rincian titik. Di layar lebar melayang di kiri bawah peta;
+                     di ponsel dipindah ke bawah peta oleh skrip, supaya tidak
+                     menutup peta dan tombol zoom (2026-10-03, feedback user).
+                     Field pendek dua kolom, Lokasi/Sumber/Nomor selebar penuh
+                     dengan huruf kecil, supaya kotak tidak menjulang. --}}
                 <div id="petaIsi" hidden
-                     class="absolute bottom-3 left-3 z-[600] max-h-[calc(100%-1.5rem)] w-[250px] overflow-y-auto rounded-md bg-white/95 p-3 shadow-lg ring-1 ring-black/5 dark:bg-gray-800/95 dark:ring-white/10">
+                     class="border-t border-gray-100 bg-white p-3 dark:border-gray-700 dark:bg-gray-800 lg:absolute lg:bottom-3 lg:left-3 lg:z-[600] lg:max-h-[min(440px,calc(100%-1.5rem))] lg:w-[290px] lg:overflow-y-auto lg:rounded-md lg:border-t-0 lg:bg-white/95 lg:shadow-lg lg:ring-1 lg:ring-black/5 dark:lg:bg-gray-800/95 dark:lg:ring-white/10">
                     <div class="flex items-start justify-between gap-2">
                         <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Nilai tanah</p>
                         <button type="button" id="rincTutup" aria-label="Tutup rincian"
-                                class="-mr-1 -mt-1 grid h-5 w-5 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">&times;</button>
+                                class="-mr-1 -mt-1 grid h-6 w-6 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200">&times;</button>
                     </div>
                     <p id="rincNilai" class="text-lg font-bold leading-tight tabular-nums text-gray-900 dark:text-gray-100"></p>
                     <p id="rincBanding" class="text-[11px]"></p>
 
-                    <dl class="mt-2 space-y-1.5 border-t border-gray-100 pt-2 text-xs dark:border-gray-700">
-                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Jenis</dt><dd id="rincJenis" class="text-gray-800 dark:text-gray-200"></dd></div>
-                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Tanggal penilaian</dt><dd id="rincTgl" class="text-gray-800 dark:text-gray-200"></dd></div>
-                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Luas tanah / bangunan</dt><dd id="rincLuas" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
+                    <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-gray-100 pt-2 text-xs dark:border-gray-700">
+                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Jenis</dt><dd id="rincJenis" class="leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Tanggal penilaian</dt><dd id="rincTgl" class="leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Luas tanah / bangunan</dt><dd id="rincLuas" class="tabular-nums leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Jarak dari titik dicari</dt><dd id="rincJarak" class="tabular-nums leading-snug text-gray-800 dark:text-gray-200"></dd></div>
                         {{-- Rincian nilai (2026-10-03, permintaan user). Baris yang
                              datanya kosong disembunyikan oleh skrip. --}}
-                        <div id="rincTotalWrap"><dt id="rincTotalLabel" class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran total</dt><dd id="rincTotal" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
-                        <div id="rincTanahWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran tanah</dt><dd id="rincTanah" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
-                        <div id="rincBgnWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran bangunan</dt><dd id="rincBgn" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
-                        <div id="rincRateBgnWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai per m² bangunan</dt><dd id="rincRateBgn" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
-                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Jarak dari titik dicari</dt><dd id="rincJarak" class="tabular-nums text-gray-800 dark:text-gray-200"></dd></div>
-                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Lokasi</dt><dd id="rincLokasi" class="text-gray-800 dark:text-gray-200"></dd></div>
-                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Sumber</dt><dd id="rincSumber" class="text-gray-800 dark:text-gray-200"></dd></div>
-                        <div><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nomor laporan</dt><dd id="rincNomor" class="break-all text-[10px] text-gray-600 dark:text-gray-300"></dd></div>
+                        <div id="rincTotalWrap"><dt id="rincTotalLabel" class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran total</dt><dd id="rincTotal" class="tabular-nums leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div id="rincTanahWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran tanah</dt><dd id="rincTanah" class="tabular-nums leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div id="rincBgnWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai penawaran bangunan</dt><dd id="rincBgn" class="tabular-nums leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div id="rincRateBgnWrap"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nilai per m² bangunan</dt><dd id="rincRateBgn" class="tabular-nums leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div class="col-span-2"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Lokasi</dt><dd id="rincLokasi" class="text-[11px] leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div class="col-span-2"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Sumber</dt><dd id="rincSumber" class="text-[11px] leading-snug text-gray-800 dark:text-gray-200"></dd></div>
+                        <div class="col-span-2"><dt class="text-[10px] text-gray-500 dark:text-gray-400">Nomor laporan</dt><dd id="rincNomor" class="break-all text-[10px] leading-snug text-gray-600 dark:text-gray-300"></dd></div>
                     </dl>
 
                     <a id="rincMaps" href="#" target="_blank" rel="noopener"
                        class="mt-2 inline-block text-[11px] font-medium text-blue-600 hover:underline dark:text-blue-400">Buka di Google Maps &rarr;</a>
                 </div>
             </div>
+
+            {{-- Tempat kotak rincian di ponsel (di bawah peta, bukan menimpa). --}}
+            <div id="petaIsiSlot" class="lg:hidden"></div>
 
             <p class="border-t border-gray-100 px-4 py-2 text-[11px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
                 Klik di mana saja pada peta untuk menghitung titik itu. Klik titik berwarna untuk melihat rinciannya.
@@ -172,6 +177,12 @@
        garisnya digambar oleh div di belakangnya. */
     /* Titik objek penilaian digambar kotak; pembanding tetap bulat. */
     .titik-aset { rx: 0; ry: 0; }
+
+    /* Matikan scroll anchoring (2026-10-03, laporan user): di ponsel kotak
+       detail muncul DI ATAS daftar pembanding, dan peramban menjaga daftar
+       itu tetap di layar dengan menggeser halaman sebesar tinggi kotak —
+       satu ketukan titik melempar layar ke "Pembanding terdekat". */
+    html { overflow-anchor: none; }
 
     /* Baris pembanding yang sedang dibuka detailnya di peta. */
     tr.baris-terpilih { background-color: #dbeafe; }
@@ -282,6 +293,20 @@
     window.addEventListener('orientationchange', function () { setTimeout(ukurUlang, 300); });
     setTimeout(ukurUlang, 300);
 
+    // Di ponsel kotak rincian ditaruh DI BAWAH peta, bukan di atasnya: dulu
+    // menutup peta dan tombol zoom (2026-10-03, feedback user).
+    var ponsel   = window.matchMedia('(max-width: 1023px)');
+    var wadahPeta = document.getElementById('petaWadah');
+    var slotIsi   = document.getElementById('petaIsiSlot');
+
+    function tempatkanRincian() {
+        (ponsel.matches ? slotIsi : wadahPeta).appendChild(isi);
+    }
+
+    tempatkanRincian();
+    if (ponsel.addEventListener) ponsel.addEventListener('change', tempatkanRincian);
+    else if (ponsel.addListener) ponsel.addListener(tempatkanRincian);
+
     function tutupRincian() {
         isi.hidden = true;
         if (terpilih) {
@@ -295,6 +320,14 @@
 
     function tulis(t, penanda) {
         isi.hidden = false;
+
+        // Kotak ada di bawah peta pada ponsel. Gulir hanya sebanyak yang perlu
+        // supaya judul dan nilainya (±150 px teratas) terlihat; sisanya bisa
+        // digulir sendiri. Menampilkan seluruh kotak mendorong peta keluar layar.
+        if (ponsel.matches) {
+            var kurang = isi.getBoundingClientRect().top + 150 - window.innerHeight;
+            if (kurang > 0) window.scrollBy({ top: kurang, behavior: 'smooth' });
+        }
 
         document.getElementById('rincNilai').textContent = rupiah(t.rp) + ' /m²';
 
@@ -347,7 +380,27 @@
 
         if (tr) {
             tr.classList.add('baris-terpilih');
-            tr.scrollIntoView({ block: 'nearest' });
+
+            // Gulir HANYA di dalam kotak tabel. scrollIntoView() menggulir
+            // seluruh halaman, sehingga di ponsel (tabel di bawah peta) satu
+            // ketukan pada titik melempar layar ke daftar pembanding
+            // (2026-10-03, laporan user).
+            var kotak = tr.closest('.overflow-y-auto');
+
+            if (kotak) {
+                // Baris dibawa ke TENGAH bagian tabel yang terlihat (di bawah
+                // kepala lengket), dengan gerak halus, supaya jelas baris mana
+                // yang dimaksud dan baris di atas-bawahnya ikut terlihat
+                // (2026-10-03, laporan user).
+                var kepala = kotak.querySelector('thead');
+                var tinggiKepala = kepala ? kepala.offsetHeight : 0;
+                var rKotak = kotak.getBoundingClientRect();
+                var rBaris = tr.getBoundingClientRect();
+                var tengahLayar = tinggiKepala + (rKotak.height - tinggiKepala) / 2;
+                var geser = (rBaris.top - rKotak.top) + rBaris.height / 2 - tengahLayar;
+
+                kotak.scrollTo({ top: Math.max(0, kotak.scrollTop + geser), behavior: 'smooth' });
+            }
         }
     }
 
