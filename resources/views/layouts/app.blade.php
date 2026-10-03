@@ -110,6 +110,12 @@
             color: #6b7280;
         }
 
+        /* Mode gelap memberi tahu peramban bahwa halaman gelap, supaya
+           scrollbar, kalender tanggal, dan kontrol bawaan ikut gelap —
+           dulu scrollbar mendatar (mis. navigasi cepat, tabel lebar)
+           tampil sebagai strip putih (2026-10-03, laporan user). */
+        html.dark { color-scheme: dark; }
+
         /* ===================== KOTAK PETUNJUK (2026-09-27, permintaan user) ==============
            Pengganti tooltip bawaan peramban: satu kotak melayang yang dipakai
            seluruh halaman. Elemen cukup memberi data-catatan="isi",

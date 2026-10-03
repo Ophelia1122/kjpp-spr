@@ -125,9 +125,9 @@ batas atas  = M &times; faktor</pre>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 tabular-nums dark:divide-gray-700">
-                    <tr><td class="px-3 py-2">sampai 1 km</td><td class="px-3 py-2">13%</td><td class="px-3 py-2 font-semibold">1,50</td><td class="px-3 py-2">80%</td></tr>
-                    <tr><td class="px-3 py-2">sampai 2 km</td><td class="px-3 py-2">16%</td><td class="px-3 py-2 font-semibold">1,60</td><td class="px-3 py-2">80%</td></tr>
-                    <tr><td class="px-3 py-2">di atas 2 km</td><td class="px-3 py-2">17%</td><td class="px-3 py-2 font-semibold">1,75</td><td class="px-3 py-2">81%</td></tr>
+                    <tr><td class="px-3 py-2">sampai 1 km</td><td class="px-3 py-2">18%</td><td class="px-3 py-2 font-semibold">1,75</td><td class="px-3 py-2">80%</td></tr>
+                    <tr><td class="px-3 py-2">sampai 2 km</td><td class="px-3 py-2">21%</td><td class="px-3 py-2 font-semibold">1,85</td><td class="px-3 py-2">80%</td></tr>
+                    <tr><td class="px-3 py-2">di atas 2 km</td><td class="px-3 py-2">24%</td><td class="px-3 py-2 font-semibold">1,90</td><td class="px-3 py-2">80%</td></tr>
                 </tbody>
             </table>
         </div>

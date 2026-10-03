@@ -96,7 +96,7 @@
          tidak cocok) supaya tidak ada link mati, dan menandai pill aktif
          mengikuti section yang terlihat. --}}
     <div class="sticky top-14 lg:top-3 z-10 flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1.5 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-    <div id="quickNav" class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+    <div id="quickNav" class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:thin] dark:[color-scheme:dark]">
         <a href="#section-info" data-target="section-info" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Info</a>
         <a href="#section-penilai" data-target="section-penilai" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Penilai</a>
         <a href="#section-surat-tugas" data-target="section-surat-tugas" class="quicknav-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">Surat Tugas</a>

@@ -13,10 +13,11 @@ use Illuminate\Support\Collection;
  * terdahulu di sekitar lokasi, beri bobot lebih besar pada yang lebih dekat
  * dan lebih baru, lalu ambil nilai tengahnya.
  *
- * Lebar rentang (:1,75 sampai x1,75) BUKAN tebakan — didapat dari uji ulang
- * seluruh 1.755 titik data 2019-2024: tiap titik diestimasi memakai titik
- * lain, lalu sebaran galatnya diukur. Hasilnya: nilai sebenarnya jatuh di
- * dalam rentang itu pada 80% kasus, dengan median galat titik tengah 17%.
+ * Lebar rentang (÷ sampai × 1,75-1,90 menurut radius) BUKAN tebakan — didapat
+ * dari uji ulang atas data pembanding 2019-2025: tiap titik diestimasi memakai
+ * titik lain, lalu sebaran galatnya diukur. Hasilnya: nilai sebenarnya jatuh
+ * di dalam rentang itu pada 80% kasus, dengan median galat titik tengah
+ * 18-24% (lihat FAKTOR_PER_RADIUS).
  */
 class EstimasiNilaiTanah
 {
@@ -30,19 +31,23 @@ class EstimasiNilaiTanah
     public const MIN_PEMBANDING = 3;
 
     /**
-     * Faktor rentang hasil kalibrasi ulang atas 42.757 titik pembanding pasar
-     * (2026-09-27). Makin rapat radiusnya, makin tajam estimasinya, jadi
-     * faktornya ikut radius — semuanya menutup sekitar 80% kasus:
-     *   radius <=1 km  median galat 13%  faktor 1,5  -> memuat 80%
-     *   radius <=2 km  median galat 16%  faktor 1,6  -> memuat 80%
-     *   radius  >2 km  median galat 17%  faktor 1,75 -> memuat 81%
+     * Faktor rentang, dikalibrasi ulang (2026-10-03) atas 61.576 titik
+     * pembanding pasar (2019-2025, komparabel kembar sudah dibuang). Uji
+     * "tinggalkan satu titik" atas 1.500 sampel Tanah & Bangunan:
+     *   radius <=1 km  median galat 18%  faktor 1,75 -> memuat 80%
+     *   radius <=2 km  median galat 21%  faktor 1,85 -> memuat 80%
+     *   radius  >2 km  median galat 24%  faktor 1,90 -> memuat 80%
+     * Kalibrasi 2026-09-27 (faktor 1,5 / 1,6 / 1,75, galat 13-17%) terlalu
+     * optimis: komparabel kembar ikut tersisa di tetangga titik uji, sehingga
+     * "menebak" kembarannya sendiri. Setelah kembaran dibuang, faktor lama
+     * hanya memuat ±72%.
      */
     private const FAKTOR_PER_RADIUS = [
-        1.0 => 1.5,
-        2.0 => 1.6,
+        1.0 => 1.75,
+        2.0 => 1.85,
     ];
 
-    private const FAKTOR_RENTANG = 1.75;
+    private const FAKTOR_RENTANG = 1.90;
 
     private function faktorRentang(float $radiusKm): float
     {

@@ -96,7 +96,7 @@ class ImporDataPembanding extends Command
             $this->warn("{$jml} data pembanding lama dihapus.");
         }
 
-        $ringkas = ['baris' => 0, 'simpan' => 0, 'koordinat' => 0, 'harga' => 0, 'ekstrem' => 0];
+        $ringkas = ['baris' => 0, 'simpan' => 0, 'koordinat' => 0, 'harga' => 0, 'ekstrem' => 0, 'kembar' => 0];
         $bar = $this->output->createProgressBar(count($berkas));
         $bar->start();
 
@@ -115,6 +115,7 @@ class ImporDataPembanding extends Command
         $this->line('Dilewati (koordinat): ' . $ringkas['koordinat']);
         $this->line('Dilewati (tanpa Rp) : ' . $ringkas['harga']);
         $this->line('Dilewati (ekstrem)  : ' . $ringkas['ekstrem']);
+        $this->line('Dilewati (kembar)   : ' . $ringkas['kembar']);
         $this->info('Titik tersimpan     : ' . $ringkas['simpan']);
 
         if ($this->option('uji')) {
@@ -153,15 +154,37 @@ class ImporDataPembanding extends Command
     }
 
     /** @return array{baris:int,simpan:int,koordinat:int,harga:int,ekstrem:int} */
+    /** Kunci pembanding yang sudah dibaca pada eksekusi ini (lihat imporSheet). */
+    private array $terlihat = [];
+
     private function impor(string $file): array
     {
-        $n = ['baris' => 0, 'simpan' => 0, 'koordinat' => 0, 'harga' => 0, 'ekstrem' => 0];
+        $n = ['baris' => 0, 'simpan' => 0, 'koordinat' => 0, 'harga' => 0, 'ekstrem' => 0, 'kembar' => 0];
         $label = basename($file);
 
         $reader = IOFactory::createReaderForFile($file);
         $reader->setReadDataOnly(true);
-        $sheet = $reader->load($file)->getSheet(0);
+        $buku = $reader->load($file);
+
+        // Hapus baris lama berkas ini SEKALI di depan, lalu baca SEMUA sheet.
+        // Berkas 2025 berisi 12 sheet bulanan; dulu hanya sheet pertama yang
+        // dibaca, jadi 11 bulan hilang tanpa peringatan (2026-10-03).
+        if (! $this->option('uji')) {
+            LandValuePoint::where('source_file', $label)->delete();
+        }
+
+        foreach ($buku->getAllSheets() as $sheet) {
+            $this->imporSheet($sheet, $label, $n);
+        }
+
+        return $n;
+    }
+
+    /** @param array{baris:int,simpan:int,koordinat:int,harga:int,ekstrem:int,kembar:int} $n */
+    private function imporSheet(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, string $label, array &$n): void
+    {
         $baris = $sheet->toArray(null, true, false, false);
+        $namaSheet = $label . ' / ' . $sheet->getTitle();
 
         $iHeader = null;
         foreach (array_slice($baris, 0, 10) as $i => $r) {
@@ -173,9 +196,9 @@ class ImporDataPembanding extends Command
 
         if ($iHeader === null) {
             $this->newLine();
-            $this->warn("Header tidak ditemukan, dilewati: {$label}");
+            $this->warn("Header tidak ditemukan, dilewati: {$namaSheet}");
 
-            return $n;
+            return;
         }
 
         $peta = [];
@@ -199,13 +222,9 @@ class ImporDataPembanding extends Command
 
         if ($hilang) {
             $this->newLine();
-            $this->warn("Kolom hilang (" . implode(', ', $hilang) . "), dilewati: {$label}");
+            $this->warn("Kolom hilang (" . implode(', ', $hilang) . "), dilewati: {$namaSheet}");
 
-            return $n;
-        }
-
-        if (! $this->option('uji')) {
-            LandValuePoint::where('source_file', $label)->delete();
+            return;
         }
 
         $simpan = [];
@@ -253,9 +272,31 @@ class ImporDataPembanding extends Command
             $tanggal = $this->tanggal($ambil('tanggal'));
             $tahun   = (int) $ambil('tahun') ?: (int) ($tanggal?->year ?: 0);
 
-            if ($tahun < 2000 || $tahun > (int) now()->year + 1) {
+            // Tahun di masa depan = salah ketik (berkas 2025 memuat 2027, 2029,
+            // 2030 pada baris bertanggal penilaian 2025): pakai tahun tanggal
+            // penilaian. Tahun ini sendiri boleh — laporan Januari memuat
+            // penilaian akhir tahun lalu (2026-10-03).
+            if ($tahun < 2000 || $tahun > (int) now()->year) {
                 $tahun = (int) ($tanggal?->year ?: now()->year);
             }
+
+            // Laporan yang menilai beberapa objek mencantumkan daftar pembanding
+            // yang SAMA untuk tiap objek, jadi satu komparabel muncul berulang.
+            // Dibiarkan, ia terhitung berkali-kali di median berbobot (±5% baris
+            // berkas 2019-2025 kembar). Cukup satu per komparabel (2026-10-03).
+            $kunci = md5(implode('|', [
+                $ambil('nomor'), mb_strtolower($ambil('alamat')),
+                (int) $this->rupiah($ambil('total')),
+                (int) $this->rupiah($ambil('luas_t')), (int) $this->rupiah($ambil('luas_b')),
+                (int) $rate,
+            ]));
+
+            if (isset($this->terlihat[$kunci])) {
+                $n['kembar']++;
+                continue;
+            }
+
+            $this->terlihat[$kunci] = true;
 
             $simpan[] = [
                 'data_type'      => LandValuePoint::TIPE_PEMBANDING,
@@ -294,8 +335,6 @@ class ImporDataPembanding extends Command
                 LandValuePoint::insert($potong);
             }
         }
-
-        return $n;
     }
 
     /**
